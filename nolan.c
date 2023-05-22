@@ -8,7 +8,7 @@
 #include <concord/log.h>
 
 #define RAIDS_ID 1109604402102276216
-#define STATS_ID 1109604402102276216
+#define STATS_ID 1110185440285302855
 #define MAX      300
 #define KINGDOM  "Scream of Terra"
 
@@ -46,9 +46,9 @@ void initplayer(Player *player);
 char *trim(char *start, char *end, char *line);
 void parseline(Player *player, char *line);
 void forline(Player *player, char *src);
-void createcsv(void);
+void createtsv(void);
 int playerinfile(Player *player, int col);
-void savetocsv(Player *player);
+void savetotsv(Player *player);
 void on_ready(struct discord *client, const struct discord_ready *event);
 void on_message(struct discord *client, const struct discord_message *event);
 
@@ -255,19 +255,19 @@ forline(Player *player, char *src)
 }
 
 void
-createcsv(void)
+createtsv(void)
 {
 	FILE *f;
 	int size;
 
-	f = fopen("players.csv", "r");
+	f = fopen("players.tsv", "r");
 
 	if (f != NULL) {
 		fseek(f, 0, SEEK_END);
 		size = ftell(f);
 	}
 
-	if ((f == NULL || size == 0) && ((f = fopen("players.csv", "w")) != NULL))
+	if ((f == NULL || size == 0) && ((f = fopen("players.tsv", "w")) != NULL))
 		fprintf(f, "Name,Level,Ascension,Kingdom,Global rank,Regional rank,Competitive rank,Playtime,Monsters slain,Bosses slain,Players defeated,Quests completed,Areas explored,Areas taken,Dungeons cleared,Coliseum wins,Items upgraded,Fish caught,Distance travelled,Reputation,Endless record,Entries completed\n");
 
 	fclose(f);
@@ -276,18 +276,18 @@ createcsv(void)
 /* TODO */
 /*
 void
-getvaluefromcsv(int col)
+getvaluefromtsv(int col)
 {
 	FILE *f;
 	char line[MAX], *p, *end;
 	char res[50][MAX];
 	int i = 0;
 
-	if ((f = fopen("players.csv", "r")) == NULL)
-		die("getvaluefromcsv: cannot open players.csv\n");
+	if ((f = fopen("players.tsv", "r")) == NULL)
+		die("getvaluefromtsv: cannot open players.tsv\n");
 
 	while ((p = fgets(line, MAX, f)) != NULL) {
-		end = nstrchr(p, ',', col);
+		end = nstrchr(p, '\t', col);
 		if (end)
 			*end = 0;
 		res[i] = p;
@@ -302,22 +302,22 @@ playerinfile(Player *player, int col)
 	char line[MAX], *p, *endname;
 	int res = -1, i = 0;
 
-	if ((f = fopen("players.csv", "r")) == NULL)
-		die("saveplayer: cannot open players.csv\n");
+	if ((f = fopen("players.tsv", "r")) == NULL)
+		die("saveplayer: cannot open players.tsv\n");
 
 	while ((p = fgets(line, MAX, f)) != NULL) {
 		i++;
-		endname = nstrchr(p, ',', col);
+		endname = nstrchr(p, '\t', col);
 		if (--endname)
 			*endname = 0;
 		if (strcmp(player->name, p) == 0) {
 			res = i;
 			if (endname)
-				*endname = ',';
+				*endname = '\t';
 			break;
 		}
 		if (endname)
-			*endname = ',';
+			*endname = '\t';
 	}
 
 	fclose(f);
@@ -325,76 +325,76 @@ playerinfile(Player *player, int col)
 }
 
 void
-savetocsv(Player *player)
+savetotsv(Player *player)
 {
 	FILE *fw, *fr;
 	int pos, c, cpt = 0;
 	int edited = 0;
 
-	createcsv();
+	createtsv();
 	pos = playerinfile(player, 1);
 
 	if (pos == -1) {
-		if ((fw = fopen("players.csv", "a")) == NULL)
-			die("savetocsv: cannot open players.csv\n");
+		if ((fw = fopen("players.tsv", "a")) == NULL)
+			die("savetotsv: cannot open players.tsv\n");
 
-		fprintf(fw, "%s,", player->name);
-		fprintf(fw, "%s,", player->level);
-		fprintf(fw, "%s,", player->ascension);
-		fprintf(fw, "%s,", player->kingdom);
-		fprintf(fw, "%s,", player->global);
-		fprintf(fw, "%s,", player->regional);
-		fprintf(fw, "%s,", player->competitive);
-		fprintf(fw, "%s,", player->playtime);
-		fprintf(fw, "%s,", player->monsters);
-		fprintf(fw, "%s,", player->bosses);
-		fprintf(fw, "%s,", player->players);
-		fprintf(fw, "%s,", player->quests);
-		fprintf(fw, "%s,", player->explored);
-		fprintf(fw, "%s,", player->taken);
-		fprintf(fw, "%s,", player->dungeons);
-		fprintf(fw, "%s,", player->coliseum);
-		fprintf(fw, "%s,", player->items);
-		fprintf(fw, "%s,", player->fish);
-		fprintf(fw, "%s,", player->distance);
-		fprintf(fw, "%s,", player->reputation);
-		fprintf(fw, "%s,", player->endless);
+		fprintf(fw, "%s\t", player->name);
+		fprintf(fw, "%s\t", player->level);
+		fprintf(fw, "%s\t", player->ascension);
+		fprintf(fw, "%s\t", player->kingdom);
+		fprintf(fw, "%s\t", player->global);
+		fprintf(fw, "%s\t", player->regional);
+		fprintf(fw, "%s\t", player->competitive);
+		fprintf(fw, "%s\t", player->playtime);
+		fprintf(fw, "%s\t", player->monsters);
+		fprintf(fw, "%s\t", player->bosses);
+		fprintf(fw, "%s\t", player->players);
+		fprintf(fw, "%s\t", player->quests);
+		fprintf(fw, "%s\t", player->explored);
+		fprintf(fw, "%s\t", player->taken);
+		fprintf(fw, "%s\t", player->dungeons);
+		fprintf(fw, "%s\t", player->coliseum);
+		fprintf(fw, "%s\t", player->items);
+		fprintf(fw, "%s\t", player->fish);
+		fprintf(fw, "%s\t", player->distance);
+		fprintf(fw, "%s\t", player->reputation);
+		fprintf(fw, "%s\t", player->endless);
 		fprintf(fw, "%s\n", player->codex);
 		fclose(fw);
 	} else {
-		if ((fr = fopen("players.csv", "r")) == NULL)
-			die("savetocsv: cannot open players.csv (fr)\n");
+		if ((fr = fopen("players.tsv", "r")) == NULL)
+			die("savetotsv: cannot open players.tsv (fr)\n");
 		if ((fw = fopen("tmpfile", "w")) == NULL)
-			die("savetocsv: cannot open players.csv (fw)\n");
+			die("savetotsv: cannot open players.tsv (fw)\n");
 
 		while ((c = fgetc(fr)) != EOF) {
 			if (c == '\n')
 				cpt++;
 			if (!edited && cpt == pos - 1) {
 				if (cpt == 0)
-					fprintf(fw, "%s,", player->name);
+					fprintf(fw, "%s\t", player->name);
 				else
-					fprintf(fw, "\n%s,", player->name);
-				fprintf(fw, "%s,", player->level);
-				fprintf(fw, "%s,", player->ascension);
-				fprintf(fw, "%s,", player->kingdom);
-				fprintf(fw, "%s,", player->global);
-				fprintf(fw, "%s,", player->regional);
-				fprintf(fw, "%s,", player->competitive);
-				fprintf(fw, "%s,", player->playtime);
-				fprintf(fw, "%s,", player->monsters);
-				fprintf(fw, "%s,", player->bosses);
-				fprintf(fw, "%s,", player->players);
-				fprintf(fw, "%s,", player->quests);
-				fprintf(fw, "%s,", player->explored);
-				fprintf(fw, "%s,", player->taken);
-				fprintf(fw, "%s,", player->dungeons);
-				fprintf(fw, "%s,", player->coliseum);
-				fprintf(fw, "%s,", player->items);
-				fprintf(fw, "%s,", player->fish);
-				fprintf(fw, "%s,", player->distance);
-				fprintf(fw, "%s,", player->reputation);
-				fprintf(fw, "%s,", player->endless);
+					fprintf(fw, "\n%s\t", player->name);
+				fprintf(fw, "%s\t", player->level);
+				fprintf(fw, "%s\t", player->ascension);
+				fprintf(fw, "%s\t", player->kingdom);
+				fprintf(fw, "%s\t", player->global);
+				fprintf(fw, "%s\t", player->regional);
+				fprintf(fw, "%s\t", player->competitive);
+				fprintf(fw, "%s\t", player->playtime);
+				fprintf(fw, "%s\t", player->monsters);
+				fprintf(fw, "%s\t", player->bosses);
+				fprintf(fw, "%s\t", player->players);
+				fprintf(fw, "%s\t", player->quests);
+				fprintf(fw, "%s\t", player->explored);
+				fprintf(fw, "%s\t", player->taken);
+				fprintf(fw, "%s\t", player->dungeons);
+				fprintf(fw, "%s\t", player->coliseum);
+				fprintf(fw, "%s\t", player->items);
+				fprintf(fw, "%s\t", player->fish);
+				fprintf(fw, "%s\t", player->distance);
+				fprintf(fw, "%s\t", player->reputation);
+				fprintf(fw, "%s\t", player->endless);
 				fprintf(fw, "%s\n", player->codex);
 
 				edited = 1;
@@ -410,8 +410,8 @@ savetocsv(Player *player)
 		fclose(fr);
 		fclose(fw);
 
-		remove("players.csv");
-		rename("tmpfile", "players.csv");
+		remove("players.tsv");
+		rename("tmpfile", "players.tsv");
 	}
 }
 
@@ -470,7 +470,7 @@ on_message(struct discord *client, const struct discord_message *event)
 			struct discord_create_message params = { .content = "Sorry you're not part of the kingdom :/" };
 			discord_create_message(client, event->channel_id, &params, NULL);
 		} else {
-			savetocsv(&player);
+			savetotsv(&player);
 		}
 
 #ifdef DEBUG
