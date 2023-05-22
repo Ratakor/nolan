@@ -7,10 +7,9 @@
 #include <concord/discord.h>
 #include <concord/log.h>
 
-#define RAIDS_ID 1109604402102276216
-#define STATS_ID 1110185440285302855
-#define MAX      300
-#define KINGDOM  "Scream of Terra"
+#include "config.h"
+
+#define MAX 300
 
 typedef struct {
 	char *name;
@@ -268,7 +267,7 @@ createtsv(void)
 	}
 
 	if ((f == NULL || size == 0) && ((f = fopen("players.tsv", "w")) != NULL))
-		fprintf(f, "Name,Level,Ascension,Kingdom,Global rank,Regional rank,Competitive rank,Playtime,Monsters slain,Bosses slain,Players defeated,Quests completed,Areas explored,Areas taken,Dungeons cleared,Coliseum wins,Items upgraded,Fish caught,Distance travelled,Reputation,Endless record,Entries completed\n");
+		fprintf(f, "Name\tLevel\tAscension\tKingdom\tGlobal rank\tRegional rank\tCompetitive rank\tPlaytime\tMonsters slain\tBosses slain\tPlayers defeated\tQuests completed\tAreas explored\tAreas taken\tDungeons cleared\tColiseum wins\tItems upgraded\tFish caught\tDistance travelled\tReputation\tEndless record\tEntries completed\n");
 
 	fclose(f);
 }
@@ -363,9 +362,9 @@ savetotsv(Player *player)
 		fclose(fw);
 	} else {
 		if ((fr = fopen("players.tsv", "r")) == NULL)
-			die("savetotsv: cannot open players.tsv (fr)\n");
+			die("savetotsv: cannot open players.tsv (read)\n");
 		if ((fw = fopen("tmpfile", "w")) == NULL)
-			die("savetotsv: cannot open players.tsv (fw)\n");
+			die("savetotsv: cannot open players.tsv (write)\n");
 
 		while ((c = fgetc(fr)) != EOF) {
 			if (c == '\n')
@@ -416,6 +415,20 @@ savetotsv(Player *player)
 }
 
 void
+loadtsv(char *src)
+{
+	FILE *f;
+	char *p = src, c;
+
+	if ((f = fopen("players.tsv", "r")) == NULL)
+		die("loadtsv: cannot open players.tsv\n");
+
+	while ((c = fgetc(f)) != EOF && (*p++ = c));
+	*p = 0;
+	fclose(f);
+}
+
+void
 on_ready(struct discord *client, const struct discord_ready *event)
 {
 	log_info("Logged in as %s!", event->user->username);
@@ -447,6 +460,36 @@ void
 on_message(struct discord *client, const struct discord_message *event)
 {
 	if (event->channel_id == STATS_ID) {
+		if (strcmp(event->content, "getsourcetxt") == 0) {
+			char *src = malloc(16384);
+			loadtsv(src);
+
+			struct discord_create_message params = {
+				.content = src
+			};
+			discord_create_message(client, event->channel_id, &params, NULL);
+			free(src);
+			return;
+		}
+		if (strcmp(event->content, "getsource") == 0) {
+			char *src = malloc(16384);
+			loadtsv(src);
+
+			struct discord_attachment attachment = {
+				.content = src,
+				.filename = "players.tsv"
+			};
+			struct discord_attachments attachments = {
+				.size = 1,
+				.array = &attachment
+			};
+			struct discord_create_message params = {
+				.attachments = &attachments
+			};
+			discord_create_message(client, event->channel_id, &params, NULL);
+			free(src);
+			return;
+		}
 		if (event->attachments->size == 0)
 			return;
 		if (strchr(event->attachments->array->filename, '.') == NULL)
@@ -466,9 +509,19 @@ on_message(struct discord *client, const struct discord_message *event)
 		player.name = event->author->username;
 		forline(&player, txt);
 
-		if (strcmp(player.kingdom, KINGDOM) != 0) {
-			struct discord_create_message params = { .content = "Sorry you're not part of the kingdom :/" };
-			discord_create_message(client, event->channel_id, &params, NULL);
+		if (kingdom_verification) {
+			int i = sizeof(kingdoms) / sizeof(kingdoms[0]);
+
+			while (i > 0 && strcmp(player.kingdom, kingdoms[i++]) != 0);
+
+			if (i == 0) {
+				struct discord_create_message params = {
+					.content = "Sorry you're not part of the kingdom :/"
+				};
+				discord_create_message(client, event->channel_id, &params, NULL);
+			} else {
+				savetotsv(&player);
+			}
 		} else {
 			savetotsv(&player);
 		}
@@ -500,6 +553,7 @@ on_message(struct discord *client, const struct discord_message *event)
 
 	} else if (event->channel_id == RAIDS_ID) {
 		/* TODO */
+	} else if (event->channel_id == TEST_ID) {
 	}
 }
 
