@@ -2,4 +2,4 @@ lib dependencies: concord, tesseract, curl
 
 TODO:
 command !info @player or !info playername to get their info
-only save if player.kingdom = "Scream of Terra"
+csv -> tsv

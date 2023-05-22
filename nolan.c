@@ -37,6 +37,21 @@ typedef struct {
 	char *codex;
 } Player;
 
+void die(const char *errstr);
+char *nstrchr(const char *p, int c, int n);
+static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
+void dlimg(char *url);
+char *extract_txt_from_img(void);
+void initplayer(Player *player);
+char *trim(char *start, char *end, char *line);
+void parseline(Player *player, char *line);
+void forline(Player *player, char *src);
+void createcsv(void);
+int playerinfile(Player *player, int col);
+void savetocsv(Player *player);
+void on_ready(struct discord *client, const struct discord_ready *event);
+void on_message(struct discord *client, const struct discord_message *event);
+
 void
 die(const char *errstr)
 {
@@ -45,7 +60,7 @@ die(const char *errstr)
 }
 
 char *
-nstrchr(const char *p, char c, int n)
+nstrchr(const char *p, int c, int n)
 {
 	do {
 		if (n == 0)
@@ -313,9 +328,8 @@ void
 savetocsv(Player *player)
 {
 	FILE *fw, *fr;
-	int pos, cpt = 0, ch, edited = 0, t, lineNum;
-	char c;
-	edited = 0;
+	int pos, c, cpt = 0;
+	int edited = 0;
 
 	createcsv();
 	pos = playerinfile(player, 1);

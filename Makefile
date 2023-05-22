@@ -1,13 +1,7 @@
-PREFIX = /usr/local
-CC = cc
-#CFLAGS = -g -Wall -W -ansi -Werror
-DEBUG_CFLAGS = -g -Wall -W -ansi -pedantic -Werror -Wfloat-equal\
-	-Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align\
-       	-Waggregate-return -Wstrict-prototypes -Wmissing-prototypes\
-       	-Wmissing-declarations -Wnested-externs -Wunreachable-code\
-	-Wundef -Wshadow
-LDLFLAGS = -ltesseract -lleptonica -ldiscord -lcurl
-
+PREFIX   ?= /usr/local
+CC       ?= cc
+CFLAGS   += -std=c99 -pedantic -Wall -O2 -g -W
+LDLFLAGS += -ltesseract -lleptonica -ldiscord -lcurl
 
 SRC = nolan.c
 OBJ = ${SRC:.c=.o}
@@ -34,4 +28,4 @@ install: all
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/nolan
 
-.PHONY: all debug clean distclean install uninstall
+.PHONY: all clean distclean install uninstall
