@@ -1,0 +1,8 @@
+*.jpg
+*.png
+*.o
+*.log
+*.csv
+img
+nolan
+config.json
