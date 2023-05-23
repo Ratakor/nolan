@@ -39,7 +39,6 @@ typedef struct {
 } Player;
 
 void die(const char *errstr);
-char *nstrchr(const char *p, int c, int n);
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
 void dlimg(char *url);
 char *extract_txt_from_img(void);
@@ -96,19 +95,6 @@ die(const char *errstr)
 {
 	fputs(errstr, stderr);
 	exit(EXIT_FAILURE);
-}
-
-char *
-nstrchr(const char *p, int c, int n)
-{
-	do {
-		if (n == 0)
-			return (char *)p;
-		if (*p == c)
-			n--;
-	} while (*p++);
-
-	return NULL;
 }
 
 static size_t
@@ -392,7 +378,7 @@ playerinfile(Player *player, int col)
 		die("saveplayer: cannot open players.tsv\n");
 
 	while ((p = fgets(buf, MAX, f)) != NULL) {
-		endname = nstrchr(p, '\t', col);
+		endname = strchr(p, '\t');
 		if (--endname)
 			*endname = 0;
 		if (strcmp(player->name, p) == 0) {
