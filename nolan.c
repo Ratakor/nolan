@@ -8,33 +8,35 @@
 
 #include "config.h"
 
-#define MAX       350
-#define NKINGDOM  sizeof(kingdoms) / sizeof(kingdoms[0])
-#define NFIELDS   24
+#define MAX         300
+#define NKINGDOM    sizeof(kingdoms) / sizeof(kingdoms[0])
+#define MAX_PLAYERS NKINGDOM * 50
+#define NFIELDS     24
 
+/* ALL FIELDS MUST HAVE THE SAME SIZE */
 typedef struct {
 	char *name;
-	char *level;
-	char *ascension;
 	char *kingdom;
-	char *global;
-	char *regional;
-	char *competitive;
-	char *playtime;
-	char *monsters;
-	char *bosses;
-	char *players;
-	char *quests;
-	char *explored;
-	char *taken;
-	char *dungeons;
-	char *coliseum;
-	char *items;
-	char *fish;
-	char *distance;
-	char *reputation;
-	char *endless;
-	char *codex;
+	long level;
+	long ascension;
+	long global;
+	long regional;
+	long competitive;
+	long playtime;
+	long monsters;
+	long bosses;
+	long players;
+	long quests;
+	long explored;
+	long taken;
+	long dungeons;
+	long coliseum;
+	long items;
+	long fish;
+	long distance;
+	long reputation;
+	long endless;
+	long codex;
 	u64snowflake userid;
 	char *bufptr;
 } Player;
@@ -43,11 +45,10 @@ void die(const char *errstr);
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
 void dlimg(char *url);
 char *extract_txt_from_img(void);
-void initplayer(Player *player);
-Player createplayerfromtsv(int line);
+Player loadplayerfromfile(int line);
 void initplayers(void);
 void updateplayers(Player *player);
-char *trim(char *start, char *end, char *line);
+void trimall(char *str);
 void parseline(Player *player, char *line);
 void forline(Player *player, char *src);
 void createtsv(void);
@@ -65,13 +66,13 @@ void on_leaderboard(struct discord *client, const struct discord_message *event)
 void on_info(struct discord *client, const struct discord_message *event);
 void on_help(struct discord *client, const struct discord_message *event);
 
-static Player players[NKINGDOM * 50];
+static Player players[MAX_PLAYERS];
 static int nplayers;
 static const char *fields[] = {
 	"Name",
+	"Kingdom",
 	"Level",
 	"Ascension",
-	"Kingdom",
 	"Global Rank",
 	"Regional Rank",
 	"Competitive Rank",
@@ -160,17 +161,8 @@ extract_txt_from_img(void)
 	return txt;
 }
 
-void
-initplayer(Player *player)
-{
-	for (int i = 0; i < NFIELDS - 2; i++)
-		*((char **)player + i) = NULL;
-	player->userid = 0;
-	player->bufptr = NULL;
-}
-
 Player
-createplayerfromtsv(int line)
+loadplayerfromfile(int line)
 {
 	FILE *f;
 	Player player;
@@ -178,10 +170,10 @@ createplayerfromtsv(int line)
 	int i = 0;
 
 	if (line < 1)
-		die("createplayerfromtsv: line < 1\n");
+		die("loadplayerfromfile: line < 1\n"); /* description line */
 
 	if ((f = fopen("players.tsv", "r")) == NULL)
-		die("createplayerfromtsv: cannot open players.tsv\n");
+		die("loadplayerfromfile: cannot open players.tsv\n");
 
 	while (i++ <= line && (p = fgets(buf, MAX, f)) != NULL);
 	fclose(f);
@@ -190,22 +182,22 @@ createplayerfromtsv(int line)
 	player.bufptr = buf;
 
 	/* -2 because the last field in tsv finish with a '\n'
-	   and userid is not a char *
 	   and bufptr is not in the tsv */
 	while (i < NFIELDS - 2 && *p != '\0') {
 		if (*p == '\t') {
 			*p = '\0';
-			*((char **)&player + i) = val;
+			if (i <= 1) /* name and kingdom */
+				((char **)&player)[i] = val;
+			else
+				((long *)&player)[i] = atol(val);
 			val = p + 1;
 			i++;
 		}
 		p++;
 	}
-
 	if (i != NFIELDS - 2)
-		die("createplayerfromtsv: a player is missing a field\n");
-
-	player.userid = atol(val);
+		die("loadplayerfromfile: a player is missing a field\n");
+	player.userid = strtoul(val, NULL, 10);
 
 	return player;
 }
@@ -225,101 +217,120 @@ initplayers(void)
 	nplayers--; /* first line is not a player */
 
 	for (int i = 0; i < nplayers; i++)
-		players[i] = createplayerfromtsv(i + 1);
+		players[i] = loadplayerfromfile(i + 1);
 }
 
 void
 updateplayers(Player *player)
 {
-	int i = 0;
+	int i = 0, j;
 
 	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
 		i++;
 	if (i == nplayers)
 		nplayers++;
-	/* NFIELDS - 2 because userid is not a char * and
-	   we want to keep the original bufptr */
-	for (int j = 1; j < NFIELDS - 2; j++)
-		*((char **)&players[i] + j) = *((char **)player + j);
-	players[i].userid = player->userid;
+	/* NFIELDS - 1 because we want to keep the original bufptr */
+	for (j = 1; j < NFIELDS - 1; j++)
+		((void **)&players[i])[j] = ((void **)player)[j];
 }
 
-char *
-trim(char *start, char *end, char *line)
+int
+playtimetoint(char *playtime)
 {
-	char *trimmed = line;
+	/* TODO */
+	return 0;
+}
 
-	if (start != NULL) {
-		while (*start && (*trimmed++ == *start++));
+/* trim everything that is not a number or a left parenthesis */
+void
+trimall(char *str)
+{
+	const char *r = str;
+	char *w = str;
 
-		/* if (*start != 0) */
-		/* 	die("trim: start was not found in line\n"); */
-	}
+	do {
+		if ((*r >= 48 && *r <= 57) || *r == '(')
+			*w++ = *r;
+	} while (*r++);
 
-	if (end != NULL) {
-		char *endtrimmed = trimmed;
-		char *endofend = end;
-
-		while (*endtrimmed++);
-		endtrimmed--;
-		while (*endofend++);
-		endofend--;
-
-		while ((*endtrimmed-- == *endofend--) && (endofend != end));
-		if ((endofend == end) && (*endtrimmed == *endofend ))
-			*endtrimmed = 0;
-		/* else */
-		/* 	die("trim: end was not found in line\n"); */
-	}
-
-	return trimmed;
+	*w = 0;
 }
 
 void
 parseline(Player *player, char *line)
 {
+	char *str;
+
+	if (strncmp(line, "KINGDOM", 7) == 0) {
+		str = "KINGDOM ";
+		while (*str && (*line++ == *str++));
+		player->kingdom = line;
+		return;
+	}
+
+	if (strncmp(line, "PLAYTIME", 8) == 0) {
+		/* TODO */
+		/* player->playtime = strip("PLAYTIME ", NULL, line); */
+		return;
+	}
+
 	if (strncmp(line, "LEVEL", 5) == 0) {
-		player->level = trim("LEVEL ", NULL, line);
+		trimall(line);
+		player->level = atol(line);
 	} else if (strncmp(line, "ASCENSION LEVEL", 15) == 0) {
-		player->ascension = trim("ASCENSION LEVEL ", NULL, line);
-	} else if (strncmp(line, "KINGDOM", 7) == 0) {
-		player->kingdom = trim("KINGDOM ", NULL, line);
+		trimall(line);
+		player->ascension = atol(line);
 	} else if (strncmp(line, "GLOBAL RANK", 11) == 0) {
-		player->global = trim("GLOBAL RANK #", " @", line);
+		trimall(line);
+		player->global = atol(line);
 	} else if (strncmp(line, "REGIONAL RANK", 12) == 0) {
-		player->regional = trim("REGIONAL RANK #", " @", line);
+		trimall(line);
+		player->regional = atol(line);
 	} else if (strncmp(line, "COMPETITIVE RANK", 16) == 0) {
-		player->competitive = trim("COMPETITIVE RANK #", " @", line);
-	} else if (strncmp(line, "PLAYTIME", 8) == 0) {
-		player->playtime = trim("PLAYTIME ", NULL, line);
+		trimall(line);
+		player->competitive = atol(line);
 	} else if (strncmp(line, "MONSTERS SLAIN", 14) == 0) {
-		player->monsters = trim("MONSTERS SLAIN ", " @", line);
+		trimall(line);
+		player->monsters = atol(line);
 	} else if (strncmp(line, "BOSSES SLAIN", 12) == 0) {
-		player->bosses = trim("BOSSES SLAIN ", " @", line);
+		trimall(line);
+		player->bosses = atol(line);
 	} else if (strncmp(line, "PLAYERS DEFEATED", 16) == 0) {
-		player->players = trim("PLAYERS DEFEATED ", " @", line);
+		trimall(line);
+		player->players = atol(line);
 	} else if (strncmp(line, "QUESTS COMPLETED", 16) == 0) {
-		player->quests = trim("QUESTS COMPLETED ", " @", line);
+		trimall(line);
+		player->quests = atol(line);
 	} else if (strncmp(line, "AREAS EXPLORED", 14) == 0) {
-		player->explored = trim("AREAS EXPLORED ", " @", line);
+		trimall(line);
+		player->explored = atol(line);
 	} else if (strncmp(line, "AREAS TAKEN", 11) == 0) {
-		player->taken = trim("AREAS TAKEN ", " @", line);
+		trimall(line);
+		player->taken = atol(line);
 	} else if (strncmp(line, "DUNGEONS CLEARED", 16) == 0) {
-		player->dungeons = trim("DUNGEONS CLEARED ", " @", line);
+		trimall(line);
+		player->dungeons = atol(line);
 	} else if (strncmp(line, "COLISEUM WINS", 13) == 0) {
-		player->coliseum = trim("COLISEUM WINS ", " @", line);
+		trimall(line);
+		player->coliseum = atol(line);
 	} else if (strncmp(line, "ITEMS UPGRADED", 14) == 0) {
-		player->items = trim("ITEMS UPGRADED ", " @", line);
+		trimall(line);
+		player->items = atol(line);
 	} else if (strncmp(line, "FISH CAUGHT", 11) == 0) {
-		player->fish = trim("FISH CAUGHT ", " @", line);
+		trimall(line);
+		player->fish = atol(line);
 	} else if (strncmp(line, "DISTANCE TRAVELLED", 18) == 0) {
-		player->distance = trim("DISTANCE TRAVELLED ", NULL, line);
+		trimall(line);
+		player->distance = atol(line);
 	} else if (strncmp(line, "REPUTATION", 10) == 0) {
-		player->reputation = trim("REPUTATION ", " @", line);
+		trimall(line);
+		player->reputation = atol(line);
 	} else if (strncmp(line, "ENDLESS RECORD", 14) == 0) {
-		player->endless = trim("ENDLESS RECORD Floor ", " @", line);
+		trimall(line);
+		player->endless = atol(line);
 	} else if (strncmp(line, "ENTRIES COMPLETED", 17) == 0) {
-		player->codex = trim("ENTRIES COMPLETED ", " @", line);
+		trimall(line);
+		player->codex = atol(line);
 	}
 }
 
@@ -333,34 +344,15 @@ forline(Player *player, char *src)
 		if (endline)
 			*endline = 0;
 		parseline(player, p);
-		/* if (endline) */
-		/* 	*endline = '\n'; */
-		p = endline ? (endline + 1) : NULL;
+		p = endline ? (endline + 1) : 0;
 	}
 }
-
-/*
-void
-forlineraid(char *src)
-{
-	char *endline, *p = src;
-
-	while (p && strcmp(p, "+ Raid options") != 0) {
-		endline = strchr(p, '\n');
-		if (endline)
-			*endline = 0;
-		p = endline ? (endline + 1) : NULL;
-	}
-
-	src = p; // endline + 1;
-}
-*/
 
 void
 createtsv(void)
 {
 	FILE *f;
-	int size = 0;
+	int i, size = 0;
 
 	f = fopen("players.tsv", "r");
 
@@ -371,7 +363,7 @@ createtsv(void)
 
 	/* -2 because bufptr is not in the tsv */
 	if (size == 0 && (f = fopen("players.tsv", "w")) != NULL) {
-		for (int i = 0; i < NFIELDS - 2; i++)
+		for (i = 0; i < NFIELDS - 2; i++)
 			fprintf(f, "%s\t", fields[i]);
 		fprintf(f, "%s\n", fields[NFIELDS - 2]);
 	}
@@ -405,61 +397,61 @@ playerinfile(Player *player)
 void
 savetotsv(Player *player)
 {
-	FILE *fw, *fr;
+	FILE *w, *r;
 	int pos, c, cpt = 0;
 	int edited = 0;
 
 	pos = playerinfile(player);
 
-	if ((fr = fopen("players.tsv", "r")) == NULL)
+	if ((r = fopen("players.tsv", "r")) == NULL)
 		die("savetotsv: cannot open players.tsv (read)\n");
-	if ((fw = fopen("tmpfile", "w")) == NULL)
+	if ((w = fopen("tmpfile", "w")) == NULL)
 		die("savetotsv: cannot open players.tsv (write)\n");
 
-	while ((c = fgetc(fr)) != EOF) {
+	while ((c = fgetc(r)) != EOF) {
 		if (c == '\n')
 			cpt++;
 		if (!edited && cpt == pos - 1) {
 			if (cpt == 0)
-				fprintf(fw, "%s\t", player->name);
+				fprintf(w, "%s\t", player->name);
 			else
-				fprintf(fw, "\n%s\t", player->name);
+				fprintf(w, "\n%s\t", player->name);
 
-			fprintf(fw, "%s\t", player->level);
-			fprintf(fw, "%s\t", player->ascension);
-			fprintf(fw, "%s\t", player->kingdom);
-			fprintf(fw, "%s\t", player->global);
-			fprintf(fw, "%s\t", player->regional);
-			fprintf(fw, "%s\t", player->competitive);
-			fprintf(fw, "%s\t", player->playtime);
-			fprintf(fw, "%s\t", player->monsters);
-			fprintf(fw, "%s\t", player->bosses);
-			fprintf(fw, "%s\t", player->players);
-			fprintf(fw, "%s\t", player->quests);
-			fprintf(fw, "%s\t", player->explored);
-			fprintf(fw, "%s\t", player->taken);
-			fprintf(fw, "%s\t", player->dungeons);
-			fprintf(fw, "%s\t", player->coliseum);
-			fprintf(fw, "%s\t", player->items);
-			fprintf(fw, "%s\t", player->fish);
-			fprintf(fw, "%s\t", player->distance);
-			fprintf(fw, "%s\t", player->reputation);
-			fprintf(fw, "%s\t", player->endless);
-			fprintf(fw, "%s\t", player->codex);
-			fprintf(fw, "%lu\n", player->userid);
+			fprintf(w, "%s\t", player->kingdom);
+			fprintf(w, "%ld\t", player->level);
+			fprintf(w, "%ld\t", player->ascension);
+			fprintf(w, "%ld\t", player->global);
+			fprintf(w, "%ld\t", player->regional);
+			fprintf(w, "%ld\t", player->competitive);
+			fprintf(w, "%ld\t", player->playtime);
+			fprintf(w, "%ld\t", player->monsters);
+			fprintf(w, "%ld\t", player->bosses);
+			fprintf(w, "%ld\t", player->players);
+			fprintf(w, "%ld\t", player->quests);
+			fprintf(w, "%ld\t", player->explored);
+			fprintf(w, "%ld\t", player->taken);
+			fprintf(w, "%ld\t", player->dungeons);
+			fprintf(w, "%ld\t", player->coliseum);
+			fprintf(w, "%ld\t", player->items);
+			fprintf(w, "%ld\t", player->fish);
+			fprintf(w, "%ld\t", player->distance);
+			fprintf(w, "%ld\t", player->reputation);
+			fprintf(w, "%ld\t", player->endless);
+			fprintf(w, "%ld\t", player->codex);
+			fprintf(w, "%lu\n", player->userid);
 
 			edited = 1;
 
-			while ((c = fgetc(fr)) != EOF) {
+			while ((c = fgetc(r)) != EOF) {
 				if (c == '\n')
 					break;
 			}
 		} else
-			fprintf(fw, "%c", c);
+			fprintf(w, "%c", c);
 	}
 
-	fclose(fr);
-	fclose(fw);
+	fclose(r);
+	fclose(w);
 
 	remove("players.tsv");
 	rename("tmpfile", "players.tsv");
@@ -522,6 +514,10 @@ on_ready(struct discord *client, const struct discord_ready *event)
 void
 on_stats(struct discord *client, const struct discord_message *event)
 {
+	int i;
+	char *txt;
+	Player player;
+
 	if (event->attachments->size == 0)
 		return;
 	if (strchr(event->attachments->array->filename, '.') == NULL)
@@ -530,20 +526,18 @@ on_stats(struct discord *client, const struct discord_message *event)
 		return;
 
 	dlimg(event->attachments->array->url);
-	char *txt = extract_txt_from_img();
+	txt = extract_txt_from_img();
 
 	if (txt == NULL)
 		return;
 
-	Player player;
-
-	initplayer(&player);
+	memset(&player, 0, sizeof(player));
 	player.name = event->author->username;
 	player.userid = event->author->id;
 	forline(&player, txt);
 
 	if (kingdom_verification) {
-		int i = NKINGDOM;
+		i = NKINGDOM;
 
 		while (i > 0 && strcmp(player.kingdom, kingdoms[i++]) != 0);
 
@@ -567,6 +561,8 @@ on_stats(struct discord *client, const struct discord_message *event)
 void
 on_raids(struct discord *client, const struct discord_message *event)
 {
+	char *txt;
+
 	if (event->attachments->size == 0)
 		return;
 	if (strchr(event->attachments->array->filename, '.') == NULL)
@@ -575,14 +571,14 @@ on_raids(struct discord *client, const struct discord_message *event)
 		return;
 
 	dlimg(event->attachments->array->url);
-	char *txt = extract_txt_from_img();
+	txt = extract_txt_from_img();
 
 	if (txt == NULL)
 		return;
 
 	/* TODO */
+	/* "+ Raid options" */
 	return;
-	/* forlineraid(txt); */
 
 	struct discord_create_message msg = {
 		.content = txt
@@ -606,22 +602,22 @@ on_message(struct discord *client, const struct discord_message *event)
 void
 on_sourcetxt(struct discord *client, const struct discord_message *event)
 {
-	char *src = malloc(16384); /* TODO: malloc according to NKINGDOM */
-	loadtsv(src);
+	char *txt = malloc(MAX + MAX * MAX_PLAYERS);
+	loadtsv(txt);
 	struct discord_create_message msg = {
-		.content = src
+		.content = txt
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	free(src);
+	free(txt);
 }
 
 void
 on_source(struct discord *client, const struct discord_message *event)
 {
-	char *src = malloc(16384);
-	loadtsv(src);
+	char *txt = malloc(MAX + MAX * MAX_PLAYERS);
+	loadtsv(txt);
 	struct discord_attachment attachment = {
-		.content = src,
+		.content = txt,
 		.filename = "players.tsv"
 	};
 	struct discord_attachments attachments = {
@@ -632,7 +628,7 @@ on_source(struct discord *client, const struct discord_message *event)
 		.attachments = &attachments
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	free(src);
+	free(txt);
 }
 
 
@@ -648,7 +644,6 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 	}
 
 	int i = 0;
-	char *src;
 
 	while (i < NFIELDS && strcmp(fields[i], event->content) != 0)
 		i++;
@@ -660,17 +655,12 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		return;
 	}
 
-	src = malloc(1024);
-	*src = 0;
-
 	/* TODO */
 
 	struct discord_create_message msg = {
 		.content = "DOESN'T WORK"
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-
-	free(src);
 }
 
 void
@@ -684,10 +674,9 @@ on_info(struct discord *client, const struct discord_message *event)
 		return;
 	}
 
-	int i = 0;
-	char *src;
-	u64snowflake userid;
-	userid = useridtoul(event->content);
+	int i = 0, j;
+	char *txt, *p;
+	u64snowflake userid = useridtoul(event->content);
 
 	if (userid > 0)
 		while (i < nplayers && players[i].userid != userid)
@@ -704,38 +693,54 @@ on_info(struct discord *client, const struct discord_message *event)
 		return;
 	}
 
-	src = malloc(1024);
-	*src = 0;
+	txt = malloc(512);
+	*txt = 0;
 
-	for (int j = 0; j < NFIELDS - 2; j++) {
-		strcat(src, fields[j]);
-		strcat(src, ": ");
-		strcat(src, *((char **)&players[i] + j));
-		strcat(src, "\n");
+	for (j = 0; j < NFIELDS - 2; j++) {
+		strcat(txt, fields[j]);
+		strcat(txt, ": ");
+		if (j <= 1) { /* name and kingdom */
+			strcat(txt, ((char **)&players[i])[j]);
+		} else {
+			p = strrchr(txt, ' ');
+			sprintf(++p, "%ld", ((long *)&players[i])[j]);
+			if (j == 18) /* distance */
+				strcat(txt, "m");
+		}
+		strcat(txt, "\n");
 	}
 
 	struct discord_create_message msg = {
-		.content = src
+		.content = txt
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
 
-	free(src);
+	free(txt);
 }
 
 void
-on_help(struct discord *client, const struct discord_message *event)
+on_help(struct discord * client, const struct discord_message * event)
 {
+	char *txt = malloc(4096), *p;
+
+	strcpy(txt, "Post image to <#");
+	p = strchr(txt, '#');;
+	sprintf(++p, "%lu", STATS_ID);
+	strcat(txt, "> to enter the database.\n");
+	strcat(txt, "Commands: \n");
+	strcat(txt, "\t?sourcetxt or ?srctxt\n");
+	strcat(txt, "\t?source or ?src\n");
+	strcat(txt, "\t?info\n");
+	strcat(txt, "\t?leaderboard or ?lb (not implemented yet)\n");
+	strcat(txt, "\t?help\n\n");
+	strcat(txt, "Try them or ask Ratakor to know what they do.");
+
 	struct discord_create_message msg = {
-		.content = "Post image to stat-bot to enter the database.\n\
-Commands:\n\
-	?sourcetxt or ?srctxt\n\
-	?source or ?src\n\
-	?info\n\
-	?leaderboard or ?lb (not implemented yet)\n\
-	?help\n\n\
-Ask Ratakor to know what they do."
+		.content = txt
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+
+	free(txt);
 }
 
 int
@@ -751,8 +756,8 @@ main(void)
 	discord_set_on_command(client, "?sourcetxt", &on_sourcetxt);
 	discord_set_on_command(client, "?src", &on_source);
 	discord_set_on_command(client, "?source", &on_source);
-	/* discord_set_on_command(client, "?leaderboard", &on_leaderboard); */
-	/* discord_set_on_command(client, "?lb", &on_leaderboard); */
+	discord_set_on_command(client, "?leaderboard", &on_leaderboard);
+	discord_set_on_command(client, "?lb", &on_leaderboard);
 	discord_set_on_command(client, "?info", &on_info);
 	discord_set_on_command(client, "?help", &on_help);
 
