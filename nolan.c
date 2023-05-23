@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <locale.h>
 #include <leptonica/allheaders.h>
 #include <tesseract/capi.h>
 #include <curl/curl.h>
@@ -48,6 +49,8 @@ char *extract_txt_from_img(void);
 Player loadplayerfromfile(int line);
 void initplayers(void);
 void updateplayers(Player *player);
+long playtimetolong(char *playtime);
+char *playtimetostr(long playtime);
 void trimall(char *str);
 void parseline(Player *player, char *line);
 void forline(Player *player, char *src);
@@ -234,11 +237,32 @@ updateplayers(Player *player)
 		((void **)&players[i])[j] = ((void **)player)[j];
 }
 
-int
-playtimetoint(char *playtime)
+long
+playtimetolong(char *playtime)
 {
-	/* TODO */
-	return 0;
+	char *str = "days, ";
+	int days, hours;
+
+	days = atol(playtime);
+	playtime = strchr(playtime, 'd');
+	while (*str && (*playtime++ == *str++));
+	hours = atol(playtime);
+
+	return days * 24 + hours;
+}
+
+char *
+playtimetostr(long playtime)
+{
+	int days, hours;
+	char *buf;
+
+	days = playtime / 24;
+	hours = playtime % 24;
+	buf = malloc(20);
+	sprintf(buf, "%'d days, %'d hours", days, hours);
+
+	return buf;
 }
 
 /* trim everything that is not a number or a left parenthesis */
@@ -269,8 +293,9 @@ parseline(Player *player, char *line)
 	}
 
 	if (strncmp(line, "PLAYTIME", 8) == 0) {
-		/* TODO */
-		/* player->playtime = strip("PLAYTIME ", NULL, line); */
+		str = "PLAYTIME ";
+		while (*str && (*line++ == *str++));
+		player->playtime = playtimetolong(line);
 		return;
 	}
 
@@ -701,9 +726,14 @@ on_info(struct discord *client, const struct discord_message *event)
 		strcat(txt, ": ");
 		if (j <= 1) { /* name and kingdom */
 			strcat(txt, ((char **)&players[i])[j]);
+		} else if (j == 7) { /* playtime */
+			p = playtimetostr(((long *)&players[i])[j]);
+			strcat(txt, p);
+			free(p);
 		} else {
 			p = strrchr(txt, ' ');
-			sprintf(++p, "%ld", ((long *)&players[i])[j]);
+			sprintf(++p, "%'ld", ((long *)&players[i])[j]);
+
 			if (j == 18) /* distance */
 				strcat(txt, "m");
 		}
@@ -746,6 +776,7 @@ on_help(struct discord * client, const struct discord_message * event)
 int
 main(void)
 {
+	setlocale(LC_NUMERIC, "");
 	ccord_global_init();
 	struct discord *client = discord_config_init("config.json");
 
