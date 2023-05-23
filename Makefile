@@ -1,6 +1,7 @@
 PREFIX   ?= /usr/local
 CC       ?= cc
-CFLAGS   += -std=c99 -pedantic -Wall -O2 -g -W
+DEBUG     = -g -W -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
+CFLAGS   += -std=c99 -pedantic -Wall -O2 ${DEBUG}
 LDLFLAGS += -ltesseract -lleptonica -ldiscord -lcurl
 
 SRC = nolan.c
