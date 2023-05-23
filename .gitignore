@@ -2,6 +2,7 @@
 *.png
 *.o
 *.log
+*.csv
 *.tsv
 img
 nolan

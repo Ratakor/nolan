@@ -10,8 +10,7 @@
 #include "config.h"
 
 #define MAX         300
-#define NKINGDOM    sizeof(kingdoms) / sizeof(kingdoms[0])
-#define MAX_PLAYERS NKINGDOM * 50
+#define MAX_PLAYERS sizeof(kingdoms) / sizeof(kingdoms[0]) * 50
 #define NFIELDS     24
 
 /* ALL FIELDS MUST HAVE THE SAME SIZE */
@@ -54,10 +53,10 @@ char *playtimetostr(long playtime);
 void trimall(char *str);
 void parseline(Player *player, char *line);
 void forline(Player *player, char *src);
-void createtsv(void);
+void createfile(void);
 int playerinfile(Player *player);
-void savetotsv(Player *player);
-void loadtsv(char *src);
+void savetofile(Player *player);
+void loadfile(char *src);
 u64snowflake useridtoul(char *id);
 void on_ready(struct discord *client, const struct discord_ready *event);
 void on_stats(struct discord *client, const struct discord_message *event);
@@ -175,8 +174,8 @@ loadplayerfromfile(int line)
 	if (line < 1)
 		die("loadplayerfromfile: line < 1\n"); /* description line */
 
-	if ((f = fopen("players.tsv", "r")) == NULL)
-		die("loadplayerfromfile: cannot open players.tsv\n");
+	if ((f = fopen(FILENAME, "r")) == NULL)
+		die("loadplayerfromfile: cannot open the players file\n");
 
 	while (i++ <= line && (p = fgets(buf, MAX, f)) != NULL);
 	fclose(f);
@@ -184,10 +183,12 @@ loadplayerfromfile(int line)
 	val = p;
 	player.bufptr = buf;
 
-	/* -2 because the last field in tsv finish with a '\n'
-	   and bufptr is not in the tsv */
+	/*
+	 * -2 because the last field in the file finish with a '\n'
+	 * and bufptr is not in the file
+	 */
 	while (i < NFIELDS - 2 && *p != '\0') {
-		if (*p == '\t') {
+		if (*p == DELIM) {
 			*p = '\0';
 			if (i <= 1) /* name and kingdom */
 				((char **)&player)[i] = val;
@@ -211,8 +212,8 @@ initplayers(void)
 	FILE *f;
 	char buf[MAX];
 
-	if ((f = fopen("players.tsv", "r")) == NULL)
-		die("initplayers: cannot open players.tsv\n");
+	if ((f = fopen(FILENAME, "r")) == NULL)
+		die("initplayers: cannot open the players file\n");
 
 	while (fgets(buf, MAX, f))
 		nplayers++;
@@ -385,22 +386,22 @@ forline(Player *player, char *src)
 }
 
 void
-createtsv(void)
+createfile(void)
 {
 	FILE *f;
 	int i, size = 0;
 
-	f = fopen("players.tsv", "r");
+	f = fopen(FILENAME, "r");
 
 	if (f != NULL) {
 		fseek(f, 0, SEEK_END);
 		size = ftell(f);
 	}
 
-	/* -2 because bufptr is not in the tsv */
-	if (size == 0 && (f = fopen("players.tsv", "w")) != NULL) {
+	/* -2 because bufptr is not in the file */
+	if (size == 0 && (f = fopen(FILENAME, "w")) != NULL) {
 		for (i = 0; i < NFIELDS - 2; i++)
-			fprintf(f, "%s\t", fields[i]);
+			fprintf(f, "%s%c", fields[i], DELIM);
 		fprintf(f, "%s\n", fields[NFIELDS - 2]);
 	}
 
@@ -414,11 +415,11 @@ playerinfile(Player *player)
 	char buf[MAX], *p, *endname;
 	int line = 1;
 
-	if ((f = fopen("players.tsv", "r")) == NULL)
-		die("playerinfile: cannot open players.tsv\n");
+	if ((f = fopen(FILENAME, "r")) == NULL)
+		die("playerinfile: cannot open the players file\n");
 
 	while ((p = fgets(buf, MAX, f)) != NULL) {
-		endname = strchr(p, '\t');
+		endname = strchr(p, DELIM);
 		if (endname)
 			*endname = 0;
 		if (strcmp(player->name, p) == 0)
@@ -431,7 +432,7 @@ playerinfile(Player *player)
 }
 
 void
-savetotsv(Player *player)
+savetofile(Player *player)
 {
 	FILE *w, *r;
 	int pos, c, cpt = 0;
@@ -439,41 +440,41 @@ savetotsv(Player *player)
 
 	pos = playerinfile(player);
 
-	if ((r = fopen("players.tsv", "r")) == NULL)
-		die("savetotsv: cannot open players.tsv (read)\n");
+	if ((r = fopen(FILENAME, "r")) == NULL)
+		die("savetofile: cannot open the players file (read)\n");
 	if ((w = fopen("tmpfile", "w")) == NULL)
-		die("savetotsv: cannot open players.tsv (write)\n");
+		die("savetofile: cannot open the players players file (write)\n");
 
 	while ((c = fgetc(r)) != EOF) {
 		if (c == '\n')
 			cpt++;
 		if (!edited && cpt == pos - 1) {
 			if (cpt == 0)
-				fprintf(w, "%s\t", player->name);
+				fprintf(w, "%s%c", player->name, DELIM);
 			else
-				fprintf(w, "\n%s\t", player->name);
+				fprintf(w, "\n%s%c", player->name, DELIM);
 
-			fprintf(w, "%s\t", player->kingdom);
-			fprintf(w, "%ld\t", player->level);
-			fprintf(w, "%ld\t", player->ascension);
-			fprintf(w, "%ld\t", player->global);
-			fprintf(w, "%ld\t", player->regional);
-			fprintf(w, "%ld\t", player->competitive);
-			fprintf(w, "%ld\t", player->playtime);
-			fprintf(w, "%ld\t", player->monsters);
-			fprintf(w, "%ld\t", player->bosses);
-			fprintf(w, "%ld\t", player->players);
-			fprintf(w, "%ld\t", player->quests);
-			fprintf(w, "%ld\t", player->explored);
-			fprintf(w, "%ld\t", player->taken);
-			fprintf(w, "%ld\t", player->dungeons);
-			fprintf(w, "%ld\t", player->coliseum);
-			fprintf(w, "%ld\t", player->items);
-			fprintf(w, "%ld\t", player->fish);
-			fprintf(w, "%ld\t", player->distance);
-			fprintf(w, "%ld\t", player->reputation);
-			fprintf(w, "%ld\t", player->endless);
-			fprintf(w, "%ld\t", player->codex);
+			fprintf(w, "%s%c", player->kingdom, DELIM);
+			fprintf(w, "%ld%c", player->level, DELIM);
+			fprintf(w, "%ld%c", player->ascension, DELIM);
+			fprintf(w, "%ld%c", player->global, DELIM);
+			fprintf(w, "%ld%c", player->regional, DELIM);
+			fprintf(w, "%ld%c", player->competitive, DELIM);
+			fprintf(w, "%ld%c", player->playtime, DELIM);
+			fprintf(w, "%ld%c", player->monsters, DELIM);
+			fprintf(w, "%ld%c", player->bosses, DELIM);
+			fprintf(w, "%ld%c", player->players, DELIM);
+			fprintf(w, "%ld%c", player->quests, DELIM);
+			fprintf(w, "%ld%c", player->explored, DELIM);
+			fprintf(w, "%ld%c", player->taken, DELIM);
+			fprintf(w, "%ld%c", player->dungeons, DELIM);
+			fprintf(w, "%ld%c", player->coliseum, DELIM);
+			fprintf(w, "%ld%c", player->items, DELIM);
+			fprintf(w, "%ld%c", player->fish, DELIM);
+			fprintf(w, "%ld%c", player->distance, DELIM);
+			fprintf(w, "%ld%c", player->reputation, DELIM);
+			fprintf(w, "%ld%c", player->endless, DELIM);
+			fprintf(w, "%ld%c", player->codex, DELIM);
 			fprintf(w, "%lu\n", player->userid);
 
 			edited = 1;
@@ -489,18 +490,18 @@ savetotsv(Player *player)
 	fclose(r);
 	fclose(w);
 
-	remove("players.tsv");
-	rename("tmpfile", "players.tsv");
+	remove(FILENAME);
+	rename("tmpfile", FILENAME);
 }
 
 void
-loadtsv(char *src)
+loadfile(char *src)
 {
 	FILE *f;
 	char *p = src, c;
 
-	if ((f = fopen("players.tsv", "r")) == NULL)
-		die("loadtsv: cannot open players.tsv\n");
+	if ((f = fopen(FILENAME, "r")) == NULL)
+		die("loadfile: cannot open the players file\n");
 
 	while ((c = fgetc(f)) != EOF && (*p++ = c));
 	*p = 0;
@@ -568,12 +569,13 @@ on_stats(struct discord *client, const struct discord_message *event)
 		return;
 
 	memset(&player, 0, sizeof(player));
+
 	player.name = event->author->username;
 	player.userid = event->author->id;
 	forline(&player, txt);
 
 	if (kingdom_verification) {
-		i = NKINGDOM;
+		i = sizeof(kingdoms) / sizeof(kingdoms[0]);
 
 		while (i > 0 && strcmp(player.kingdom, kingdoms[i++]) != 0);
 
@@ -583,11 +585,11 @@ on_stats(struct discord *client, const struct discord_message *event)
 			};
 			discord_create_message(client, event->channel_id, &msg, NULL);
 		} else {
-			savetotsv(&player);
+			savetofile(&player);
 			updateplayers(&player);
 		}
 	} else {
-		savetotsv(&player);
+		savetofile(&player);
 		updateplayers(&player);
 	}
 
@@ -612,8 +614,11 @@ on_raids(struct discord *client, const struct discord_message *event)
 	if (txt == NULL)
 		return;
 
-	/* TODO */
-	/* "+ Raid options" */
+	/*
+	 * TODO
+	 * "+ Raid options"
+	 */
+
 	return;
 
 	struct discord_create_message msg = {
@@ -639,10 +644,10 @@ void
 on_source(struct discord *client, const struct discord_message *event)
 {
 	char *txt = malloc(MAX + MAX * MAX_PLAYERS);
-	loadtsv(txt);
+	loadfile(txt);
 	struct discord_attachment attachment = {
 		.content = txt,
-		.filename = "players.tsv"
+		.filename = FILENAME
 	};
 	struct discord_attachments attachments = {
 		.size = 1,
@@ -789,7 +794,7 @@ main(void)
 	discord_set_on_command(client, "?info", &on_info);
 	discord_set_on_command(client, "?help", &on_help);
 
-	createtsv();
+	createfile();
 	initplayers();
 
 	discord_run(client);
