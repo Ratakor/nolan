@@ -3,4 +3,3 @@ lib dependencies: concord, tesseract, curl
 TODO:
 !leaderboard [category]
 use atoi and if it cannot convert prompt the use to correct the value
-command !info @player to get their info -> add userid to Player

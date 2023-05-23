@@ -8,9 +8,9 @@
 
 #include "config.h"
 
-#define MAX       300
+#define MAX       350
 #define NKINGDOM  sizeof(kingdoms) / sizeof(kingdoms[0])
-#define NFIELDS   22
+#define NFIELDS   24
 
 typedef struct {
 	char *name;
@@ -35,6 +35,7 @@ typedef struct {
 	char *reputation;
 	char *endless;
 	char *codex;
+	u64snowflake userid;
 	char *bufptr;
 } Player;
 
@@ -50,9 +51,10 @@ char *trim(char *start, char *end, char *line);
 void parseline(Player *player, char *line);
 void forline(Player *player, char *src);
 void createtsv(void);
-int playerinfile(Player *player, int col);
+int playerinfile(Player *player);
 void savetotsv(Player *player);
 void loadtsv(char *src);
+u64snowflake useridtoul(char *id);
 void on_ready(struct discord *client, const struct discord_ready *event);
 void on_stats(struct discord *client, const struct discord_message *event);
 void on_raids(struct discord *client, const struct discord_message *event);
@@ -88,6 +90,7 @@ static const char *fields[] = {
 	"Reputation",
 	"Endless Record",
 	"Entries Completed",
+	"User ID",
 };
 
 void
@@ -160,8 +163,10 @@ extract_txt_from_img(void)
 void
 initplayer(Player *player)
 {
-	for (int i = 0; i < NFIELDS + 1; i++)
+	for (int i = 0; i < NFIELDS - 2; i++)
 		*((char **)player + i) = NULL;
+	player->userid = 0;
+	player->bufptr = NULL;
 }
 
 Player
@@ -184,7 +189,10 @@ createplayerfromtsv(int line)
 	val = p;
 	player.bufptr = buf;
 
-	while (i < NFIELDS - 1 && *p != '\0') {
+	/* -2 because the last field in tsv finish with a '\n'
+	   and userid is not a char *
+	   and bufptr is not in the tsv */
+	while (i < NFIELDS - 2 && *p != '\0') {
 		if (*p == '\t') {
 			*p = '\0';
 			*((char **)&player + i) = val;
@@ -194,10 +202,10 @@ createplayerfromtsv(int line)
 		p++;
 	}
 
-	if (i != NFIELDS - 1)
-		die("createplayerfromtsv: i != NFIELDS - 1\n");
+	if (i != NFIELDS - 2)
+		die("createplayerfromtsv: a player is missing a field\n");
 
-	*((char **)&player + i) = val;
+	player.userid = atol(val);
 
 	return player;
 }
@@ -214,7 +222,7 @@ initplayers(void)
 	while (fgets(buf, MAX, f)) {
 		nplayers++;
 	}
-	nplayers--;
+	nplayers--; /* first line is not a player */
 
 	for (int i = 0; i < nplayers; i++)
 		players[i] = createplayerfromtsv(i + 1);
@@ -229,8 +237,11 @@ updateplayers(Player *player)
 		i++;
 	if (i == nplayers)
 		nplayers++;
-	for (int j = 1; j < NFIELDS; j++)
+	/* NFIELDS - 2 because userid is not a char * and
+	   we want to keep the original bufptr */
+	for (int j = 1; j < NFIELDS - 2; j++)
 		*((char **)&players[i] + j) = *((char **)player + j);
+	players[i].userid = player->userid;
 }
 
 char *
@@ -358,36 +369,32 @@ createtsv(void)
 		size = ftell(f);
 	}
 
+	/* -2 because bufptr is not in the tsv */
 	if (size == 0 && (f = fopen("players.tsv", "w")) != NULL) {
-		for (int i = 0; i < NFIELDS - 1; i++)
+		for (int i = 0; i < NFIELDS - 2; i++)
 			fprintf(f, "%s\t", fields[i]);
-		fprintf(f, "%s\n", fields[NFIELDS - 1]);
+		fprintf(f, "%s\n", fields[NFIELDS - 2]);
 	}
 
 	fclose(f);
 }
 
 int
-playerinfile(Player *player, int col)
+playerinfile(Player *player)
 {
 	FILE *f;
 	char buf[MAX], *p, *endname;
 	int line = 1;
 
 	if ((f = fopen("players.tsv", "r")) == NULL)
-		die("saveplayer: cannot open players.tsv\n");
+		die("playerinfile: cannot open players.tsv\n");
 
 	while ((p = fgets(buf, MAX, f)) != NULL) {
 		endname = strchr(p, '\t');
-		if (--endname)
-			*endname = 0;
-		if (strcmp(player->name, p) == 0) {
-			if (endname)
-				*endname = '\t';
-			break;
-		}
 		if (endname)
-			*endname = '\t';
+			*endname = 0;
+		if (strcmp(player->name, p) == 0)
+			break;
 		line++;
 	}
 
@@ -402,7 +409,7 @@ savetotsv(Player *player)
 	int pos, c, cpt = 0;
 	int edited = 0;
 
-	pos = playerinfile(player, 1);
+	pos = playerinfile(player);
 
 	if ((fr = fopen("players.tsv", "r")) == NULL)
 		die("savetotsv: cannot open players.tsv (read)\n");
@@ -438,7 +445,8 @@ savetotsv(Player *player)
 			fprintf(fw, "%s\t", player->distance);
 			fprintf(fw, "%s\t", player->reputation);
 			fprintf(fw, "%s\t", player->endless);
-			fprintf(fw, "%s\n", player->codex);
+			fprintf(fw, "%s\t", player->codex);
+			fprintf(fw, "%lu\n", player->userid);
 
 			edited = 1;
 
@@ -469,6 +477,21 @@ loadtsv(char *src)
 	while ((c = fgetc(f)) != EOF && (*p++ = c));
 	*p = 0;
 	fclose(f);
+}
+
+u64snowflake
+useridtoul(char *id)
+{
+	char *start = id, *end = strchr(id, 0);
+
+	if (strncmp(start, "<@", 2) == 0 && strcmp(--end, ">") == 0) {
+		start += 2;
+		end = 0;
+
+		return strtoul(start, NULL, 10);
+	}
+
+	return 0;
 }
 
 void
@@ -516,6 +539,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 
 	initplayer(&player);
 	player.name = event->author->username;
+	player.userid = event->author->id;
 	forline(&player, txt);
 
 	if (kingdom_verification) {
@@ -582,7 +606,7 @@ on_message(struct discord *client, const struct discord_message *event)
 void
 on_sourcetxt(struct discord *client, const struct discord_message *event)
 {
-	char *src = malloc(16384);
+	char *src = malloc(16384); /* TODO: malloc according to NKINGDOM */
 	loadtsv(src);
 	struct discord_create_message msg = {
 		.content = src
@@ -662,9 +686,16 @@ on_info(struct discord *client, const struct discord_message *event)
 
 	int i = 0;
 	char *src;
+	u64snowflake userid;
+	userid = useridtoul(event->content);
 
-	while (i < nplayers && strcmp(players[i].name, event->content) != 0)
-		i++;
+	if (userid > 0)
+		while (i < nplayers && players[i].userid != userid)
+			i++;
+	else
+		while (i < nplayers && strcmp(players[i].name, event->content) != 0)
+			i++;
+
 	if (i == nplayers) {
 		struct discord_create_message msg = {
 			.content = "This player does not exist in the database"
@@ -676,7 +707,7 @@ on_info(struct discord *client, const struct discord_message *event)
 	src = malloc(1024);
 	*src = 0;
 
-	for (int j = 0; j < NFIELDS; j++) {
+	for (int j = 0; j < NFIELDS - 2; j++) {
 		strcat(src, fields[j]);
 		strcat(src, ": ");
 		strcat(src, *((char **)&players[i] + j));
