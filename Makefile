@@ -2,7 +2,7 @@ PREFIX   ?= /usr/local
 CC       ?= cc
 DEBUG     = -g -W -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
 CFLAGS   += -std=c99 -pedantic -Wall -O2 ${DEBUG}
-LDLFLAGS += -ltesseract -lleptonica -ldiscord -lcurl
+LDLFLAGS += -ltesseract -lleptonica -ldiscord -lcurl -lpthread
 
 SRC = nolan.c
 OBJ = ${SRC:.c=.o}
@@ -12,8 +12,13 @@ all: nolan
 .c.o:
 	${CC} -c ${CFLAGS} $<
 
+${OBJ}: config.json
+
+config.json:
+	cp config.def.json $@
+
 nolan: ${OBJ}
-	${CC} -o  $@  ${OBJ} ${LDLFLAGS}
+	${CC} -o $@ ${OBJ} ${LDLFLAGS}
 
 clean:
 	rm -f *.o

@@ -342,6 +342,23 @@ forline(Player *player, char *src)
 	}
 }
 
+/*
+void
+forlineraid(char *src)
+{
+	char *endline, *p = src;
+
+	while (p && strcmp(p, "+ Raid options") != 0) {
+		endline = strchr(p, '\n');
+		if (endline)
+			*endline = 0;
+		p = endline ? (endline + 1) : NULL;
+	}
+
+	src = p; // endline + 1;
+}
+*/
+
 void
 createtsv(void)
 {
@@ -473,7 +490,7 @@ on_ready(struct discord *client, const struct discord_ready *event)
 {
 	struct discord_activity activities[] = {
 		{
-			.name = "nothing",
+			.name = "?help",
 			.type = DISCORD_ACTIVITY_LISTENING,
 		},
 	};
@@ -540,8 +557,27 @@ on_stats(struct discord *client, const struct discord_message *event)
 void
 on_raids(struct discord *client, const struct discord_message *event)
 {
+	if (event->attachments->size == 0)
+		return;
+	if (strchr(event->attachments->array->filename, '.') == NULL)
+		return;
+	if (strncmp(event->attachments->array->content_type, "image", 5) != 0)
+		return;
+
+	dlimg(event->attachments->array->url);
+	char *txt = extract_txt_from_img();
+
+	if (txt == NULL)
+		return;
+
 	/* TODO */
 	return;
+	/* forlineraid(txt); */
+
+	struct discord_create_message msg = {
+		.content = txt
+	};
+	discord_create_message(client, event->channel_id, &msg, NULL);
 }
 
 
@@ -601,10 +637,30 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		return;
 	}
 
+	int i = 0;
+	char *src;
+
+	while (i < NFIELDS && strcmp(fields[i], event->content) != 0)
+		i++;
+	if (i == NFIELDS) {
+		struct discord_create_message msg = {
+			.content = "This is not a valid category"
+		};
+		discord_create_message(client, event->channel_id, &msg, NULL);
+		return;
+	}
+
+	src = malloc(1024);
+	*src = 0;
+
+	/* TODO */
+
 	struct discord_create_message msg = {
-		.content = "todo lol"
+		.content = "DOESN'T WORK"
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+
+	free(src);
 }
 
 void
@@ -655,18 +711,18 @@ on_help(struct discord *client, const struct discord_message *event)
 	struct discord_create_message msg = {
 		.content = "Post image to stat-bot to enter the database.\n\
 Commands:\n\
-	!sourcetxt or !srctxt\n\
-	!source or !src\n\
-	!info\n\
-	!leaderboard or !lb\n\
-	!help\n\n\
+	?sourcetxt or ?srctxt\n\
+	?source or ?src\n\
+	?info\n\
+	?leaderboard or ?lb (not implemented yet)\n\
+	?help\n\n\
 Ask Ratakor to know what they do."
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
 }
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 	ccord_global_init();
 	struct discord *client = discord_config_init("config.json");
@@ -674,14 +730,14 @@ main(int argc, char *argv[])
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT);
 	discord_set_on_ready(client, &on_ready);
 	discord_set_on_message_create(client, &on_message);
-	discord_set_on_command(client, "!srctxt", &on_sourcetxt);
-	discord_set_on_command(client, "!sourcetxt", &on_sourcetxt);
-	discord_set_on_command(client, "!src", &on_source);
-	discord_set_on_command(client, "!source", &on_source);
-	discord_set_on_command(client, "!leaderboard", &on_leaderboard);
-	discord_set_on_command(client, "!lb", &on_leaderboard);
-	discord_set_on_command(client, "!info", &on_info);
-	discord_set_on_command(client, "!help", &on_help);
+	discord_set_on_command(client, "?srctxt", &on_sourcetxt);
+	discord_set_on_command(client, "?sourcetxt", &on_sourcetxt);
+	discord_set_on_command(client, "?src", &on_source);
+	discord_set_on_command(client, "?source", &on_source);
+	/* discord_set_on_command(client, "?leaderboard", &on_leaderboard); */
+	/* discord_set_on_command(client, "?lb", &on_leaderboard); */
+	discord_set_on_command(client, "?info", &on_info);
+	discord_set_on_command(client, "?help", &on_help);
 
 	createtsv();
 	initplayers();
