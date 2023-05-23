@@ -70,7 +70,7 @@ void on_info(struct discord *client, const struct discord_message *event);
 void on_help(struct discord *client, const struct discord_message *event);
 
 static Player players[MAX_PLAYERS];
-static int nplayers;
+static int nplayers = 0;
 static const char *fields[] = {
 	"Name",
 	"Kingdom",
@@ -214,9 +214,8 @@ initplayers(void)
 	if ((f = fopen("players.tsv", "r")) == NULL)
 		die("initplayers: cannot open players.tsv\n");
 
-	while (fgets(buf, MAX, f)) {
+	while (fgets(buf, MAX, f))
 		nplayers++;
-	}
 	nplayers--; /* first line is not a player */
 
 	for (int i = 0; i < nplayers; i++)
@@ -230,11 +229,18 @@ updateplayers(Player *player)
 
 	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
 		i++;
-	if (i == nplayers)
+	if (i == nplayers) {
 		nplayers++;
-	/* NFIELDS - 1 because we want to keep the original bufptr */
-	for (j = 1; j < NFIELDS - 1; j++)
-		((void **)&players[i])[j] = ((void **)player)[j];
+		players[nplayers - 1] = loadplayerfromfile(nplayers);
+	} else {
+		/*
+		 * j = 1 because we want to keep the original username and
+		 * NFIELDS - 2 because we want to keep the original userid and
+		 * bufptr
+		 */
+		for (j = 1; j < NFIELDS - 2; j++)
+			((void **)&players[i])[j] = ((void **)player)[j];
+	}
 }
 
 long
@@ -243,6 +249,7 @@ playtimetolong(char *playtime)
 	char *str = "days, ";
 	int days, hours;
 
+	/* we assume that each players have played for at least 1 day */
 	days = atol(playtime);
 	playtime = strchr(playtime, 'd');
 	while (*str && (*playtime++ == *str++));
@@ -260,7 +267,11 @@ playtimetostr(long playtime)
 	days = playtime / 24;
 	hours = playtime % 24;
 	buf = malloc(20);
-	sprintf(buf, "%'d days, %'d hours", days, hours);
+	/* we assume that each players have played for at least 1 day */
+	if (hours == 0)
+		sprintf(buf, "%'d days", days);
+	else
+		sprintf(buf, "%'d days, %'d hours", days, hours);
 
 	return buf;
 }
@@ -625,18 +636,6 @@ on_message(struct discord *client, const struct discord_message *event)
 }
 
 void
-on_sourcetxt(struct discord *client, const struct discord_message *event)
-{
-	char *txt = malloc(MAX + MAX * MAX_PLAYERS);
-	loadtsv(txt);
-	struct discord_create_message msg = {
-		.content = txt
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
-	free(txt);
-}
-
-void
 on_source(struct discord *client, const struct discord_message *event)
 {
 	char *txt = malloc(MAX + MAX * MAX_PLAYERS);
@@ -662,7 +661,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 {
 	if (strlen(event->content) == 0) {
 		struct discord_create_message msg = {
-			.content = "NO WRONG, YOU MUST USE AN ARGUMENT"
+			.content = "NO WRONG, YOU MUST USE AN ARGUMENT!"
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
 		return;
@@ -674,7 +673,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		i++;
 	if (i == NFIELDS) {
 		struct discord_create_message msg = {
-			.content = "This is not a valid category"
+			.content = "This is not a valid category."
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
 		return;
@@ -683,7 +682,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 	/* TODO */
 
 	struct discord_create_message msg = {
-		.content = "DOESN'T WORK"
+		.content = "DOESN'T WORK!"
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
 }
@@ -693,7 +692,7 @@ on_info(struct discord *client, const struct discord_message *event)
 {
 	if (strlen(event->content) == 0) {
 		struct discord_create_message msg = {
-			.content = "NO WRONG, YOU MUST USE AN ARGUMENT"
+			.content = "NO WRONG, YOU MUST USE AN ARGUMENT!"
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
 		return;
@@ -703,16 +702,17 @@ on_info(struct discord *client, const struct discord_message *event)
 	char *txt, *p;
 	u64snowflake userid = useridtoul(event->content);
 
-	if (userid > 0)
+	if (userid > 0) {
 		while (i < nplayers && players[i].userid != userid)
 			i++;
-	else
+	} else {
 		while (i < nplayers && strcmp(players[i].name, event->content) != 0)
 			i++;
+	}
 
 	if (i == nplayers) {
 		struct discord_create_message msg = {
-			.content = "This player does not exist in the database"
+			.content = "This player does not exist in the database."
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
 		return;
@@ -751,14 +751,13 @@ on_info(struct discord *client, const struct discord_message *event)
 void
 on_help(struct discord * client, const struct discord_message * event)
 {
-	char *txt = malloc(4096), *p;
+	char *txt = malloc(2001), *p;
 
 	strcpy(txt, "Post image to <#");
 	p = strchr(txt, '#');;
 	sprintf(++p, "%lu", STATS_ID);
 	strcat(txt, "> to enter the database.\n");
 	strcat(txt, "Commands: \n");
-	strcat(txt, "\t?sourcetxt or ?srctxt\n");
 	strcat(txt, "\t?source or ?src\n");
 	strcat(txt, "\t?info\n");
 	strcat(txt, "\t?leaderboard or ?lb (not implemented yet)\n");
@@ -783,8 +782,6 @@ main(void)
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT);
 	discord_set_on_ready(client, &on_ready);
 	discord_set_on_message_create(client, &on_message);
-	discord_set_on_command(client, "?srctxt", &on_sourcetxt);
-	discord_set_on_command(client, "?sourcetxt", &on_sourcetxt);
 	discord_set_on_command(client, "?src", &on_source);
 	discord_set_on_command(client, "?source", &on_source);
 	discord_set_on_command(client, "?leaderboard", &on_leaderboard);
