@@ -503,7 +503,7 @@ compare(const void *e1, const void *e2)
 {
 	const Player p1 = *((const Player *)e1);
 	const Player p2 = *((const Player *)e2);
-	if (category >= 4 && category <= 6) /* ranks */
+	if (category == 4 || category == 6) /* ranks */
 		return ((long *)&p1)[category] - ((long *)&p2)[category];
 	return ((long *)&p2)[category] - ((long *)&p1)[category];
 }
@@ -709,6 +709,8 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		strcpy(txt, "NO WRONG, YOU MUST USE AN ARGUMENT!\n");
 		strcat(txt, "Valid categories are:\n");
 		for (i = 2; i < NFIELDS - 2; i++) {
+			if (i == 5) /* regional rank */
+				continue;
 			strcat(txt, fields[i]);
 			strcat(txt, "\n");
 		}
@@ -723,10 +725,12 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 	while (i < NFIELDS - 2 && strcmp(fields[i], event->content) != 0)
 		i++;
 
-	if (i == NFIELDS - 2) {
+	if (i == NFIELDS - 2 || i == 5) {
 		strcpy(txt, "This is not a valid category.\n");
 		strcat(txt, "Valid categories are:\n");
 		for (i = 2; i < NFIELDS - 2; i++) {
+			if (i == 5) /* regional rank */
+				continue;
 			strcat(txt, fields[i]);
 			strcat(txt, "\n");
 		}
