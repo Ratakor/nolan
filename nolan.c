@@ -172,7 +172,7 @@ loadplayerfromfile(int line)
 {
 	FILE *f;
 	Player player;
-	char *buf = malloc(MAX), *p, *val;
+	char *buf = malloc(MAX), *p = NULL, *val;
 	int i = 0;
 
 	if (line < 1)
@@ -183,6 +183,10 @@ loadplayerfromfile(int line)
 
 	while (i++ <= line && (p = fgets(buf, MAX, f)) != NULL);
 	fclose(f);
+
+	if (p == NULL)
+		die("loadplayerfromfile: player is not in the save file\n");
+
 	i = 0;
 	val = p;
 	player.bufptr = buf;
@@ -255,7 +259,8 @@ playtimetolong(char *playtime, char str[])
 	int days, hours;
 
 	days = atol(playtime);
-	playtime = strchr(playtime, str[0]);
+	if ((playtime = strchr(playtime, str[0])) == 0)
+		return days; /* less than a day of playtime */
 	while (*str && (*playtime++ == *str++));
 	hours = atol(playtime);
 
@@ -326,14 +331,14 @@ parseline(Player *player, char *line)
 		return;
 	}
 
-	if (strncmp(line, "LEVEL", LEN("LEVEL")) == 0 ||
-	                strncmp(line, "NIVEAU", LEN("NIVEAU")) == 0) {
-		trimall(line);
-		player->level = atol(line);
-	} else if (strncmp(line, "ASCENSION LEVEL", LEN("ASCENSION LEVEL")) == 0 ||
+	if (strncmp(line, "ASCENSION LEVEL", LEN("ASCENSION LEVEL")) == 0 ||
 	                strncmp(line, "NIVEAU D'ELEVATION", LEN("NIVEAU D'ELEVATION")) == 0) {
 		trimall(line);
 		player->ascension = atol(line);
+	} else if (strncmp(line, "LEVEL", LEN("LEVEL")) == 0 ||
+	                strncmp(line, "NIVEAU", LEN("NIVEAU")) == 0) {
+		trimall(line);
+		player->level = atol(line);
 	} else if (strncmp(line, "GLOBAL RANK", LEN("GLOBAL RANK")) == 0 ||
 	                strncmp(line, "RANG GLOBAL", LEN("RANG GLOBAL")) == 0) {
 		trimall(line);
@@ -621,7 +626,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 		discord_create_message(client, event->channel_id, &msg, NULL);
 	} else {
 		struct discord_create_message msg = {
-			.content = "You have been registrated in the databse."
+			.content = "You have been registrated in the database."
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
 	}
@@ -667,6 +672,12 @@ on_message(struct discord *client, const struct discord_message *event)
 {
 	int i;
 
+#ifdef DEVEL
+	if (event->channel_id == 1110775106101329950)
+		on_stats(client, event);
+	return;
+#endif
+
 	for (i = 0; i < (int)LENGTH(stats_ids); i++) {
 		if (event->channel_id == stats_ids[i]) {
 			on_stats(client, event);
@@ -676,9 +687,6 @@ on_message(struct discord *client, const struct discord_message *event)
 
 	if (event->channel_id == RAIDS_ID)
 		on_raids(client, event);
-
-	if (event->channel_id == TEST_ID)
-		on_stats(client, event);
 }
 
 void
@@ -686,6 +694,11 @@ on_source(struct discord *client, const struct discord_message *event)
 {
 	size_t fsz = 0;
 	char *fbuf = cog_load_whole_file(FILENAME, &fsz);
+
+#ifdef DEVEL
+	if (event->channel_id != 1110775106101329950)
+		return;
+#endif
 
 	struct discord_attachment attachment = {
 		.filename = FILENAME,
@@ -709,6 +722,13 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 	int i = 2;
 	char *txt = malloc(512);
 
+#ifdef DEVEL
+	if (event->channel_id != 1110775106101329950) {
+		free(txt);
+		return;
+	}
+#endif
+
 	if (strlen(event->content) == 0) {
 		strcpy(txt, "NO WRONG, YOU MUST USE AN ARGUMENT!\n");
 		strcat(txt, "Valid categories are:\n");
@@ -718,6 +738,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 			strcat(txt, fields[i]);
 			strcat(txt, "\n");
 		}
+		strcat(txt, "\nThis is case sensitive.");
 		struct discord_create_message msg = {
 			.content = txt
 		};
@@ -738,6 +759,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 			strcat(txt, fields[i]);
 			strcat(txt, "\n");
 		}
+		strcat(txt, "\nThis is case sensitive.");
 		struct discord_create_message msg = {
 			.content = txt
 		};
@@ -762,6 +784,11 @@ on_info(struct discord *client, const struct discord_message *event)
 	int i = 0, j;
 	char *txt, *p;
 	u64snowflake userid;
+
+#ifdef DEVEL
+	if (event->channel_id != 1110775106101329950)
+		return;
+#endif
 
 	if (strlen(event->content) == 0) {
 		struct discord_create_message msg = {
@@ -818,7 +845,8 @@ on_info(struct discord *client, const struct discord_message *event)
 }
 
 
-/* TODO
+/* TODO */
+/*
 void
 on_correct(struct discord * client, const struct discord_message * event)
 {
@@ -829,9 +857,14 @@ void
 on_help(struct discord * client, const struct discord_message * event)
 {
 	char *txt = malloc(512), *p;
-	int i, len;
+	int i, len = (int)LENGTH(stats_ids);
 
-	len = (int)LENGTH(stats_ids);
+#ifdef DEVEL
+	if (event->channel_id != 1110775106101329950) {
+		free(txt);
+		return;
+	}
+#endif
 
 	strcpy(txt, "Post a screenshot of your stats to ");
 	for (i = 0; i < len; i++) {
@@ -843,7 +876,7 @@ on_help(struct discord * client, const struct discord_message * event)
 	strcat(txt, "to enter the database.\n");
 	/* TODO: add PREFIX */
 	strcat(txt, "Commands: \n");
-	strcat(txt, "\t?info [[@]player]\n");
+	strcat(txt, "\t?info [[@]user]\n");
 	strcat(txt, "\t?leaderboard or ?lb [category]\n");
 	/* strcat(txt, "\t?correct [category] [corrected value]\n"); */
 	strcat(txt, "\t?source or ?src\n");

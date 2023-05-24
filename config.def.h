@@ -1,5 +1,4 @@
 #define RAIDS_ID 1109604402102276217 /* Channel ID for raids */
-#define TEST_ID  1110775106101329950 /* Channel ID for tests */
 #define DELIM    ','                 /* Delimiter for the save file */
 #define FILENAME "source.csv"        /* Filename of the save file */
 #define LB_MAX   10                  /* Max players to be shown with !lb */
