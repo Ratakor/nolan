@@ -57,8 +57,7 @@ void trimall(char *str);
 void parseline(Player *player, char *line);
 void forline(Player *player, char *src);
 void createfile(void);
-int playerinfile(Player *player);
-void savetofile(Player *player);
+int savetofile(Player *player);
 int compare(const void *e1, const void *e2);
 void leaderboard(char *buf);
 u64snowflake useridtoul(char *id);
@@ -236,7 +235,7 @@ updateplayers(Player *player)
 
 	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
 		i++;
-	if (i == nplayers) {
+	if (i == nplayers) { /* new player */
 		nplayers++;
 		players[nplayers - 1] = loadplayerfromfile(nplayers);
 	} else {
@@ -442,92 +441,51 @@ createfile(void)
 	fclose(f);
 }
 
+/* Save player to file and return 1 if player was already present */
 int
-playerinfile(Player *player)
-{
-	FILE *f;
-	char buf[MAX], *p, *endname;
-	int line = 1;
-
-	if ((f = fopen(FILENAME, "r")) == NULL)
-		die("playerinfile: cannot open the save file\n");
-
-	while ((p = fgets(buf, MAX, f)) != NULL) {
-		endname = strchr(p, DELIM);
-		if (endname)
-			*endname = 0;
-		if (strcmp(player->name, p) == 0)
-			break;
-		line++;
-	}
-
-	fclose(f);
-	return line;
-}
-
-void
 savetofile(Player *player)
 {
 	FILE *w, *r;
-	int pos, c, cpt = 0;
-	int edited = 0;
-
-	pos = playerinfile(player);
+	char buf[MAX], *p, *endname;
+	int infile = 0, i;
 
 	if ((r = fopen(FILENAME, "r")) == NULL)
 		die("savetofile: cannot open the save file (read)\n");
 	if ((w = fopen("tmpfile", "w")) == NULL)
 		die("savetofile: cannot open the save file (write)\n");
 
-	while ((c = fgetc(r)) != EOF) {
-		if (c == '\n')
-			cpt++;
-		if (!edited && cpt == pos - 1) {
-			if (cpt == 0)
-				fprintf(w, "%s%c", player->name, DELIM);
-			else
-				fprintf(w, "\n%s%c", player->name, DELIM);
-
+	while ((p = fgets(buf, MAX, r)) != NULL) {
+		endname = strchr(p, DELIM);
+		if (endname)
+			*endname = 0;
+		if (strcmp(player->name, p) == 0) {
+			infile = 1;
+			fprintf(w, "%s%c", player->name, DELIM);
 			fprintf(w, "%s%c", player->kingdom, DELIM);
-			fprintf(w, "%ld%c", player->level, DELIM);
-			fprintf(w, "%ld%c", player->ascension, DELIM);
-			fprintf(w, "%ld%c", player->global, DELIM);
-			fprintf(w, "%ld%c", player->regional, DELIM);
-			fprintf(w, "%ld%c", player->competitive, DELIM);
-			fprintf(w, "%ld%c", player->playtime, DELIM);
-			fprintf(w, "%ld%c", player->monsters, DELIM);
-			fprintf(w, "%ld%c", player->bosses, DELIM);
-			fprintf(w, "%ld%c", player->players, DELIM);
-			fprintf(w, "%ld%c", player->quests, DELIM);
-			fprintf(w, "%ld%c", player->explored, DELIM);
-			fprintf(w, "%ld%c", player->taken, DELIM);
-			fprintf(w, "%ld%c", player->dungeons, DELIM);
-			fprintf(w, "%ld%c", player->coliseum, DELIM);
-			fprintf(w, "%ld%c", player->items, DELIM);
-			fprintf(w, "%ld%c", player->fish, DELIM);
-			fprintf(w, "%ld%c", player->distance, DELIM);
-			fprintf(w, "%ld%c", player->reputation, DELIM);
-			fprintf(w, "%ld%c", player->endless, DELIM);
-			fprintf(w, "%ld%c", player->codex, DELIM);
+			for (i = 2; i < NFIELDS - 2; i++)
+				fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
 			fprintf(w, "%lu\n", player->userid);
-
-			edited = 1;
-
-			while ((c = fgetc(r)) != EOF) {
-				if (c == '\n')
-					break;
-			}
-		} else
-			fprintf(w, "%c", c);
+		} else {
+			if (endname)
+				*endname = DELIM;
+			fprintf(w, "%s", p);
+		}
+	}
+	if (!infile) {
+		fprintf(w, "%s%c", player->name, DELIM);
+		fprintf(w, "%s%c", player->kingdom, DELIM);
+		for (i = 2; i < NFIELDS - 2; i++)
+			fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
+		fprintf(w, "%lu\n", player->userid);
 	}
 
 	fclose(r);
 	fclose(w);
-
 	remove(FILENAME);
 	rename("tmpfile", FILENAME);
-}
 
+	return infile;
+}
 
 int
 compare(const void *e1, const void *e2)
@@ -622,19 +580,21 @@ on_stats(struct discord *client, const struct discord_message *event)
 	if (strncmp(event->attachments->array->content_type, "image", 5) != 0)
 		return;
 
-	fname = malloc(64);
-	strcpy(fname, "./images/");
-	strcat(fname, event->author->username);
-	strcat(fname, ".jpg");
+	fname = malloc(64 + sizeof(char));
+	snprintf(fname, 64, "./images/%s.jpg", event->author->username);
 	dlimg(event->attachments->array->url, fname);
 	txt = extract_txt_from_img(fname);
 	free(fname);
 
-	if (txt == NULL)
+	if (txt == NULL) {
+		struct discord_create_message msg = {
+			.content = "Error: failed to read the image"
+		};
+		discord_create_message(client, event->channel_id, &msg, NULL);
 		return;
+	}
 
 	memset(&player, 0, sizeof(player));
-
 	player.name = event->author->username;
 	player.userid = event->author->id;
 	forline(&player, txt);
@@ -654,13 +614,18 @@ on_stats(struct discord *client, const struct discord_message *event)
 		}
 	}
 
-	savetofile(&player);
+	if (savetofile(&player)) {
+		struct discord_create_message msg = {
+			.content = "Your profile has been updated."
+		};
+		discord_create_message(client, event->channel_id, &msg, NULL);
+	} else {
+		struct discord_create_message msg = {
+			.content = "You have been registrated in the databse."
+		};
+		discord_create_message(client, event->channel_id, &msg, NULL);
+	}
 	updateplayers(&player);
-
-	struct discord_create_message msg = {
-		.content = "You have been registrated in the databse."
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
 
 	free(player.bufptr); /* bufptr should always be NULL */
 }
@@ -852,6 +817,14 @@ on_info(struct discord *client, const struct discord_message *event)
 	free(txt);
 }
 
+
+/* TODO
+void
+on_correct(struct discord * client, const struct discord_message * event)
+{
+}
+*/
+
 void
 on_help(struct discord * client, const struct discord_message * event)
 {
@@ -872,7 +845,7 @@ on_help(struct discord * client, const struct discord_message * event)
 	strcat(txt, "Commands: \n");
 	strcat(txt, "\t?info [[@]player]\n");
 	strcat(txt, "\t?leaderboard or ?lb [category]\n");
-	strcat(txt, "\t?correct [category] [corrected value]\n");
+	/* strcat(txt, "\t?correct [category] [corrected value]\n"); */
 	strcat(txt, "\t?source or ?src\n");
 	strcat(txt, "\t?help\n\n");
 	strcat(txt, "Try them or ask Ratakor to know what they do.");
@@ -890,10 +863,11 @@ main(void)
 {
 	char *src[] = { "src", "source" };
 	char *lb[] = { "lb", "leaderboard" };
+	struct discord *client;
 
 	setlocale(LC_NUMERIC, "");
 	ccord_global_init();
-	struct discord *client = discord_init(TOKEN);
+	client = discord_init(TOKEN);
 
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT);
 	discord_set_prefix(client, PREFIX);
