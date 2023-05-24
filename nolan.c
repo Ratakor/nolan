@@ -59,11 +59,12 @@ void forline(Player *player, char *src);
 void createfile(void);
 int savetofile(Player *player);
 int compare(const void *e1, const void *e2);
-void leaderboard(char *buf);
+void addplayertolb(char *buf, int i);
+void leaderboard(char *buf, u64snowflake userid);
 u64snowflake useridtoul(char *id);
 void on_ready(struct discord *client, const struct discord_ready *event);
-void on_stats(struct discord *client, const struct discord_message *event);
-void on_raids(struct discord *client, const struct discord_message *event);
+void stats(struct discord *client, const struct discord_message *event);
+void raids(struct discord *client, const struct discord_message *event);
 void on_message(struct discord *client, const struct discord_message *event);
 void on_sourcetxt(struct discord *client, const struct discord_message *event);
 void on_source(struct discord *client, const struct discord_message *event);
@@ -503,46 +504,54 @@ compare(const void *e1, const void *e2)
 }
 
 void
-leaderboard(char *buf)
+addplayertolb(char *buf, int i)
 {
-	char *p;
-	int i, lb_max;
+	char *p = strchr(buf, '\0');
+	sprintf(p, "%d. %s: ", i + 1, players[i].name);
+	if (category == 7) { /* playtime */
+		p = playtimetostr(((long *)&players[i])[category]);
+		strcat(buf, p);
+		free(p);
+	} else {
+		p = strchr(buf, '\0');
+		sprintf(p, "%'ld", ((long *)&players[i])[category]);
+		if (i == 18) /* distance */
+			strcat(buf, "m");
+	}
+	strcat(buf, "\n");
+}
+
+void
+leaderboard(char *buf, u64snowflake userid)
+{
+	int i, lb_max, in_lb = 0;
 
 	qsort(players, nplayers, sizeof(*players), compare);
 	lb_max = (nplayers < LB_MAX) ? nplayers : LB_MAX;
 
-	strcpy(buf, fields[category]);
-	strcat(buf, ":\n");
+	sprintf(buf, "%s:\n", fields[category]);
 	for (i = 0; i < lb_max ; i++) {
-		p = strrchr(buf, '\n');
-		sprintf(++p, "%d. %s", i + 1, players[i].name);
-		strcat(buf, ": ");
-		if (category == 7) { /* playtime */
-			p = playtimetostr(((long *)&players[i])[category]);
-			strcat(buf, p);
-			free(p);
-		} else {
-			p = strrchr(buf, ' ');
-			sprintf(++p, "%'ld", ((long *)&players[i])[category]);
-			if (i == 18) /* distance */
-				strcat(buf, "m");
-		}
-		strcat(buf, "\n");
+		if (userid == players[i].userid)
+			in_lb = 1;
+		addplayertolb(buf, i);
+	}
+
+	if (!in_lb) {
+		strcat(buf, "...\n");
+		i = lb_max;
+		while (i < nplayers && players[i].userid != userid)
+			i++;
+		addplayertolb(buf, i);
 	}
 }
 
 u64snowflake
 useridtoul(char *id)
 {
-	char *start = id, *end = strchr(id, 0);
+	char *start = id, *end = strchr(id, 0) - 1;
 
-	if (strncmp(start, "<@", 2) == 0 && strcmp(--end, ">") == 0) {
-		start += 2;
-		end = 0;
-
-		return strtoul(start, NULL, 10);
-	}
-
+	if (strncmp(start, "<@", 2) == 0 && strncmp(end, ">", 1) == 0)
+		return strtoul(start + 2, NULL, 10);
 	return 0;
 }
 
@@ -572,7 +581,7 @@ on_ready(struct discord *client, const struct discord_ready *event)
 }
 
 void
-on_stats(struct discord *client, const struct discord_message *event)
+stats(struct discord *client, const struct discord_message *event)
 {
 	int i;
 	char *txt, *fname;
@@ -591,18 +600,13 @@ on_stats(struct discord *client, const struct discord_message *event)
 	txt = extract_txt_from_img(fname);
 	free(fname);
 
-	if (txt == NULL) {
-		struct discord_create_message msg = {
-			.content = "Error: failed to read the image"
-		};
-		discord_create_message(client, event->channel_id, &msg, NULL);
-		return;
-	}
-
 	memset(&player, 0, sizeof(player));
 	player.name = event->author->username;
 	player.userid = event->author->id;
 	forline(&player, txt);
+
+	if (player.kingdom == NULL)
+		player.kingdom = "(null)";
 
 	if (kingdom_verification) {
 		i = LENGTH(kingdoms);
@@ -636,7 +640,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 }
 
 void
-on_raids(struct discord *client, const struct discord_message *event)
+raids(struct discord *client, const struct discord_message *event)
 {
 	char *txt;
 
@@ -649,9 +653,6 @@ on_raids(struct discord *client, const struct discord_message *event)
 
 	dlimg(event->attachments->array->url, "./images/raids.jpg");
 	txt = extract_txt_from_img("./images/raids.jpg");
-
-	if (txt == NULL)
-		return;
 
 	/*
 	 * TODO
@@ -673,20 +674,20 @@ on_message(struct discord *client, const struct discord_message *event)
 	int i;
 
 #ifdef DEVEL
-	if (event->channel_id == 1110775106101329950)
-		on_stats(client, event);
+	if (event->channel_id == DEVEL)
+		stats(client, event);
 	return;
 #endif
 
 	for (i = 0; i < (int)LENGTH(stats_ids); i++) {
 		if (event->channel_id == stats_ids[i]) {
-			on_stats(client, event);
+			stats(client, event);
 			break;
 		}
 	}
 
 	if (event->channel_id == RAIDS_ID)
-		on_raids(client, event);
+		raids(client, event);
 }
 
 void
@@ -696,7 +697,7 @@ on_source(struct discord *client, const struct discord_message *event)
 	char *fbuf = cog_load_whole_file(FILENAME, &fsz);
 
 #ifdef DEVEL
-	if (event->channel_id != 1110775106101329950)
+	if (event->channel_id != DEVEL)
 		return;
 #endif
 
@@ -720,16 +721,15 @@ void
 on_leaderboard(struct discord *client, const struct discord_message *event)
 {
 	int i = 2;
-	char *txt = malloc(512);
+	char *txt;
 
 #ifdef DEVEL
-	if (event->channel_id != 1110775106101329950) {
-		free(txt);
+	if (event->channel_id != DEVEL)
 		return;
-	}
 #endif
 
 	if (strlen(event->content) == 0) {
+		txt = malloc(512);
 		strcpy(txt, "NO WRONG, YOU MUST USE AN ARGUMENT!\n");
 		strcat(txt, "Valid categories are:\n");
 		for (i = 2; i < NFIELDS - 2; i++) {
@@ -751,6 +751,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		i++;
 
 	if (i == NFIELDS - 2 || i == 5) {
+		txt = malloc(512);
 		strcpy(txt, "This is not a valid category.\n");
 		strcat(txt, "Valid categories are:\n");
 		for (i = 2; i < NFIELDS - 2; i++) {
@@ -769,7 +770,8 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 	}
 
 	category = i;
-	leaderboard(txt);
+	txt = malloc((LB_MAX + 2) * 32);
+	leaderboard(txt, event->author->id);
 
 	struct discord_create_message msg = {
 		.content = txt
@@ -786,7 +788,7 @@ on_info(struct discord *client, const struct discord_message *event)
 	u64snowflake userid;
 
 #ifdef DEVEL
-	if (event->channel_id != 1110775106101329950)
+	if (event->channel_id != DEVEL)
 		return;
 #endif
 
@@ -828,8 +830,8 @@ on_info(struct discord *client, const struct discord_message *event)
 			strcat(txt, p);
 			free(p);
 		} else {
-			p = strrchr(txt, ' ');
-			sprintf(++p, "%'ld", ((long *)&players[i])[j]);
+			p = strchr(txt, 0);
+			sprintf(p, "%'ld", ((long *)&players[i])[j]);
 			if (j == 18) /* distance */
 				strcat(txt, "m");
 		}
@@ -844,15 +846,6 @@ on_info(struct discord *client, const struct discord_message *event)
 	free(txt);
 }
 
-
-/* TODO */
-/*
-void
-on_correct(struct discord * client, const struct discord_message * event)
-{
-}
-*/
-
 void
 on_help(struct discord * client, const struct discord_message * event)
 {
@@ -860,7 +853,7 @@ on_help(struct discord * client, const struct discord_message * event)
 	int i, len = (int)LENGTH(stats_ids);
 
 #ifdef DEVEL
-	if (event->channel_id != 1110775106101329950) {
+	if (event->channel_id != DEVEL) {
 		free(txt);
 		return;
 	}
@@ -908,7 +901,6 @@ main(void)
 	discord_set_on_message_create(client, on_message);
 	discord_set_on_commands(client, lb, LENGTH(lb), on_leaderboard);
 	discord_set_on_command(client, "info", on_info);
-	/* discord_set_on_command(client, "correct", on_correct); */
 	discord_set_on_commands(client, src, LENGTH(src), on_source);
 	discord_set_on_command(client, "help", on_help);
 
