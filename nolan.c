@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <locale.h>
+#include <sys/stat.h>
 #include <leptonica/allheaders.h>
 #include <tesseract/capi.h>
 #include <curl/curl.h>
@@ -10,7 +11,8 @@
 #include "config.h"
 
 #define MAX         300
-#define MAX_PLAYERS sizeof(kingdoms) / sizeof(kingdoms[0]) * 50
+#define LENGTH(X)   (sizeof X / sizeof X[0])
+#define MAX_PLAYERS LENGTH(kingdoms) * 50
 #define NFIELDS     24
 
 /* ALL FIELDS MUST HAVE THE SAME SIZE */
@@ -43,8 +45,8 @@ typedef struct {
 
 void die(const char *errstr);
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
-void dlimg(char *url);
-char *extract_txt_from_img(void);
+void dlimg(char *url, char *fname);
+char *extract_txt_from_img(char *fname);
 Player loadplayerfromfile(int line);
 void initplayers(void);
 void updateplayers(Player *player);
@@ -113,7 +115,7 @@ write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 }
 
 void
-dlimg(char *url)
+dlimg(char *url, char *fname)
 {
 	CURL *handle;
 	FILE *f;
@@ -125,7 +127,7 @@ dlimg(char *url)
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_data);
 
-	f = fopen("img", "wb");
+	f = fopen(fname, "wb");
 	if (f) {
 
 		curl_easy_setopt(handle, CURLOPT_WRITEDATA, f);
@@ -138,13 +140,13 @@ dlimg(char *url)
 }
 
 char *
-extract_txt_from_img(void)
+extract_txt_from_img(char *fname)
 {
 	TessBaseAPI *handle;
 	PIX *img;
 	char *txt;
 
-	if ((img = pixRead("img")) == NULL)
+	if ((img = pixRead(fname)) == NULL)
 		die("Error reading image\n");
 
 	handle = TessBaseAPICreate();
@@ -177,7 +179,7 @@ loadplayerfromfile(int line)
 		die("loadplayerfromfile: line < 1\n"); /* description line */
 
 	if ((f = fopen(FILENAME, "r")) == NULL)
-		die("loadplayerfromfile: cannot open the players file\n");
+		die("loadplayerfromfile: cannot open the save file\n");
 
 	while (i++ <= line && (p = fgets(buf, MAX, f)) != NULL);
 	fclose(f);
@@ -216,7 +218,7 @@ initplayers(void)
 	int i;
 
 	if ((f = fopen(FILENAME, "r")) == NULL)
-		die("initplayers: cannot open the players file\n");
+		die("initplayers: cannot open the save file\n");
 
 	while (fgets(buf, MAX, f))
 		nplayers++;
@@ -419,7 +421,7 @@ playerinfile(Player *player)
 	int line = 1;
 
 	if ((f = fopen(FILENAME, "r")) == NULL)
-		die("playerinfile: cannot open the players file\n");
+		die("playerinfile: cannot open the save file\n");
 
 	while ((p = fgets(buf, MAX, f)) != NULL) {
 		endname = strchr(p, DELIM);
@@ -444,9 +446,9 @@ savetofile(Player *player)
 	pos = playerinfile(player);
 
 	if ((r = fopen(FILENAME, "r")) == NULL)
-		die("savetofile: cannot open the players file (read)\n");
+		die("savetofile: cannot open the save file (read)\n");
 	if ((w = fopen("tmpfile", "w")) == NULL)
-		die("savetofile: cannot open the players players file (write)\n");
+		die("savetofile: cannot open the save file (write)\n");
 
 	while ((c = fgetc(r)) != EOF) {
 		if (c == '\n')
@@ -521,7 +523,7 @@ leaderboard(char *buf)
 	strcat(buf, ":\n");
 	for (i = 0; i < lb_max ; i++) {
 		p = strrchr(buf, '\n');
-		sprintf(++p, "%s", players[i].name);
+		sprintf(++p, "%d. %s", i + 1, players[i].name);
 		strcat(buf, ": ");
 		if (category == 7) { /* playtime */
 			p = playtimetostr(((long *)&players[i])[category]);
@@ -566,8 +568,8 @@ on_ready(struct discord *client, const struct discord_ready *event)
 		.activities =
 		        &(struct discord_activities)
 		{
-			.size = sizeof(activities) / sizeof * activities,
-			.array = activities,
+			.size = LENGTH(activities),
+			.array = activities
 		},
 		.status = "online",
 		.afk = false,
@@ -581,7 +583,7 @@ void
 on_stats(struct discord *client, const struct discord_message *event)
 {
 	int i;
-	char *txt;
+	char *txt, *fname;
 	Player player;
 
 	if (event->attachments->size == 0)
@@ -591,8 +593,13 @@ on_stats(struct discord *client, const struct discord_message *event)
 	if (strncmp(event->attachments->array->content_type, "image", 5) != 0)
 		return;
 
-	dlimg(event->attachments->array->url);
-	txt = extract_txt_from_img();
+	fname = malloc(64);
+	strcpy(fname, "./images/");
+	strcat(fname, event->author->username);
+	strcat(fname, ".jpg");
+	dlimg(event->attachments->array->url, fname);
+	txt = extract_txt_from_img(fname);
+	free(fname);
 
 	if (txt == NULL)
 		return;
@@ -604,7 +611,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 	forline(&player, txt);
 
 	if (kingdom_verification) {
-		i = sizeof(kingdoms) / sizeof(kingdoms[0]);
+		i = LENGTH(kingdoms);
 
 		while (i > 0 && strcmp(player.kingdom, kingdoms[i++]) != 0);
 
@@ -641,8 +648,8 @@ on_raids(struct discord *client, const struct discord_message *event)
 	if (strncmp(event->attachments->array->content_type, "image", 5) != 0)
 		return;
 
-	dlimg(event->attachments->array->url);
-	txt = extract_txt_from_img();
+	dlimg(event->attachments->array->url, "./images/raids.jpg");
+	txt = extract_txt_from_img("./images/raids.jpg");
 
 	if (txt == NULL)
 		return;
@@ -666,7 +673,7 @@ on_message(struct discord *client, const struct discord_message *event)
 {
 	int i;
 
-	for (i = 0; i < (int)(sizeof(stats_ids) / sizeof(*stats_ids)); i++) {
+	for (i = 0; i < (int)LENGTH(stats_ids); i++) {
 		if (event->channel_id == stats_ids[i]) {
 			on_stats(client, event);
 			break;
@@ -819,7 +826,7 @@ on_help(struct discord * client, const struct discord_message * event)
 	char *txt = malloc(512), *p;
 	int i, len;
 
-	len = (int)(sizeof(stats_ids) / sizeof(*stats_ids));
+	len = (int)LENGTH(stats_ids);
 
 	strcpy(txt, "Post a screenshot of your stats to ");
 	for (i = 0; i < len; i++) {
@@ -831,6 +838,7 @@ on_help(struct discord * client, const struct discord_message * event)
 			strcat(txt, "or ");
 	}
 	strcat(txt, "to enter the database.\n");
+	/* TODO: add PREFIX */
 	strcat(txt, "Commands: \n");
 	strcat(txt, "\t?source or ?src\n");
 	strcat(txt, "\t?info [[@]player]\n");
@@ -849,20 +857,24 @@ on_help(struct discord * client, const struct discord_message * event)
 int
 main(void)
 {
+	char *src[] = { "src", "source" };
+	char *lb[] = { "lb", "leaderboard" };
+
 	setlocale(LC_NUMERIC, "");
 	ccord_global_init();
-	struct discord *client = discord_config_init("config.json");
+	struct discord *client = discord_init(TOKEN);
 
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT);
-	discord_set_on_ready(client, &on_ready);
-	discord_set_on_message_create(client, &on_message);
-	discord_set_on_command(client, "?src", &on_source);
-	discord_set_on_command(client, "?source", &on_source);
-	discord_set_on_command(client, "?leaderboard", &on_leaderboard);
-	discord_set_on_command(client, "?lb", &on_leaderboard);
-	discord_set_on_command(client, "?info", &on_info);
-	discord_set_on_command(client, "?help", &on_help);
+	discord_set_prefix(client, PREFIX);
+	discord_set_on_ready(client, on_ready);
+	discord_set_on_message_create(client, on_message);
+	discord_set_on_commands(client, src, LENGTH(src), on_source);
+	discord_set_on_commands(client, lb, LENGTH(lb), on_leaderboard);
+	discord_set_on_command(client, "info", on_info);
+	discord_set_on_command(client, "help", on_help);
 
+	if (mkdir("./images/", 0755) == 1)
+		die("main: cannot create the images folder\n");
 	createfile();
 	initplayers();
 

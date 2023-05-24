@@ -12,10 +12,10 @@ all: nolan
 .c.o:
 	${CC} -c ${CFLAGS} $<
 
-${OBJ}: config.json
+${OBJ}: config.h
 
-config.json:
-	cp config.def.json $@
+config.h:
+	cp config.def.h $@
 
 nolan: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDLFLAGS}

@@ -1,10 +1,11 @@
-*.jpg
-*.png
 *.o
 *.log
 *.csv
 *.tsv
-img
+images/
 nolan
-config.json
+config.h
+
+*.jpg
+*.png
 test*

@@ -1,7 +1,9 @@
 #define RAIDS_ID 1109604402102276217 /* Channel ID for raids */
-#define DELIM    ','
-#define FILENAME "players.csv"
+#define DELIM    ','                 /* Delimiter for the save file */
+#define FILENAME "players.csv"       /* Filename of the save file */
 #define LB_MAX   10                  /* Max players to be shown with !lb */
+#define TOKEN    "YOUR-BOT-TOKEN"
+#define PREFIX   "?"
 
 static const int kingdom_verification = 0; /* 0 means no verification */
 
