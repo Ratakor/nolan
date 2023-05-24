@@ -56,7 +56,8 @@ void forline(Player *player, char *src);
 void createfile(void);
 int playerinfile(Player *player);
 void savetofile(Player *player);
-void loadfile(char *src);
+int compare(const void *e1, const void *e2);
+void leaderboard(char *buf);
 u64snowflake useridtoul(char *id);
 void on_ready(struct discord *client, const struct discord_ready *event);
 void on_stats(struct discord *client, const struct discord_message *event);
@@ -70,6 +71,7 @@ void on_help(struct discord *client, const struct discord_message *event);
 
 static Player players[MAX_PLAYERS];
 static int nplayers = 0;
+static int category = 0;
 static const char *fields[] = {
 	"Name",
 	"Kingdom",
@@ -211,6 +213,7 @@ initplayers(void)
 {
 	FILE *f;
 	char buf[MAX];
+	int i;
 
 	if ((f = fopen(FILENAME, "r")) == NULL)
 		die("initplayers: cannot open the players file\n");
@@ -219,7 +222,7 @@ initplayers(void)
 		nplayers++;
 	nplayers--; /* first line is not a player */
 
-	for (int i = 0; i < nplayers; i++)
+	for (i = 0; i < nplayers; i++)
 		players[i] = loadplayerfromfile(i + 1);
 }
 
@@ -398,8 +401,8 @@ createfile(void)
 		size = ftell(f);
 	}
 
-	/* -2 because bufptr is not in the file */
 	if (size == 0 && (f = fopen(FILENAME, "w")) != NULL) {
+		/* -2 because bufptr is not in the file */
 		for (i = 0; i < NFIELDS - 2; i++)
 			fprintf(f, "%s%c", fields[i], DELIM);
 		fprintf(f, "%s\n", fields[NFIELDS - 2]);
@@ -494,18 +497,44 @@ savetofile(Player *player)
 	rename("tmpfile", FILENAME);
 }
 
-void
-loadfile(char *src)
+
+int
+compare(const void *e1, const void *e2)
 {
-	FILE *f;
-	char *p = src, c;
+	const Player p1 = *((const Player *)e1);
+	const Player p2 = *((const Player *)e2);
+	if (category >= 4 && category <= 6) /* ranks */
+		return ((long *)&p1)[category] - ((long *)&p2)[category];
+	return ((long *)&p2)[category] - ((long *)&p1)[category];
+}
 
-	if ((f = fopen(FILENAME, "r")) == NULL)
-		die("loadfile: cannot open the players file\n");
+void
+leaderboard(char *buf)
+{
+	char *p;
+	int i, lb_max;
 
-	while ((c = fgetc(f)) != EOF && (*p++ = c));
-	*p = 0;
-	fclose(f);
+	qsort(players, nplayers, sizeof(*players), compare);
+	lb_max = (nplayers < LB_MAX) ? nplayers : LB_MAX;
+
+	strcpy(buf, fields[category]);
+	strcat(buf, ":\n");
+	for (i = 0; i < lb_max ; i++) {
+		p = strrchr(buf, '\n');
+		sprintf(++p, "%s", players[i].name);
+		strcat(buf, ": ");
+		if (category == 7) { /* playtime */
+			p = playtimetostr(((long *)&players[i])[category]);
+			strcat(buf, p);
+			free(p);
+		} else {
+			p = strrchr(buf, ' ');
+			sprintf(++p, "%'ld", ((long *)&players[i])[category]);
+			if (i == 18) /* distance */
+				strcat(buf, "m");
+		}
+		strcat(buf, "\n");
+	}
 }
 
 u64snowflake
@@ -584,14 +613,18 @@ on_stats(struct discord *client, const struct discord_message *event)
 				.content = "Sorry you're not part of the kingdom :/"
 			};
 			discord_create_message(client, event->channel_id, &msg, NULL);
-		} else {
-			savetofile(&player);
-			updateplayers(&player);
+			free(player.bufptr);
+			return;
 		}
-	} else {
-		savetofile(&player);
-		updateplayers(&player);
 	}
+
+	savetofile(&player);
+	updateplayers(&player);
+
+	struct discord_create_message msg = {
+		.content = "You have been registrated in the databse."
+	};
+	discord_create_message(client, event->channel_id, &msg, NULL);
 
 	free(player.bufptr); /* bufptr should always be NULL */
 }
@@ -631,23 +664,29 @@ on_raids(struct discord *client, const struct discord_message *event)
 void
 on_message(struct discord *client, const struct discord_message *event)
 {
-	if (event->channel_id == STATS_ID) {
-		on_stats(client, event);
-	} else if (event->channel_id == RAIDS_ID) {
-		on_raids(client, event);
-	} else if (event->channel_id == TEST_ID) {
-		on_stats(client, event);
+	int i;
+
+	for (i = 0; i < (int)(sizeof(stats_ids) / sizeof(*stats_ids)); i++) {
+		if (event->channel_id == stats_ids[i]) {
+			on_stats(client, event);
+			break;
+		}
 	}
+
+	if (event->channel_id == RAIDS_ID)
+		on_raids(client, event);
 }
 
 void
 on_source(struct discord *client, const struct discord_message *event)
 {
-	char *txt = malloc(MAX + MAX * MAX_PLAYERS);
-	loadfile(txt);
+	size_t fsz = 0;
+	char *fbuf = cog_load_whole_file(FILENAME, &fsz);
+
 	struct discord_attachment attachment = {
-		.content = txt,
-		.filename = FILENAME
+		.filename = FILENAME,
+		.content = fbuf,
+		.size = fsz
 	};
 	struct discord_attachments attachments = {
 		.size = 1,
@@ -657,44 +696,65 @@ on_source(struct discord *client, const struct discord_message *event)
 		.attachments = &attachments
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	free(txt);
 }
 
 
 void
 on_leaderboard(struct discord *client, const struct discord_message *event)
 {
+	int i = 2;
+	char *txt = malloc(512);
+
 	if (strlen(event->content) == 0) {
+		strcpy(txt, "NO WRONG, YOU MUST USE AN ARGUMENT!\n");
+		strcat(txt, "Valid categories are:\n");
+		for (i = 2; i < NFIELDS - 2; i++) {
+			strcat(txt, fields[i]);
+			strcat(txt, "\n");
+		}
 		struct discord_create_message msg = {
-			.content = "NO WRONG, YOU MUST USE AN ARGUMENT!"
+			.content = txt
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
+		free(txt);
 		return;
 	}
 
-	int i = 0;
-
-	while (i < NFIELDS && strcmp(fields[i], event->content) != 0)
+	while (i < NFIELDS - 2 && strcmp(fields[i], event->content) != 0)
 		i++;
-	if (i == NFIELDS) {
+
+	if (i == NFIELDS - 2) {
+		strcpy(txt, "This is not a valid category.\n");
+		strcat(txt, "Valid categories are:\n");
+		for (i = 2; i < NFIELDS - 2; i++) {
+			strcat(txt, fields[i]);
+			strcat(txt, "\n");
+		}
 		struct discord_create_message msg = {
-			.content = "This is not a valid category."
+			.content = txt
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
+		free(txt);
 		return;
 	}
 
-	/* TODO */
+	category = i;
+	leaderboard(txt);
 
 	struct discord_create_message msg = {
-		.content = "DOESN'T WORK!"
+		.content = txt
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	free(txt);
 }
 
 void
 on_info(struct discord *client, const struct discord_message *event)
 {
+	int i = 0, j;
+	char *txt, *p;
+	u64snowflake userid;
+
 	if (strlen(event->content) == 0) {
 		struct discord_create_message msg = {
 			.content = "NO WRONG, YOU MUST USE AN ARGUMENT!"
@@ -703,10 +763,7 @@ on_info(struct discord *client, const struct discord_message *event)
 		return;
 	}
 
-	int i = 0, j;
-	char *txt, *p;
-	u64snowflake userid = useridtoul(event->content);
-
+	userid = useridtoul(event->content);
 	if (userid > 0) {
 		while (i < nplayers && players[i].userid != userid)
 			i++;
@@ -738,7 +795,6 @@ on_info(struct discord *client, const struct discord_message *event)
 		} else {
 			p = strrchr(txt, ' ');
 			sprintf(++p, "%'ld", ((long *)&players[i])[j]);
-
 			if (j == 18) /* distance */
 				strcat(txt, "m");
 		}
@@ -756,16 +812,25 @@ on_info(struct discord *client, const struct discord_message *event)
 void
 on_help(struct discord * client, const struct discord_message * event)
 {
-	char *txt = malloc(2001), *p;
+	char *txt = malloc(512), *p;
+	int i, len;
 
-	strcpy(txt, "Post image to <#");
-	p = strchr(txt, '#');;
-	sprintf(++p, "%lu", STATS_ID);
-	strcat(txt, "> to enter the database.\n");
+	len = (int)(sizeof(stats_ids) / sizeof(*stats_ids));
+
+	strcpy(txt, "Post a screenshot of your stats to ");
+	for (i = 0; i < len; i++) {
+		strcat(txt, "<#");
+		p = strrchr(txt, '#');;
+		sprintf(++p, "%lu", stats_ids[i]);
+		strcat(txt, "> ");
+		if (i < len - 1)
+			strcat(txt, "or ");
+	}
+	strcat(txt, "to enter the database.\n");
 	strcat(txt, "Commands: \n");
 	strcat(txt, "\t?source or ?src\n");
-	strcat(txt, "\t?info\n");
-	strcat(txt, "\t?leaderboard or ?lb (not implemented yet)\n");
+	strcat(txt, "\t?info [[@]player]\n");
+	strcat(txt, "\t?leaderboard or ?lb [category]\n");
 	strcat(txt, "\t?help\n\n");
 	strcat(txt, "Try them or ask Ratakor to know what they do.");
 

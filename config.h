@@ -1,11 +1,17 @@
-#define TEST_ID  1109604402102276216 /* Channel ID for testing */
 #define RAIDS_ID 1109604402102276217 /* Channel ID for raids */
-#define STATS_ID 1110185440285302855 /* Channel ID for stats */
 #define DELIM    ','
 #define FILENAME "players.csv"
+#define LB_MAX   10                  /* Max players to be shown with !lb */
 
 static const int kingdom_verification = 0; /* 0 means no verification */
 
+ /* list of ids to check for stats image */
+static const u64snowflake stats_ids[] = {
+	1110185440285302855,
+	1110767040890941590
+};
+
+/* list of kingdom to accept if verification is on */
 static const char *kingdoms[] = {
 	"Scream of Terra",
 	"Volcano of Terra",
