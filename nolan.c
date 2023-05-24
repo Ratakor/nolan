@@ -12,6 +12,7 @@
 
 #define MAX         300
 #define LENGTH(X)   (sizeof X / sizeof X[0])
+#define LEN(X)      (sizeof X - 1)
 #define MAX_PLAYERS LENGTH(kingdoms) * 50
 #define NFIELDS     24
 
@@ -50,7 +51,7 @@ char *extract_txt_from_img(char *fname);
 Player loadplayerfromfile(int line);
 void initplayers(void);
 void updateplayers(Player *player);
-long playtimetolong(char *playtime);
+long playtimetolong(char *playtime, char *str);
 char *playtimetostr(long playtime);
 void trimall(char *str);
 void parseline(Player *player, char *line);
@@ -250,14 +251,12 @@ updateplayers(Player *player)
 }
 
 long
-playtimetolong(char *playtime)
+playtimetolong(char *playtime, char str[])
 {
-	char *str = "days, ";
 	int days, hours;
 
-	/* we assume that each players have played for at least 1 day */
 	days = atol(playtime);
-	playtime = strchr(playtime, 'd');
+	playtime = strchr(playtime, str[0]);
 	while (*str && (*playtime++ == *str++));
 	hours = atol(playtime);
 
@@ -273,7 +272,7 @@ playtimetostr(long playtime)
 	days = playtime / 24;
 	hours = playtime % 24;
 	buf = malloc(20);
-	/* we assume that each players have played for at least 1 day */
+
 	if (hours == 0)
 		sprintf(buf, "%'d days", days);
 	else
@@ -302,75 +301,105 @@ parseline(Player *player, char *line)
 {
 	char *str;
 
-	if (strncmp(line, "KINGDOM", 7) == 0) {
+	if (strncmp(line, "KINGDOM", LEN("KINGDOM")) == 0) {
 		str = "KINGDOM ";
 		while (*str && (*line++ == *str++));
 		player->kingdom = line;
 		return;
 	}
-
-	if (strncmp(line, "PLAYTIME", 8) == 0) {
-		str = "PLAYTIME ";
+	if (strncmp(line, "ROYAUME", LEN("ROYAUME")) == 0) {
+		str = "ROYAUME ";
 		while (*str && (*line++ == *str++));
-		player->playtime = playtimetolong(line);
+		player->kingdom = line;
 		return;
 	}
 
-	if (strncmp(line, "LEVEL", 5) == 0) {
+	if (strncmp(line, "PLAYTIME", LEN("PLAYTIME")) == 0) {
+		str = "PLAYTIME ";
+		while (*str && (*line++ == *str++));
+		player->playtime = playtimetolong(line, "days, ");
+		return;
+	}
+	if (strncmp(line, "TEMPS DE JEU", LEN("TEMPS DE JEU")) == 0) {
+		str = "TEMPS DE JEU ";
+		while (*str && (*line++ == *str++));
+		player->playtime = playtimetolong(line, "jours, ");
+		return;
+	}
+
+	if (strncmp(line, "LEVEL", LEN("LEVEL")) == 0 ||
+	                strncmp(line, "NIVEAU", LEN("NIVEAU")) == 0) {
 		trimall(line);
 		player->level = atol(line);
-	} else if (strncmp(line, "ASCENSION LEVEL", 15) == 0) {
+	} else if (strncmp(line, "ASCENSION LEVEL", LEN("ASCENSION LEVEL")) == 0 ||
+	                strncmp(line, "NIVEAU D'ELEVATION", LEN("NIVEAU D'ELEVATION")) == 0) {
 		trimall(line);
 		player->ascension = atol(line);
-	} else if (strncmp(line, "GLOBAL RANK", 11) == 0) {
+	} else if (strncmp(line, "GLOBAL RANK", LEN("GLOBAL RANK")) == 0 ||
+	                strncmp(line, "RANG GLOBAL", LEN("RANG GLOBAL")) == 0) {
 		trimall(line);
 		player->global = atol(line);
-	} else if (strncmp(line, "REGIONAL RANK", 12) == 0) {
+	} else if (strncmp(line, "REGIONAL RANK", LEN("REGIONAL RANK")) == 0 ||
+	                strncmp(line, "RANG REGIONAL", LEN("RANG REGIONAL")) == 0) {
 		trimall(line);
 		player->regional = atol(line);
-	} else if (strncmp(line, "COMPETITIVE RANK", 16) == 0) {
+	} else if (strncmp(line, "COMPETITIVE RANK", LEN("COMPETITIVE RANK")) == 0 ||
+	                strncmp(line, "RANG COMPETITIF", LEN("RANG COMPETITIF")) == 0) {
 		trimall(line);
 		player->competitive = atol(line);
-	} else if (strncmp(line, "MONSTERS SLAIN", 14) == 0) {
+	} else if (strncmp(line, "MONSTERS SLAIN", LEN("MONSTERS SLAIN")) == 0 ||
+	                strncmp(line, "MONSTRES TUES", LEN("MONSTRES TUES")) == 0) {
 		trimall(line);
 		player->monsters = atol(line);
-	} else if (strncmp(line, "BOSSES SLAIN", 12) == 0) {
+	} else if (strncmp(line, "BOSSES SLAIN", LEN("BOSSES SLAIN")) == 0 ||
+	                strncmp(line, "BOSS TUES", LEN("BOSS TUES")) == 0) {
 		trimall(line);
 		player->bosses = atol(line);
-	} else if (strncmp(line, "PLAYERS DEFEATED", 16) == 0) {
+	} else if (strncmp(line, "PLAYERS DEFEATED", LEN("PLAYERS DEFEATED")) == 0 ||
+	                strncmp(line, "JOUEURS VAINCUS", LEN("JOUEURS VAINCUS")) == 0) {
 		trimall(line);
 		player->players = atol(line);
-	} else if (strncmp(line, "QUESTS COMPLETED", 16) == 0) {
+	} else if (strncmp(line, "QUESTS COMPLETED", LEN("QUESTS COMPLETED")) == 0 ||
+	                strncmp(line, "QUETES TERMINEES", LEN("QUETES TERMINEES")) == 0) {
 		trimall(line);
 		player->quests = atol(line);
-	} else if (strncmp(line, "AREAS EXPLORED", 14) == 0) {
+	} else if (strncmp(line, "AREAS EXPLORED", LEN("AREAS EXPLORED")) == 0 ||
+	                strncmp(line, "TERRES EXPLOREES", LEN("TERRES EXPLOREES")) == 0) {
 		trimall(line);
 		player->explored = atol(line);
-	} else if (strncmp(line, "AREAS TAKEN", 11) == 0) {
+	} else if (strncmp(line, "AREAS TAKEN", LEN("AREAS TAKEN")) == 0 ||
+	                strncmp(line, "TERRES PRISES", LEN("TERRES PRISES")) == 0) {
 		trimall(line);
 		player->taken = atol(line);
-	} else if (strncmp(line, "DUNGEONS CLEARED", 16) == 0) {
+	} else if (strncmp(line, "DUNGEONS CLEARED", LEN("DUNGEONS CLEARED")) == 0 ||
+	                strncmp(line, "DONJONS TERMINES", LEN("DONJONS TERMINES")) == 0) {
 		trimall(line);
 		player->dungeons = atol(line);
-	} else if (strncmp(line, "COLISEUM WINS", 13) == 0) {
+	} else if (strncmp(line, "COLISEUM WINS", LEN("COLISEUM WINS")) == 0 ||
+	                strncmp(line, "VICTOIRES DANS LE COLISEE", LEN("VICTOIRES DANS LE COLISEE")) == 0) {
 		trimall(line);
 		player->coliseum = atol(line);
-	} else if (strncmp(line, "ITEMS UPGRADED", 14) == 0) {
+	} else if (strncmp(line, "ITEMS UPGRADED", LEN("ITEMS UPGRADED")) == 0 ||
+	                strncmp(line, "OBJETS AMELIORES", LEN("OBJETS AMELIORES")) == 0) {
 		trimall(line);
 		player->items = atol(line);
-	} else if (strncmp(line, "FISH CAUGHT", 11) == 0) {
+	} else if (strncmp(line, "FISH CAUGHT", LEN("FISH CAUGHT")) == 0 ||
+	                strncmp(line, "POISSONS ATTRAPES", LEN("POISSONS ATTRAPES")) == 0) {
 		trimall(line);
 		player->fish = atol(line);
-	} else if (strncmp(line, "DISTANCE TRAVELLED", 18) == 0) {
+	} else if (strncmp(line, "DISTANCE TRAVELLED", LEN("DISTANCE TRAVELLED")) == 0 ||
+	                strncmp(line, "DISTANCE VOYAGEE", LEN("DISTANCE VOYAGEE")) == 0) {
 		trimall(line);
 		player->distance = atol(line);
-	} else if (strncmp(line, "REPUTATION", 10) == 0) {
+	} else if (strncmp(line, "REPUTATION", LEN("REPUTATION")) == 0) {
 		trimall(line);
 		player->reputation = atol(line);
-	} else if (strncmp(line, "ENDLESS RECORD", 14) == 0) {
+	} else if (strncmp(line, "ENDLESS RECORD", LEN("ENDLESS RECORD")) == 0 ||
+	                strncmp(line, "RECORD DU MODE SANS-FIN", LEN("RECORD DU MODE SANS-FIN")) == 0) {
 		trimall(line);
 		player->endless = atol(line);
-	} else if (strncmp(line, "ENTRIES COMPLETED", 17) == 0) {
+	} else if (strncmp(line, "ENTRIES COMPLETED", LEN("ENTRIES COMPLETED")) == 0 ||
+	                strncmp(line, "RECHERCHES TERMINEES", LEN("RECHERCHES TERMINEES")) == 0) {
 		trimall(line);
 		player->codex = atol(line);
 	}
@@ -682,6 +711,9 @@ on_message(struct discord *client, const struct discord_message *event)
 
 	if (event->channel_id == RAIDS_ID)
 		on_raids(client, event);
+
+	if (event->channel_id == TEST_ID)
+		on_stats(client, event);
 }
 
 void
@@ -830,19 +862,18 @@ on_help(struct discord * client, const struct discord_message * event)
 
 	strcpy(txt, "Post a screenshot of your stats to ");
 	for (i = 0; i < len; i++) {
-		strcat(txt, "<#");
-		p = strrchr(txt, '#');;
-		sprintf(++p, "%lu", stats_ids[i]);
-		strcat(txt, "> ");
+		p = strchr(txt, 0);;
+		sprintf(p, "<#%lu> ", stats_ids[i]);
 		if (i < len - 1)
 			strcat(txt, "or ");
 	}
 	strcat(txt, "to enter the database.\n");
 	/* TODO: add PREFIX */
 	strcat(txt, "Commands: \n");
-	strcat(txt, "\t?source or ?src\n");
 	strcat(txt, "\t?info [[@]player]\n");
 	strcat(txt, "\t?leaderboard or ?lb [category]\n");
+	strcat(txt, "\t?correct [category] [corrected value]\n");
+	strcat(txt, "\t?source or ?src\n");
 	strcat(txt, "\t?help\n\n");
 	strcat(txt, "Try them or ask Ratakor to know what they do.");
 
@@ -868,9 +899,10 @@ main(void)
 	discord_set_prefix(client, PREFIX);
 	discord_set_on_ready(client, on_ready);
 	discord_set_on_message_create(client, on_message);
-	discord_set_on_commands(client, src, LENGTH(src), on_source);
 	discord_set_on_commands(client, lb, LENGTH(lb), on_leaderboard);
 	discord_set_on_command(client, "info", on_info);
+	/* discord_set_on_command(client, "correct", on_correct); */
+	discord_set_on_commands(client, src, LENGTH(src), on_source);
 	discord_set_on_command(client, "help", on_help);
 
 	if (mkdir("./images/", 0755) == 1)

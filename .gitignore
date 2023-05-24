@@ -3,9 +3,6 @@
 *.csv
 *.tsv
 images/
+tests/
 nolan
 config.h
-
-*.jpg
-*.png
-test*
