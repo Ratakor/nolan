@@ -14,7 +14,6 @@
 #define LINE_SIZE   300
 #define LEN(X)      (sizeof X - 1)
 #define MAX_PLAYERS LENGTH(kingdoms) * 50
-#define NFIELDS     23
 
 /* ALL FIELDS MUST HAVE THE SAME SIZE */
 typedef struct {
@@ -184,7 +183,7 @@ loadplayerfromfile(unsigned int line)
 	val = p;
 
 	/* -1 because the last field in the file finish with a '\n' */
-	while (i < NFIELDS - 1 && *p != '\0') {
+	while (i < LENGTH(fields) - 1 && *p != '\0') {
 		if (*p == DELIM) {
 			*p = '\0';
 			if (i <= 1) /* name and kingdom */
@@ -196,7 +195,7 @@ loadplayerfromfile(unsigned int line)
 		}
 		p++;
 	}
-	if (i != NFIELDS - 1)
+	if (i != LENGTH(fields) - 1)
 		die("nolan: Player on line %d is missing a field\n", line);
 	player.userid = strtoul(val, NULL, 10);
 
@@ -232,11 +231,8 @@ updateplayers(Player *player)
 		players[nplayers] = loadplayerfromfile(nplayers + 2);
 		nplayers++;
 	} else {
-		/*
-		 * j = 1 because we want to keep the original username and
-		 * NFIELDS - 1 because we want to keep the original userid
-		 */
-		for (j = 1; j < NFIELDS - 1; j++)
+		/* keep original username and userid */
+		for (j = 1; j < LENGTH(fields) - 1; j++)
 			((void **)&players[i])[j] = ((void **)player)[j];
 	}
 }
@@ -425,9 +421,9 @@ createfile(void)
 	}
 
 	if (size == 0 && (fp = fopen(FILENAME, "w")) != NULL) {
-		for (i = 0; i < NFIELDS - 1; i++)
+		for (i = 0; i < LENGTH(fields) - 1; i++)
 			fprintf(fp, "%s%c", fields[i], DELIM);
-		fprintf(fp, "%s\n", fields[NFIELDS - 1]);
+		fprintf(fp, "%s\n", fields[LENGTH(fields) - 1]);
 	}
 
 	fclose(fp);
@@ -454,7 +450,7 @@ savetofile(Player *player)
 			infile = 1;
 			fprintf(w, "%s%c", player->name, DELIM);
 			fprintf(w, "%s%c", player->kingdom, DELIM);
-			for (i = 2; i < NFIELDS - 1; i++)
+			for (i = 2; i < LENGTH(fields) - 1; i++)
 				fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
 			fprintf(w, "%lu\n", player->userid);
 		} else {
@@ -466,7 +462,7 @@ savetofile(Player *player)
 	if (!infile) {
 		fprintf(w, "%s%c", player->name, DELIM);
 		fprintf(w, "%s%c", player->kingdom, DELIM);
-		for (i = 2; i < NFIELDS - 1; i++)
+		for (i = 2; i < LENGTH(fields) - 1; i++)
 			fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
 		fprintf(w, "%lu\n", player->userid);
 	}
@@ -766,7 +762,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		txt = malloc(512);
 		strcpy(txt, "NO WRONG, YOU MUST USE AN ARGUMENT!\n");
 		strcat(txt, "Valid categories are:\n");
-		for (i = 2; i < NFIELDS - 1; i++) {
+		for (i = 2; i < LENGTH(fields) - 1; i++) {
 			if (i == 5) /* regional rank */
 				continue;
 			strcat(txt, fields[i]);
@@ -781,14 +777,14 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		return;
 	}
 
-	while (i < NFIELDS - 1 && strcmp(fields[i], event->content) != 0)
+	while (i < LENGTH(fields) - 1 && strcmp(fields[i], event->content) != 0)
 		i++;
 
-	if (i == NFIELDS - 1 || i == 5) {
+	if (i == LENGTH(fields) - 1 || i == 5) {
 		txt = malloc(512);
 		strcpy(txt, "This is not a valid category.\n");
 		strcat(txt, "Valid categories are:\n");
-		for (i = 2; i < NFIELDS - 1; i++) {
+		for (i = 2; i < LENGTH(fields) - 1; i++) {
 			if (i == 5) /* regional rank */
 				continue;
 			strcat(txt, fields[i]);
@@ -854,7 +850,7 @@ on_info(struct discord *client, const struct discord_message *event)
 	txt = malloc(512);
 	*txt = 0;
 
-	for (j = 0; j < NFIELDS - 1; j++) {
+	for (j = 0; j < LENGTH(fields) - 1; j++) {
 		strcat(txt, fields[j]);
 		strcat(txt, ": ");
 		if (j <= 1) { /* name and kingdom */
