@@ -1,10 +1,10 @@
 PREFIX   ?= /usr/local
 CC       ?= cc
-DEBUG     = -g -W -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations
-CFLAGS   += -std=c99 -pedantic -Wall -O2 ${DEBUG}
+DEBUG     = -g -W -Wmissing-prototypes
+CFLAGS   += -std=c99 -pedantic -Wall -O2 -D_DEFAULT_SOURCE ${DEBUG}
 LDLFLAGS += -ltesseract -lleptonica -ldiscord -lcurl -lpthread
 
-SRC = nolan.c
+SRC = nolan.c util.c
 OBJ = ${SRC:.c=.o}
 
 all: nolan

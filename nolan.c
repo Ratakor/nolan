@@ -8,9 +8,10 @@
 #include <curl/curl.h>
 #include <concord/discord.h>
 
+#include "util.h"
 #include "config.h"
 
-#define MAX         300
+#define LINE_SIZE   300
 #define LENGTH(X)   (sizeof X / sizeof X[0])
 #define LEN(X)      (sizeof X - 1)
 #define MAX_PLAYERS LENGTH(kingdoms) * 50
@@ -44,11 +45,10 @@ typedef struct {
 	char *bufptr;
 } Player;
 
-void die(const char *errstr);
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
 void dlimg(char *url, char *fname);
-char *extract_txt_from_img(char *fname);
-Player loadplayerfromfile(int line);
+char *ocr(char *fname);
+Player loadplayerfromfile(unsigned int line);
 void initplayers(void);
 void updateplayers(Player *player);
 long playtimetolong(char *playtime, char *str);
@@ -58,6 +58,7 @@ void parseline(Player *player, char *line);
 void forline(Player *player, char *src);
 void createfile(void);
 int savetofile(Player *player);
+char *loadfilekd(char *kingdom, size_t *fszp);
 int compare(const void *e1, const void *e2);
 void addplayertolb(char *buf, int i);
 void leaderboard(char *buf, u64snowflake userid);
@@ -101,13 +102,6 @@ static const char *fields[] = {
 	"User ID",
 };
 
-void
-die(const char *errstr)
-{
-	fputs(errstr, stderr);
-	exit(EXIT_FAILURE);
-}
-
 static size_t
 write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 {
@@ -119,7 +113,7 @@ void
 dlimg(char *url, char *fname)
 {
 	CURL *handle;
-	FILE *f;
+	FILE *fp;
 
 	curl_global_init(CURL_GLOBAL_ALL);
 
@@ -128,65 +122,65 @@ dlimg(char *url, char *fname)
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_data);
 
-	f = fopen(fname, "wb");
-	if (f) {
-
-		curl_easy_setopt(handle, CURLOPT_WRITEDATA, f);
+	fp = fopen(fname, "wb");
+	if (fp) {
+		curl_easy_setopt(handle, CURLOPT_WRITEDATA, fp);
 		curl_easy_perform(handle);
-		fclose(f);
 	}
 
+	fclose(fp);
 	curl_easy_cleanup(handle);
 	curl_global_cleanup();
 }
 
 char *
-extract_txt_from_img(char *fname)
+ocr(char *fname)
 {
 	TessBaseAPI *handle;
 	PIX *img;
-	char *txt;
+	char *txt_ocr, *txt_out;
 
 	if ((img = pixRead(fname)) == NULL)
-		die("Error reading image\n");
+		die("nolan: Error reading image\n");
 
 	handle = TessBaseAPICreate();
 	if (TessBaseAPIInit3(handle, NULL, "eng") != 0)
-		die("Error initialising tesseract\n");
+		die("nolan: Error initialising tesseract\n");
 
 	TessBaseAPISetImage2(handle, img);
 	if (TessBaseAPIRecognize(handle, NULL) != 0)
-		die("Error in tesseract recognition\n");
+		die("nolan: Error in tesseract recognition\n");
 
-	if ((txt = TessBaseAPIGetUTF8Text(handle)) == NULL)
-		die("Error getting text\n");
+	txt_ocr = TessBaseAPIGetUTF8Text(handle);
+	txt_out = strdup(txt_ocr);
 
+	TessDeleteText(txt_ocr);
 	TessBaseAPIEnd(handle);
 	TessBaseAPIDelete(handle);
 	pixDestroy(&img);
 
-	return txt;
+	return txt_out;
 }
 
 Player
-loadplayerfromfile(int line)
+loadplayerfromfile(unsigned int line)
 {
-	FILE *f;
+	FILE *fp;
 	Player player;
-	char *buf = malloc(MAX), *p = NULL, *val;
+	char *buf = malloc(LINE_SIZE), *p = NULL, *val;
 	int i = 0;
 
-	if (line < 1)
-		die("loadplayerfromfile: line < 1\n"); /* description line */
+	if (line <= 1)
+		die("nolan: Tried to load the description line as a player\n");
 
-	if ((f = fopen(FILENAME, "r")) == NULL)
-		die("loadplayerfromfile: cannot open the save file\n");
+	if ((fp = fopen(FILENAME, "r")) == NULL)
+		die("nolan: Failed to open %s (read)\n", FILENAME);
 
-	while (i++ <= line && (p = fgets(buf, MAX, f)) != NULL);
-	fclose(f);
+	while (i++ < line && (p = fgets(buf, LINE_SIZE, fp)) != NULL);
+	fclose(fp);
 
 	if (p == NULL)
-		die("loadplayerfromfile: player is not in the save file\n");
+		die("nolan: line %d is not present in %s\n", line, FILENAME);
 
 	i = 0;
 	val = p;
@@ -209,7 +203,7 @@ loadplayerfromfile(int line)
 		p++;
 	}
 	if (i != NFIELDS - 2)
-		die("loadplayerfromfile: a player is missing a field\n");
+		die("nolan: Player on line %d is missing a field\n", line);
 	player.userid = strtoul(val, NULL, 10);
 
 	return player;
@@ -218,19 +212,19 @@ loadplayerfromfile(int line)
 void
 initplayers(void)
 {
-	FILE *f;
-	char buf[MAX];
+	FILE *fp;
+	char buf[LINE_SIZE];
 	int i;
 
-	if ((f = fopen(FILENAME, "r")) == NULL)
-		die("initplayers: cannot open the save file\n");
+	if ((fp = fopen(FILENAME, "r")) == NULL)
+		die("nolan: Failed to open %s (read)\n", FILENAME);
 
-	while (fgets(buf, MAX, f))
+	while (fgets(buf, LINE_SIZE, fp))
 		nplayers++;
 	nplayers--; /* first line is not a player */
 
 	for (i = 0; i < nplayers; i++)
-		players[i] = loadplayerfromfile(i + 1);
+		players[i] = loadplayerfromfile(i + 2);
 }
 
 void
@@ -241,8 +235,8 @@ updateplayers(Player *player)
 	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
 		i++;
 	if (i == nplayers) { /* new player */
+		players[nplayers] = loadplayerfromfile(nplayers + 2);
 		nplayers++;
-		players[nplayers - 1] = loadplayerfromfile(nplayers);
 	} else {
 		/*
 		 * j = 1 because we want to keep the original username and
@@ -257,7 +251,7 @@ updateplayers(Player *player)
 long
 playtimetolong(char *playtime, char str[])
 {
-	int days, hours;
+	long days, hours;
 
 	days = atol(playtime);
 	if ((playtime = strchr(playtime, str[0])) == 0)
@@ -271,7 +265,7 @@ playtimetolong(char *playtime, char str[])
 char *
 playtimetostr(long playtime)
 {
-	int days, hours;
+	long days, hours;
 	char *buf;
 
 	days = playtime / 24;
@@ -279,9 +273,9 @@ playtimetostr(long playtime)
 	buf = malloc(20);
 
 	if (hours == 0)
-		sprintf(buf, "%'d days", days);
+		sprintf(buf, "%'ld days", days);
 	else
-		sprintf(buf, "%'d days, %'d hours", days, hours);
+		sprintf(buf, "%'ld days, %'ld hours", days, hours);
 
 	return buf;
 }
@@ -427,24 +421,24 @@ forline(Player *player, char *src)
 void
 createfile(void)
 {
-	FILE *f;
+	FILE *fp;
 	int i, size = 0;
 
-	f = fopen(FILENAME, "r");
+	fp = fopen(FILENAME, "r");
 
-	if (f != NULL) {
-		fseek(f, 0, SEEK_END);
-		size = ftell(f);
+	if (fp != NULL) {
+		fseek(fp, 0, SEEK_END);
+		size = ftell(fp);
 	}
 
-	if (size == 0 && (f = fopen(FILENAME, "w")) != NULL) {
+	if (size == 0 && (fp = fopen(FILENAME, "w")) != NULL) {
 		/* -2 because bufptr is not in the file */
 		for (i = 0; i < NFIELDS - 2; i++)
-			fprintf(f, "%s%c", fields[i], DELIM);
-		fprintf(f, "%s\n", fields[NFIELDS - 2]);
+			fprintf(fp, "%s%c", fields[i], DELIM);
+		fprintf(fp, "%s\n", fields[NFIELDS - 2]);
 	}
 
-	fclose(f);
+	fclose(fp);
 }
 
 /* Save player to file and return 1 if player was already present */
@@ -452,15 +446,15 @@ int
 savetofile(Player *player)
 {
 	FILE *w, *r;
-	char buf[MAX], *p, *endname;
+	char buf[LINE_SIZE], *p, *endname;
 	int infile = 0, i;
 
 	if ((r = fopen(FILENAME, "r")) == NULL)
-		die("savetofile: cannot open the save file (read)\n");
+		die("nolan: Failed to open %s (read)\n", FILENAME);
 	if ((w = fopen("tmpfile", "w")) == NULL)
-		die("savetofile: cannot open the save file (write)\n");
+		die("nolan: Failed to open %s (write)\n", FILENAME);
 
-	while ((p = fgets(buf, MAX, r)) != NULL) {
+	while ((p = fgets(buf, LINE_SIZE, r)) != NULL) {
 		endname = strchr(p, DELIM);
 		if (endname)
 			*endname = 0;
@@ -493,14 +487,50 @@ savetofile(Player *player)
 	return infile;
 }
 
+char *
+loadfilekd(char *kingdom, size_t *fszp)
+{
+	FILE *fp;
+	char *res, line[LINE_SIZE], *kd, *endkd;
+
+	if ((fp = fopen(FILENAME, "r")) == NULL)
+		die("nolan: Failed to open %s (read)\n", FILENAME);
+
+	res = malloc(LINE_SIZE + nplayers * LINE_SIZE);
+	fgets(line, LINE_SIZE, fp); /* fields name */
+	strcpy(res, line);
+	while (fgets(line, LINE_SIZE, fp) != NULL) {
+		kd = strchr(line, DELIM) + 1;
+		endkd = nstrchr(line, DELIM, 2);
+		if (endkd)
+			*endkd = '\0';
+		if (strcmp(kd, kingdom) == 0) {
+			*endkd = DELIM;
+			strcat(res, line);
+		}
+	}
+
+	fclose(fp);
+	*fszp = strlen(res);
+	return res;
+}
+
 int
 compare(const void *e1, const void *e2)
 {
-	const Player p1 = *((const Player *)e1);
-	const Player p2 = *((const Player *)e2);
-	if (category == 4 || category == 6) /* ranks */
-		return ((long *)&p1)[category] - ((long *)&p2)[category];
-	return ((long *)&p2)[category] - ((long *)&p1)[category];
+	const long l1 = ((long *)(Player *)e1)[category];
+	const long l2 = ((long *)(Player *)e2)[category];
+
+	/* ranks */
+	if (category == 4 || category == 6) {
+		if (l1 == 0)
+			return 1;
+		if (l2 == 0)
+			return -1;
+		return l1 - l2;
+	}
+
+	return l2 - l1;
 }
 
 void
@@ -584,26 +614,28 @@ void
 stats(struct discord *client, const struct discord_message *event)
 {
 	int i;
-	char *txt, *fname;
+	char *txt, *fname = malloc(64 + 1);
 	Player player;
 
-	if (event->attachments->size == 0)
-		return;
-	if (strchr(event->attachments->array->filename, '.') == NULL)
-		return;
-	if (strncmp(event->attachments->array->content_type, "image", 5) != 0)
-		return;
-
-	fname = malloc(64 + sizeof(char));
 	snprintf(fname, 64, "./images/%s.jpg", event->author->username);
 	dlimg(event->attachments->array->url, fname);
-	txt = extract_txt_from_img(fname);
+	txt = ocr(fname);
 	free(fname);
+
+	if (txt == NULL) {
+		struct discord_create_message msg = {
+			.content = "Error: Failed to read image"
+		};
+		discord_create_message(client, event->channel_id, &msg, NULL);
+		free(txt);
+		return;
+	}
 
 	memset(&player, 0, sizeof(player));
 	player.name = event->author->username;
 	player.userid = event->author->id;
 	forline(&player, txt);
+	free(txt);
 
 	if (player.kingdom == NULL)
 		player.kingdom = "(null)";
@@ -623,19 +655,24 @@ stats(struct discord *client, const struct discord_message *event)
 		}
 	}
 
+	txt = malloc(64 + 1);
+
 	if (savetofile(&player)) {
+		snprintf(txt, 64, "%s's profile has been updated.", player.name);
 		struct discord_create_message msg = {
-			.content = "Your profile has been updated."
+			.content = txt
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
 	} else {
+		snprintf(txt, 64, "%s has been registrated in the database.", player.name);
 		struct discord_create_message msg = {
-			.content = "You have been registrated in the database."
+			.content = txt
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
 	}
 	updateplayers(&player);
 
+	free(txt);
 	free(player.bufptr); /* bufptr should always be NULL */
 }
 
@@ -644,21 +681,15 @@ raids(struct discord *client, const struct discord_message *event)
 {
 	char *txt;
 
-	if (event->attachments->size == 0)
-		return;
-	if (strchr(event->attachments->array->filename, '.') == NULL)
-		return;
-	if (strncmp(event->attachments->array->content_type, "image", 5) != 0)
-		return;
-
 	dlimg(event->attachments->array->url, "./images/raids.jpg");
-	txt = extract_txt_from_img("./images/raids.jpg");
+	txt = ocr("./images/raids.jpg");
 
 	/*
 	 * TODO
 	 * "+ Raid options"
 	 */
 
+	free(txt);
 	return;
 
 	struct discord_create_message msg = {
@@ -672,6 +703,13 @@ void
 on_message(struct discord *client, const struct discord_message *event)
 {
 	int i;
+
+	if (event->attachments->size == 0)
+		return;
+	if (strchr(event->attachments->array->filename, '.') == NULL)
+		return;
+	if (strncmp(event->attachments->array->content_type, "image", 5) != 0)
+		return;
 
 #ifdef DEVEL
 	if (event->channel_id == DEVEL)
@@ -693,18 +731,23 @@ on_message(struct discord *client, const struct discord_message *event)
 void
 on_source(struct discord *client, const struct discord_message *event)
 {
-	size_t fsz = 0;
-	char *fbuf = cog_load_whole_file(FILENAME, &fsz);
+	size_t fsize = 0;
+	char *fbuf = NULL;
 
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
 		return;
 #endif
 
+	if (strlen(event->content) == 0)
+		fbuf = cog_load_whole_file(FILENAME, &fsize);
+	else
+		fbuf = loadfilekd(event->content, &fsize);
+
 	struct discord_attachment attachment = {
 		.filename = FILENAME,
 		.content = fbuf,
-		.size = fsz
+		.size = fsize
 	};
 	struct discord_attachments attachments = {
 		.size = 1,
@@ -714,6 +757,7 @@ on_source(struct discord *client, const struct discord_message *event)
 		.attachments = &attachments
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	free(fbuf);
 }
 
 
@@ -869,11 +913,12 @@ on_help(struct discord * client, const struct discord_message * event)
 	strcat(txt, "to enter the database.\n");
 	/* TODO: add PREFIX */
 	strcat(txt, "Commands: \n");
-	strcat(txt, "\t?info [[@]user]\n");
-	strcat(txt, "\t?leaderboard or ?lb [category]\n");
+	strcat(txt, "\t?info *[@]user*\n");
+	strcat(txt, "\t?leaderboard or ?lb *category*\n");
 	/* strcat(txt, "\t?correct [category] [corrected value]\n"); */
-	strcat(txt, "\t?source or ?src\n");
+	strcat(txt, "\t?source or ?src [kingdom]\n");
 	strcat(txt, "\t?help\n\n");
+	strcat(txt, "[...] means optional.\n");
 	strcat(txt, "Try them or ask Ratakor to know what they do.");
 
 	struct discord_create_message msg = {
@@ -905,7 +950,7 @@ main(void)
 	discord_set_on_command(client, "help", on_help);
 
 	if (mkdir("./images/", 0755) == 1)
-		die("main: cannot create the images folder\n");
+		die("nolan: Failed to create the images folder\n");
 	createfile();
 	initplayers();
 
