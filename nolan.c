@@ -12,10 +12,9 @@
 #include "config.h"
 
 #define LINE_SIZE   300
-#define LENGTH(X)   (sizeof X / sizeof X[0])
 #define LEN(X)      (sizeof X - 1)
 #define MAX_PLAYERS LENGTH(kingdoms) * 50
-#define NFIELDS     24
+#define NFIELDS     23
 
 /* ALL FIELDS MUST HAVE THE SAME SIZE */
 typedef struct {
@@ -42,7 +41,6 @@ typedef struct {
 	long endless;
 	long codex;
 	u64snowflake userid;
-	char *bufptr;
 } Player;
 
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
@@ -168,7 +166,7 @@ loadplayerfromfile(unsigned int line)
 	FILE *fp;
 	Player player;
 	char *buf = malloc(LINE_SIZE), *p = NULL, *val;
-	int i = 0;
+	unsigned int i = 0;
 
 	if (line <= 1)
 		die("nolan: Tried to load the description line as a player\n");
@@ -184,13 +182,9 @@ loadplayerfromfile(unsigned int line)
 
 	i = 0;
 	val = p;
-	player.bufptr = buf;
 
-	/*
-	 * -2 because the last field in the file finish with a '\n'
-	 * and bufptr is not in the file
-	 */
-	while (i < NFIELDS - 2 && *p != '\0') {
+	/* -1 because the last field in the file finish with a '\n' */
+	while (i < NFIELDS - 1 && *p != '\0') {
 		if (*p == DELIM) {
 			*p = '\0';
 			if (i <= 1) /* name and kingdom */
@@ -202,7 +196,7 @@ loadplayerfromfile(unsigned int line)
 		}
 		p++;
 	}
-	if (i != NFIELDS - 2)
+	if (i != NFIELDS - 1)
 		die("nolan: Player on line %d is missing a field\n", line);
 	player.userid = strtoul(val, NULL, 10);
 
@@ -240,10 +234,9 @@ updateplayers(Player *player)
 	} else {
 		/*
 		 * j = 1 because we want to keep the original username and
-		 * NFIELDS - 2 because we want to keep the original userid and
-		 * bufptr
+		 * NFIELDS - 1 because we want to keep the original userid
 		 */
-		for (j = 1; j < NFIELDS - 2; j++)
+		for (j = 1; j < NFIELDS - 1; j++)
 			((void **)&players[i])[j] = ((void **)player)[j];
 	}
 }
@@ -432,10 +425,9 @@ createfile(void)
 	}
 
 	if (size == 0 && (fp = fopen(FILENAME, "w")) != NULL) {
-		/* -2 because bufptr is not in the file */
-		for (i = 0; i < NFIELDS - 2; i++)
+		for (i = 0; i < NFIELDS - 1; i++)
 			fprintf(fp, "%s%c", fields[i], DELIM);
-		fprintf(fp, "%s\n", fields[NFIELDS - 2]);
+		fprintf(fp, "%s\n", fields[NFIELDS - 1]);
 	}
 
 	fclose(fp);
@@ -462,7 +454,7 @@ savetofile(Player *player)
 			infile = 1;
 			fprintf(w, "%s%c", player->name, DELIM);
 			fprintf(w, "%s%c", player->kingdom, DELIM);
-			for (i = 2; i < NFIELDS - 2; i++)
+			for (i = 2; i < NFIELDS - 1; i++)
 				fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
 			fprintf(w, "%lu\n", player->userid);
 		} else {
@@ -474,7 +466,7 @@ savetofile(Player *player)
 	if (!infile) {
 		fprintf(w, "%s%c", player->name, DELIM);
 		fprintf(w, "%s%c", player->kingdom, DELIM);
-		for (i = 2; i < NFIELDS - 2; i++)
+		for (i = 2; i < NFIELDS - 1; i++)
 			fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
 		fprintf(w, "%lu\n", player->userid);
 	}
@@ -650,7 +642,6 @@ stats(struct discord *client, const struct discord_message *event)
 				.content = "Sorry you're not part of the kingdom :/"
 			};
 			discord_create_message(client, event->channel_id, &msg, NULL);
-			free(player.bufptr);
 			return;
 		}
 	}
@@ -673,7 +664,6 @@ stats(struct discord *client, const struct discord_message *event)
 	updateplayers(&player);
 
 	free(txt);
-	free(player.bufptr); /* bufptr should always be NULL */
 }
 
 void
@@ -776,7 +766,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		txt = malloc(512);
 		strcpy(txt, "NO WRONG, YOU MUST USE AN ARGUMENT!\n");
 		strcat(txt, "Valid categories are:\n");
-		for (i = 2; i < NFIELDS - 2; i++) {
+		for (i = 2; i < NFIELDS - 1; i++) {
 			if (i == 5) /* regional rank */
 				continue;
 			strcat(txt, fields[i]);
@@ -791,14 +781,14 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		return;
 	}
 
-	while (i < NFIELDS - 2 && strcmp(fields[i], event->content) != 0)
+	while (i < NFIELDS - 1 && strcmp(fields[i], event->content) != 0)
 		i++;
 
-	if (i == NFIELDS - 2 || i == 5) {
+	if (i == NFIELDS - 1 || i == 5) {
 		txt = malloc(512);
 		strcpy(txt, "This is not a valid category.\n");
 		strcat(txt, "Valid categories are:\n");
-		for (i = 2; i < NFIELDS - 2; i++) {
+		for (i = 2; i < NFIELDS - 1; i++) {
 			if (i == 5) /* regional rank */
 				continue;
 			strcat(txt, fields[i]);
@@ -864,7 +854,7 @@ on_info(struct discord *client, const struct discord_message *event)
 	txt = malloc(512);
 	*txt = 0;
 
-	for (j = 0; j < NFIELDS - 2; j++) {
+	for (j = 0; j < NFIELDS - 1; j++) {
 		strcat(txt, fields[j]);
 		strcat(txt, ": ");
 		if (j <= 1) { /* name and kingdom */
