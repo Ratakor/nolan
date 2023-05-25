@@ -45,7 +45,7 @@ typedef struct {
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
 void dlimg(char *url, char *fname);
 char *ocr(char *fname);
-Player loadplayerfromfile(unsigned int line);
+Player loadplayer(unsigned int line);
 void initplayers(void);
 void updateplayers(Player *player);
 long playtimetolong(char *playtime, char *str);
@@ -55,6 +55,7 @@ void parseline(Player *player, char *line);
 void forline(Player *player, char *src);
 void createfile(void);
 int savetofile(Player *player);
+char *updatemsg(Player *player, int iplayer);
 char *loadfilekd(char *kingdom, size_t *fszp);
 int compare(const void *e1, const void *e2);
 void addplayertolb(char *buf, int i);
@@ -66,7 +67,7 @@ void raids(struct discord *client, const struct discord_message *event);
 void on_message(struct discord *client, const struct discord_message *event);
 void on_sourcetxt(struct discord *client, const struct discord_message *event);
 void on_source(struct discord *client, const struct discord_message *event);
-void on_leaderboard(struct discord *client, const struct discord_message *event);
+void on_lb(struct discord *client, const struct discord_message *event);
 void on_info(struct discord *client, const struct discord_message *event);
 void on_help(struct discord *client, const struct discord_message *event);
 
@@ -95,7 +96,7 @@ static const char *fields[] = {
 	"Distance Travelled",
 	"Reputation",
 	"Endless Record",
-	"Entries Completed",
+	"Codex",
 	"User ID",
 };
 
@@ -119,11 +120,11 @@ dlimg(char *url, char *fname)
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_data);
 
-	fp = fopen(fname, "wb");
-	if (fp) {
-		curl_easy_setopt(handle, CURLOPT_WRITEDATA, fp);
-		curl_easy_perform(handle);
-	}
+	if ((fp = fopen(fname, "wb")) == NULL)
+		die("nolan: Failed to open %s\n", fname);
+
+	curl_easy_setopt(handle, CURLOPT_WRITEDATA, fp);
+	curl_easy_perform(handle);
 
 	fclose(fp);
 	curl_easy_cleanup(handle);
@@ -160,44 +161,43 @@ ocr(char *fname)
 }
 
 Player
-loadplayerfromfile(unsigned int line)
+loadplayer(unsigned int line)
 {
 	FILE *fp;
 	Player player;
-	char *buf = malloc(LINE_SIZE), *p = NULL, *val;
+	char buf[LINE_SIZE], *p = NULL, *end;
 	unsigned int i = 0;
 
 	if (line <= 1)
 		die("nolan: Tried to load the description line as a player\n");
-
 	if ((fp = fopen(FILENAME, "r")) == NULL)
 		die("nolan: Failed to open %s (read)\n", FILENAME);
 
 	while (i++ < line && (p = fgets(buf, LINE_SIZE, fp)) != NULL);
 	fclose(fp);
-
 	if (p == NULL)
-		die("nolan: line %d is not present in %s\n", line, FILENAME);
+		die("nolan: Line %d is not present in %s\n", line, FILENAME);
 
+	player.name = malloc(32 + 1);
+	player.kingdom = malloc(32 + 1);
 	i = 0;
-	val = p;
+	end = p;
 
 	/* -1 because the last field in the file finish with a '\n' */
-	while (i < LENGTH(fields) - 1 && *p != '\0') {
-		if (*p == DELIM) {
-			*p = '\0';
-			if (i <= 1) /* name and kingdom */
-				((char **)&player)[i] = val;
-			else
-				((long *)&player)[i] = atol(val);
-			val = p + 1;
-			i++;
-		}
-		p++;
+	while (i < LENGTH(fields) - 1 && *++end != '\0') {
+		if (*end != DELIM)
+			continue;
+		*end = '\0';
+		if (i <= 1) /* name and kingdom */
+			strncpy(((char **)&player)[i], p, 32);
+		else
+			((long *)&player)[i] = atol(p);
+		p = end + 1;
+		i++;
 	}
 	if (i != LENGTH(fields) - 1)
 		die("nolan: Player on line %d is missing a field\n", line);
-	player.userid = strtoul(val, NULL, 10);
+	player.userid = strtoul(p, NULL, 10);
 
 	return player;
 }
@@ -217,7 +217,7 @@ initplayers(void)
 	nplayers--; /* first line is not a player */
 
 	for (i = 0; i < nplayers; i++)
-		players[i] = loadplayerfromfile(i + 2);
+		players[i] = loadplayer(i + 2);
 }
 
 void
@@ -225,28 +225,35 @@ updateplayers(Player *player)
 {
 	int i = 0, j;
 
-	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
+	/* while (i < nplayers && strcmp(players[i].name, player->name) != 0) */
+	while (i < nplayers && players[i].userid != player->userid)
 		i++;
+
 	if (i == nplayers) { /* new player */
-		players[nplayers] = loadplayerfromfile(nplayers + 2);
+		players[nplayers] = loadplayer(nplayers + 2);
 		nplayers++;
 	} else {
-		/* keep original username and userid */
-		for (j = 1; j < LENGTH(fields) - 1; j++)
-			((void **)&players[i])[j] = ((void **)player)[j];
+		if (player->name)
+			strncpy(players[i].name, player->name, 32);
+		if (player->kingdom)
+			strncpy(players[i].kingdom, player->kingdom, 32);
+		/* keep original userid */
+		for (j = 2; j < LENGTH(fields) - 1; j++)
+			((long *)&players[i])[j] = ((long *)player)[j];
 	}
 }
 
 long
 playtimetolong(char *playtime, char str[])
 {
+	char *p;
 	long days, hours;
 
 	days = atol(playtime);
-	if ((playtime = strchr(playtime, str[0])) == 0)
+	if ((p = strchr(playtime, str[0])) == 0)
 		return days; /* less than a day of playtime */
-	while (*str && (*playtime++ == *str++));
-	hours = atol(playtime);
+	while (*str && (*p++ == *str++));
+	hours = atol(p);
 
 	return days * 24 + hours;
 }
@@ -259,12 +266,32 @@ playtimetostr(long playtime)
 
 	days = playtime / 24;
 	hours = playtime % 24;
-	buf = malloc(20);
+	buf = malloc(20 + 1);
 
-	if (hours == 0)
-		sprintf(buf, "%'ld days", days);
-	else
-		sprintf(buf, "%'ld days, %'ld hours", days, hours);
+	switch (hours) {
+	case 0:
+		if (days <= 1)
+			snprintf(buf, 20, "%ld day", days);
+		else
+			snprintf(buf, 20, "%ld days", days);
+		break;
+	case 1:
+		if (days == 0)
+			snprintf(buf, 20, "%ld hour", hours);
+		else if (days == 1)
+			snprintf(buf, 20, "%ld day, %ld hour", days, hours);
+		else
+			snprintf(buf, 20, "%ld days, %ld hour", days, hours);
+		break;
+	default:
+		if (days == 0)
+			snprintf(buf, 20, "%ld hours", hours);
+		else if (days == 1)
+			snprintf(buf, 20, "%ld day, %ld hours", days, hours);
+		else
+			snprintf(buf, 20, "%ld days, %ld hours", days, hours);
+		break;
+	}
 
 	return buf;
 }
@@ -394,16 +421,16 @@ parseline(Player *player, char *line)
 }
 
 void
-forline(Player *player, char *src)
+forline(Player *player, char *txt)
 {
-	char *endline, *p = src;
+	char *line = txt, *endline;
 
-	while (p) {
-		endline = strchr(p, '\n');
+	while (line) {
+		endline = strchr(line, '\n');
 		if (endline)
 			*endline = 0;
-		parseline(player, p);
-		p = endline ? (endline + 1) : 0;
+		parseline(player, line);
+		line = endline ? (endline + 1) : 0;
 	}
 }
 
@@ -429,13 +456,13 @@ createfile(void)
 	fclose(fp);
 }
 
-/* Save player to file and return 1 if player was already present */
+/* Save player to file and return player's index in file if it was found */
 int
 savetofile(Player *player)
 {
 	FILE *w, *r;
 	char buf[LINE_SIZE], *p, *endname;
-	int infile = 0, i;
+	int iplayer = 0, cpt = 1, i;
 
 	if ((r = fopen(FILENAME, "r")) == NULL)
 		die("nolan: Failed to open %s (read)\n", FILENAME);
@@ -443,11 +470,12 @@ savetofile(Player *player)
 		die("nolan: Failed to open %s (write)\n", FILENAME);
 
 	while ((p = fgets(buf, LINE_SIZE, r)) != NULL) {
+		fprintf(stderr, "%d: %s\n", cpt, p);
 		endname = strchr(p, DELIM);
 		if (endname)
 			*endname = 0;
 		if (strcmp(player->name, p) == 0) {
-			infile = 1;
+			iplayer = cpt;
 			fprintf(w, "%s%c", player->name, DELIM);
 			fprintf(w, "%s%c", player->kingdom, DELIM);
 			for (i = 2; i < LENGTH(fields) - 1; i++)
@@ -458,8 +486,9 @@ savetofile(Player *player)
 				*endname = DELIM;
 			fprintf(w, "%s", p);
 		}
+		cpt++;
 	}
-	if (!infile) {
+	if (!iplayer) {
 		fprintf(w, "%s%c", player->name, DELIM);
 		fprintf(w, "%s%c", player->kingdom, DELIM);
 		for (i = 2; i < LENGTH(fields) - 1; i++)
@@ -472,7 +501,44 @@ savetofile(Player *player)
 	remove(FILENAME);
 	rename("tmpfile", FILENAME);
 
-	return infile;
+	return iplayer;
+}
+
+char *
+updatemsg(Player *player, int iplayer)
+{
+	int i;
+	char *buf = malloc(2000 + 1), *p;
+	long old, new, diff;
+
+	sprintf(buf, "%s's profile has been updated.\n\n", player->name);
+	p = strchr(buf, '\0');
+
+	if (strcmp(players[iplayer].kingdom, player->kingdom) != 0) {
+		sprintf(p, "%s: %s -> %s\n", fields[1],
+		        players[iplayer].kingdom, player->kingdom);
+		p = strchr(buf, '\0');
+	}
+
+	for (i = 2; i < LENGTH(fields) - 1; i++) {
+		old = ((long *)&players[iplayer])[i];
+		new = ((long *)player)[i];
+		diff = new - old;
+		if (diff == 0)
+			continue;
+
+		if (i == 7) { /* playtime */
+			sprintf(p, "%s: %s -> %s (+ %s)\n",
+			        fields[7], playtimetostr(old),
+			        playtimetostr(new), playtimetostr(diff));
+		} else {
+			sprintf(p, "%s: %'ld -> %'ld (%'+ld)\n",
+			        fields[i], old, new, diff);
+		}
+		p = strchr(buf, '\0');
+	}
+
+	return buf;
 }
 
 char *
@@ -601,7 +667,7 @@ on_ready(struct discord *client, const struct discord_ready *event)
 void
 stats(struct discord *client, const struct discord_message *event)
 {
-	int i;
+	int i, iplayer;
 	char *txt, *fname = malloc(64 + 1);
 	Player player;
 
@@ -642,23 +708,19 @@ stats(struct discord *client, const struct discord_message *event)
 		}
 	}
 
-	txt = malloc(64 + 1);
-
-	if (savetofile(&player)) {
-		snprintf(txt, 64, "%s's profile has been updated.", player.name);
-		struct discord_create_message msg = {
-			.content = txt
-		};
-		discord_create_message(client, event->channel_id, &msg, NULL);
+	if ((iplayer = savetofile(&player))) {
+		fprintf(stderr, "%d %d\n", iplayer, iplayer - 2);
+		txt = updatemsg(&player, iplayer - 2);
 	} else {
-		snprintf(txt, 64, "%s has been registrated in the database.", player.name);
-		struct discord_create_message msg = {
-			.content = txt
-		};
-		discord_create_message(client, event->channel_id, &msg, NULL);
+		txt = malloc(64 + 1);
+		snprintf(txt, 64, "%s has been registrated in the database.",
+		         player.name);
 	}
+	struct discord_create_message msg = {
+		.content = txt
+	};
+	discord_create_message(client, event->channel_id, &msg, NULL);
 	updateplayers(&player);
-
 	free(txt);
 }
 
@@ -748,7 +810,7 @@ on_source(struct discord *client, const struct discord_message *event)
 
 
 void
-on_leaderboard(struct discord *client, const struct discord_message *event)
+on_lb(struct discord *client, const struct discord_message *event)
 {
 	int i = 2;
 	char *txt;
@@ -930,7 +992,7 @@ main(void)
 	discord_set_prefix(client, PREFIX);
 	discord_set_on_ready(client, on_ready);
 	discord_set_on_message_create(client, on_message);
-	discord_set_on_commands(client, lb, LENGTH(lb), on_leaderboard);
+	discord_set_on_commands(client, lb, LENGTH(lb), on_lb);
 	discord_set_on_command(client, "info", on_info);
 	discord_set_on_commands(client, src, LENGTH(src), on_source);
 	discord_set_on_command(client, "help", on_help);

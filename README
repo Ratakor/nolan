@@ -1,18 +1,14 @@
 lib dependencies: concord, tesseract, curl
 
 TODO:
-add player with name in event->content for ham
-
 refactor parseline()
+use / instead of prefix
 use embed for stats
 refactor on_help()
-use / instead of prefix
+add player with name in event->content for ham
 add option to correct stats
 
 raids
 ascensions (track mats)
 detect wrong screenshot
-automatic roles attribution (for Orna FR)
-
-store tesseract output in player.bufptr and
-don't use save file to load new player ?
+automatic roles attribution (for Orna FR) -> with updatemsg
