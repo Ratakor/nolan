@@ -470,7 +470,6 @@ savetofile(Player *player)
 		die("nolan: Failed to open %s (write)\n", FILENAME);
 
 	while ((p = fgets(buf, LINE_SIZE, r)) != NULL) {
-		fprintf(stderr, "%d: %s\n", cpt, p);
 		endname = strchr(p, DELIM);
 		if (endname)
 			*endname = 0;
@@ -709,7 +708,6 @@ stats(struct discord *client, const struct discord_message *event)
 	}
 
 	if ((iplayer = savetofile(&player))) {
-		fprintf(stderr, "%d %d\n", iplayer, iplayer - 2);
 		txt = updatemsg(&player, iplayer - 2);
 	} else {
 		txt = malloc(64 + 1);
