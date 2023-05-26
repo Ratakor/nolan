@@ -6,6 +6,7 @@
 #define PREFIX   "?"
 
 static const int kingdom_verification = 0; /* 0 means no verification */
+static const int use_embed            = 1; /* 0 means no embed on info */
 
  /* list of ids to check for stats image */
 static const u64snowflake stats_ids[] = {

@@ -14,6 +14,7 @@
 #define LINE_SIZE   300
 #define LEN(X)      (sizeof X - 1)
 #define MAX_PLAYERS LENGTH(kingdoms) * 50
+#define ICON_URL    "https://orna.guide/static/orna/img/npcs/master_gnome.png"
 
 /* ALL FIELDS MUST HAVE THE SAME SIZE */
 typedef struct {
@@ -43,33 +44,32 @@ typedef struct {
 } Player;
 
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
-void dlimg(char *url, char *fname);
-char *ocr(char *fname);
-Player loadplayer(unsigned int line);
-void initplayers(void);
-void updateplayers(Player *player);
-long playtimetolong(char *playtime, char *str);
-char *playtimetostr(long playtime);
-void trimall(char *str);
-void parseline(Player *player, char *line);
-void forline(Player *player, char *src);
-void createfile(void);
-int savetofile(Player *player);
-char *updatemsg(Player *player, int iplayer);
-char *loadfilekd(char *kingdom, size_t *fszp);
-int compare(const void *e1, const void *e2);
-void addplayertolb(char *buf, int i);
-void leaderboard(char *buf, u64snowflake userid);
-u64snowflake useridtoul(char *id);
-void on_ready(struct discord *client, const struct discord_ready *event);
-void stats(struct discord *client, const struct discord_message *event);
-void raids(struct discord *client, const struct discord_message *event);
-void on_message(struct discord *client, const struct discord_message *event);
-void on_sourcetxt(struct discord *client, const struct discord_message *event);
-void on_source(struct discord *client, const struct discord_message *event);
-void on_lb(struct discord *client, const struct discord_message *event);
-void on_info(struct discord *client, const struct discord_message *event);
-void on_help(struct discord *client, const struct discord_message *event);
+static void dlimg(char *url, char *fname);
+static char *ocr(char *fname);
+static Player loadplayer(unsigned int line);
+static void initplayers(void);
+static void updateplayers(Player *player);
+static long playtimetolong(char *playtime, char *str);
+static char *playtimetostr(long playtime);
+static void trimall(char *str);
+static void parseline(Player *player, char *line);
+static void forline(Player *player, char *src);
+static void createfile(void);
+static int savetofile(Player *player);
+static char *updatemsg(Player *player, int iplayer);
+static char *loadfilekd(char *kingdom, size_t *fszp);
+static int compare(const void *e1, const void *e2);
+static void addplayertolb(char *buf, int i);
+static void leaderboard(char *buf, u64snowflake userid);
+static u64snowflake useridtoul(char *id);
+static void on_ready(struct discord *client, const struct discord_ready *event);
+static void stats(struct discord *client, const struct discord_message *event);
+static void raids(struct discord *client, const struct discord_message *event);
+static void on_message(struct discord *client, const struct discord_message *event);
+static void on_source(struct discord *client, const struct discord_message *event);
+static void on_lb(struct discord *client, const struct discord_message *event);
+static void on_info(struct discord *client, const struct discord_message *event);
+static void on_help(struct discord *client, const struct discord_message *event);
 
 static Player players[MAX_PLAYERS];
 static int nplayers = 0;
@@ -216,6 +216,10 @@ initplayers(void)
 		nplayers++;
 	nplayers--; /* first line is not a player */
 
+	if (nplayers > MAX_PLAYERS)
+		die("nolan: There is too much players to load (max:%d)\n",
+		    MAX_PLAYERS);
+
 	for (i = 0; i < nplayers; i++)
 		players[i] = loadplayer(i + 2);
 }
@@ -230,6 +234,9 @@ updateplayers(Player *player)
 		i++;
 
 	if (i == nplayers) { /* new player */
+		if (nplayers > MAX_PLAYERS)
+			die("nolan: There is too much players (max:%d)\n",
+			    MAX_PLAYERS);
 		players[nplayers] = loadplayer(nplayers + 2);
 		nplayers++;
 	} else {
@@ -428,7 +435,7 @@ forline(Player *player, char *txt)
 	while (line) {
 		endline = strchr(line, '\n');
 		if (endline)
-			*endline = 0;
+			*endline = '\0';
 		parseline(player, line);
 		line = endline ? (endline + 1) : 0;
 	}
@@ -507,7 +514,7 @@ char *
 updatemsg(Player *player, int iplayer)
 {
 	int i;
-	char *buf = malloc(2000 + 1), *p;
+	char *buf = malloc(2000 + 1), *p, *plto, *pltn, *pltd;
 	long old, new, diff;
 
 	sprintf(buf, "%s's profile has been updated.\n\n", player->name);
@@ -527,15 +534,23 @@ updatemsg(Player *player, int iplayer)
 			continue;
 
 		if (i == 7) { /* playtime */
+			plto = playtimetostr(old);
+			pltn = playtimetostr(new);
+			pltd = playtimetostr(diff);
 			sprintf(p, "%s: %s -> %s (+ %s)\n",
-			        fields[7], playtimetostr(old),
-			        playtimetostr(new), playtimetostr(diff));
+			        fields[7], plto, pltn, pltd);
+			free(plto);
+			free(pltn);
+			free(pltd);
 		} else {
 			sprintf(p, "%s: %'ld -> %'ld (%'+ld)\n",
 			        fields[i], old, new, diff);
 		}
 		p = strchr(buf, '\0');
 	}
+
+	/* TODO */
+	/* sprintf(p, "Last update was xxx ago\n"); */
 
 	return buf;
 }
@@ -725,23 +740,29 @@ stats(struct discord *client, const struct discord_message *event)
 void
 raids(struct discord *client, const struct discord_message *event)
 {
-	char *txt;
+	char *txt, *line, *endline;
 
 	dlimg(event->attachments->array->url, "./images/raids.jpg");
 	txt = ocr("./images/raids.jpg");
 
-	/*
-	 * TODO
-	 * "+ Raid options"
-	 */
-
-	free(txt);
-	return;
+	/* TODO */
+	line = txt;
+	while (line) {
+		endline = strchr(line, '\n');
+		if (endline)
+			*endline = '\0';
+		if (strncmp(line, "+ Raid options", 14) == 0) {
+			line = endline + 1;
+			break;
+		}
+		line = endline ? (endline + 1) : 0;
+	}
 
 	struct discord_create_message msg = {
-		.content = txt
+		.content = line
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	free(txt);
 }
 
 
@@ -750,6 +771,8 @@ on_message(struct discord *client, const struct discord_message *event)
 {
 	int i;
 
+	if (event->author->bot)
+		return;
 	if (event->attachments->size == 0)
 		return;
 	if (strchr(event->attachments->array->filename, '.') == NULL)
@@ -759,7 +782,7 @@ on_message(struct discord *client, const struct discord_message *event)
 
 #ifdef DEVEL
 	if (event->channel_id == DEVEL)
-		stats(client, event);
+		raids(client, event);
 	return;
 #endif
 
@@ -779,6 +802,9 @@ on_source(struct discord *client, const struct discord_message *event)
 {
 	size_t fsize = 0;
 	char *fbuf = NULL;
+
+	if (event->author->bot)
+		return;
 
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
@@ -812,6 +838,9 @@ on_lb(struct discord *client, const struct discord_message *event)
 {
 	int i = 2;
 	char *txt;
+
+	if (event->author->bot)
+		return;
 
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
@@ -874,8 +903,11 @@ void
 on_info(struct discord *client, const struct discord_message *event)
 {
 	int i = 0, j;
-	char *txt, *p;
+	char buf[512 + 1], *p;
 	u64snowflake userid;
+
+	if (event->author->bot)
+		return;
 
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
@@ -907,33 +939,62 @@ on_info(struct discord *client, const struct discord_message *event)
 		return;
 	}
 
-	txt = malloc(512);
-	*txt = 0;
-
-	for (j = 0; j < LENGTH(fields) - 1; j++) {
-		strcat(txt, fields[j]);
-		strcat(txt, ": ");
-		if (j <= 1) { /* name and kingdom */
-			strcat(txt, ((char **)&players[i])[j]);
-		} else if (j == 7) { /* playtime */
-			p = playtimetostr(((long *)&players[i])[j]);
-			strcat(txt, p);
-			free(p);
-		} else {
-			p = strchr(txt, 0);
-			sprintf(p, "%'ld", ((long *)&players[i])[j]);
-			if (j == 18) /* distance */
-				strcat(txt, "m");
+	if (use_embed) {
+		struct discord_embed embed = {
+			.color = 0x3498DB,
+			.timestamp = discord_timestamp(client),
+			.title = players[i].name,
+		};
+		discord_embed_set_footer(&embed, "Nolan", ICON_URL, NULL);
+		discord_embed_add_field(
+		        &embed, (char *)fields[1], players[i].kingdom, true);
+		for (j = 2; j < LENGTH(fields) - 1; j++) {
+			if (j == 7) { /* playtime */
+				p = playtimetostr(((long *)&players[i])[j]);
+				discord_embed_add_field(
+				        &embed, (char *)fields[j], p, true);
+				free(p);
+			} else {
+				sprintf(buf, "%'ld", ((long *)&players[i])[j]);
+				if (j == 18) /* distance */
+					strcat(buf, "m");
+				discord_embed_add_field(
+				        &embed, (char *)fields[j], buf, true);
+			}
 		}
-		strcat(txt, "\n");
+		struct discord_create_message msg = {
+			.embeds = &(struct discord_embeds)
+			{
+				.size = 1,
+				.array = &embed,
+			}
+		};
+		discord_create_message(client, event->channel_id, &msg, NULL);
+		discord_embed_cleanup(&embed);
+	} else {
+		for (j = 0; j < LENGTH(fields) - 1; j++) {
+			strcat(buf, fields[j]);
+			strcat(buf, ": ");
+			if (j <= 1) { /* name and kingdom */
+				strcat(buf, ((char **)&players[i])[j]);
+			} else if (j == 7) { /* playtime */
+				p = playtimetostr(((long *)&players[i])[j]);
+				strcat(buf, p);
+				free(p);
+			} else {
+				p = strchr(buf, 0);
+				sprintf(p, "%'ld", ((long *)&players[i])[j]);
+				if (j == 18) /* distance */
+					strcat(buf, "m");
+			}
+			strcat(buf, "\n");
+		}
+
+		struct discord_create_message msg = {
+			.content = buf
+		};
+		discord_create_message(client, event->channel_id, &msg, NULL);
 	}
-
-	struct discord_create_message msg = {
-		.content = txt
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
-
-	free(txt);
 }
 
 void
