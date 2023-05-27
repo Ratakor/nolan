@@ -2,13 +2,14 @@
 #define DELIM    ','                 /* Delimiter for the save file */
 #define FILENAME "source.csv"        /* Filename of the save file */
 #define LB_MAX   10                  /* Max players to be shown with !lb */
+#define APP_ID   1109604402102273245 /* The bot's application ID */
 #define TOKEN    "YOUR-BOT-TOKEN"
 #define PREFIX   "?"
 
 static const int kingdom_verification = 0; /* 0 means no verification */
 static const int use_embed            = 1; /* 0 means no embed on info */
 
- /* list of ids to check for stats image */
+/* list of ids to check for stats image */
 static const u64snowflake stats_ids[] = {
 	1110185440285302855,
 	1110767040890941590,

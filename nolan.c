@@ -11,7 +11,7 @@
 #include "util.h"
 #include "config.h"
 
-#define LINE_SIZE   300
+#define LINE_SIZE   300 + 1
 #define LEN(X)      (sizeof X - 1)
 #define MAX_PLAYERS LENGTH(kingdoms) * 50
 #define ICON_URL    "https://orna.guide/static/orna/img/npcs/master_gnome.png"
@@ -59,8 +59,9 @@ static int savetofile(Player *player);
 static char *updatemsg(Player *player, int iplayer);
 static char *loadfilekd(char *kingdom, size_t *fszp);
 static int compare(const void *e1, const void *e2);
-static void addplayertolb(char *buf, int i);
-static void leaderboard(char *buf, u64snowflake userid);
+static char *playerinlb(int i);
+static char *leaderboard(u64snowflake userid);
+static char *invalidlb(void);
 static u64snowflake useridtoul(char *id);
 static void on_ready(struct discord *client, const struct discord_ready *event);
 static void stats(struct discord *client, const struct discord_message *event);
@@ -189,7 +190,7 @@ loadplayer(unsigned int line)
 			continue;
 		*end = '\0';
 		if (i <= 1) /* name and kingdom */
-			strncpy(((char **)&player)[i], p, 32);
+			cpstr(((char **)&player)[i], p, 32 + 1);
 		else
 			((long *)&player)[i] = atol(p);
 		p = end + 1;
@@ -241,9 +242,9 @@ updateplayers(Player *player)
 		nplayers++;
 	} else {
 		if (player->name)
-			strncpy(players[i].name, player->name, 32);
+			cpstr(players[i].name, player->name, 32 + 1);
 		if (player->kingdom)
-			strncpy(players[i].kingdom, player->kingdom, 32);
+			cpstr(players[i].kingdom, player->kingdom, 32 + 1);
 		/* keep original userid */
 		for (j = 2; j < LENGTH(fields) - 1; j++)
 			((long *)&players[i])[j] = ((long *)player)[j];
@@ -273,30 +274,30 @@ playtimetostr(long playtime)
 
 	days = playtime / 24;
 	hours = playtime % 24;
-	buf = malloc(20 + 1);
+	buf = malloc(32);
 
 	switch (hours) {
 	case 0:
 		if (days <= 1)
-			snprintf(buf, 20, "%ld day", days);
+			snprintf(buf, 32, "%ld day", days);
 		else
-			snprintf(buf, 20, "%ld days", days);
+			snprintf(buf, 32, "%ld days", days);
 		break;
 	case 1:
 		if (days == 0)
-			snprintf(buf, 20, "%ld hour", hours);
+			snprintf(buf, 32, "%ld hour", hours);
 		else if (days == 1)
-			snprintf(buf, 20, "%ld day, %ld hour", days, hours);
+			snprintf(buf, 32, "%ld day, %ld hour", days, hours);
 		else
-			snprintf(buf, 20, "%ld days, %ld hour", days, hours);
+			snprintf(buf, 32, "%ld days, %ld hour", days, hours);
 		break;
 	default:
 		if (days == 0)
-			snprintf(buf, 20, "%ld hours", hours);
+			snprintf(buf, 32, "%ld hours", hours);
 		else if (days == 1)
-			snprintf(buf, 20, "%ld day, %ld hours", days, hours);
+			snprintf(buf, 32, "%ld day, %ld hours", days, hours);
 		else
-			snprintf(buf, 20, "%ld days, %ld hours", days, hours);
+			snprintf(buf, 32, "%ld days, %ld hours", days, hours);
 		break;
 	}
 
@@ -315,7 +316,7 @@ trimall(char *str)
 			*w++ = *r;
 	} while (*r++);
 
-	*w = 0;
+	*w = '\0';
 }
 
 void
@@ -518,6 +519,7 @@ updatemsg(Player *player, int iplayer)
 	long old, new, diff;
 
 	sprintf(buf, "%s's profile has been updated.\n\n", player->name);
+	return buf; /* FIXME: bug with iplayer or i + unsafe */
 	p = strchr(buf, '\0');
 
 	if (strcmp(players[iplayer].kingdom, player->kingdom) != 0) {
@@ -560,13 +562,14 @@ loadfilekd(char *kingdom, size_t *fszp)
 {
 	FILE *fp;
 	char *res, line[LINE_SIZE], *kd, *endkd;
+	size_t mfsz = LINE_SIZE + nplayers * LINE_SIZE;
 
 	if ((fp = fopen(FILENAME, "r")) == NULL)
 		die("nolan: Failed to open %s (read)\n", FILENAME);
 
-	res = malloc(LINE_SIZE + nplayers * LINE_SIZE);
+	res = malloc(mfsz);
 	fgets(line, LINE_SIZE, fp); /* fields name */
-	strcpy(res, line);
+	cpstr(res, line, mfsz);
 	while (fgets(line, LINE_SIZE, fp) != NULL) {
 		kd = strchr(line, DELIM) + 1;
 		endkd = nstrchr(line, DELIM, 2);
@@ -574,7 +577,7 @@ loadfilekd(char *kingdom, size_t *fszp)
 			*endkd = '\0';
 		if (strcmp(kd, kingdom) == 0) {
 			*endkd = DELIM;
-			strcat(res, line);
+			catstr(res, line, mfsz);
 		}
 	}
 
@@ -601,52 +604,86 @@ compare(const void *e1, const void *e2)
 	return l2 - l1;
 }
 
-void
-addplayertolb(char *buf, int i)
+char *
+playerinlb(int i)
 {
-	char *p = strchr(buf, '\0');
-	sprintf(p, "%d. %s: ", i + 1, players[i].name);
+	size_t siz = 64, ssiz = 16;
+	char *buf = malloc(siz), *plt, stat[ssiz];
+
+	snprintf(buf, siz, "%d. %s: ", i + 1, players[i].name);
 	if (category == 7) { /* playtime */
-		p = playtimetostr(((long *)&players[i])[category]);
-		strcat(buf, p);
-		free(p);
+		plt = playtimetostr(((long *)&players[i])[category]);
+		catstr(buf, plt, siz);
+		free(plt);
 	} else {
-		p = strchr(buf, '\0');
-		sprintf(p, "%'ld", ((long *)&players[i])[category]);
+		snprintf(stat, ssiz, "%'ld", ((long *)&players[i])[category]);
+		catstr(buf, stat, siz);
 		if (i == 18) /* distance */
-			strcat(buf, "m");
+			catstr(buf, "m", siz);
 	}
-	strcat(buf, "\n");
+	catstr(buf, "\n", siz);
+
+	return buf;
 }
 
-void
-leaderboard(char *buf, u64snowflake userid)
+char *
+leaderboard(u64snowflake userid)
 {
 	int i, lb_max, in_lb = 0;
+	size_t siz;
+	char *buf, *player;
 
-	qsort(players, nplayers, sizeof(*players), compare);
+	qsort(players, nplayers, sizeof(players[0]), compare);
 	lb_max = (nplayers < LB_MAX) ? nplayers : LB_MAX;
+	siz = (lb_max + 2) * 64;
+	buf = malloc(siz);
 
-	sprintf(buf, "%s:\n", fields[category]);
+	cpstr(buf, fields[category], siz);
+	catstr(buf, ":\n", siz);
 	for (i = 0; i < lb_max ; i++) {
 		if (userid == players[i].userid)
 			in_lb = 1;
-		addplayertolb(buf, i);
+		player = playerinlb(i);
+		catstr(buf, player, siz);
+		free(player);
 	}
 
 	if (!in_lb) {
-		strcat(buf, "...\n");
+		catstr(buf, "...\n", siz);
 		i = lb_max;
 		while (i < nplayers && players[i].userid != userid)
 			i++;
-		addplayertolb(buf, i);
+		player = playerinlb(i);
+		catstr(buf, player, siz);
+		free(player);
 	}
+
+	return buf;
+}
+
+char *
+invalidlb(void)
+{
+	int i;
+	size_t siz = 512;
+	char *buf = malloc(siz);
+
+	cpstr(buf, "NO WRONG, this is not a valid category.\n", siz);
+	catstr(buf, "Valid categories are:\n", siz);
+	for (i = 2; i < LENGTH(fields) - 1; i++) {
+		if (i == 5) /* regional rank */
+			continue;
+		catstr(buf, fields[i], siz);
+		catstr(buf, "\n", siz);
+	}
+
+	return buf;
 }
 
 u64snowflake
 useridtoul(char *id)
 {
-	char *start = id, *end = strchr(id, 0) - 1;
+	char *start = id, *end = strchr(id, '\0') - 1;
 
 	if (strncmp(start, "<@", 2) == 0 && strncmp(end, ">", 1) == 0)
 		return strtoul(start + 2, NULL, 10);
@@ -682,7 +719,7 @@ void
 stats(struct discord *client, const struct discord_message *event)
 {
 	int i, iplayer;
-	char *txt, *fname = malloc(64 + 1);
+	char *txt, *fname = malloc(64);
 	Player player;
 
 	snprintf(fname, 64, "./images/%s.jpg", event->author->username);
@@ -725,8 +762,8 @@ stats(struct discord *client, const struct discord_message *event)
 	if ((iplayer = savetofile(&player))) {
 		txt = updatemsg(&player, iplayer - 2);
 	} else {
-		txt = malloc(64 + 1);
-		snprintf(txt, 64, "%s has been registrated in the database.",
+		txt = malloc(128);
+		snprintf(txt, 128, "**%s** has been registrated in the database.",
 		         player.name);
 	}
 	struct discord_create_message msg = {
@@ -836,7 +873,7 @@ on_source(struct discord *client, const struct discord_message *event)
 void
 on_lb(struct discord *client, const struct discord_message *event)
 {
-	int i = 2;
+	int i = 2; /* ignore name and kingdom */
 	char *txt;
 
 	if (event->author->bot)
@@ -848,16 +885,7 @@ on_lb(struct discord *client, const struct discord_message *event)
 #endif
 
 	if (strlen(event->content) == 0) {
-		txt = malloc(512);
-		strcpy(txt, "NO WRONG, YOU MUST USE AN ARGUMENT!\n");
-		strcat(txt, "Valid categories are:\n");
-		for (i = 2; i < LENGTH(fields) - 1; i++) {
-			if (i == 5) /* regional rank */
-				continue;
-			strcat(txt, fields[i]);
-			strcat(txt, "\n");
-		}
-		strcat(txt, "\nThis is case sensitive.");
+		txt = invalidlb();
 		struct discord_create_message msg = {
 			.content = txt
 		};
@@ -866,20 +894,11 @@ on_lb(struct discord *client, const struct discord_message *event)
 		return;
 	}
 
-	while (i < LENGTH(fields) - 1 && strcmp(fields[i], event->content) != 0)
+	while (i < LENGTH(fields) - 1 && strcasecmp(fields[i], event->content) != 0)
 		i++;
 
 	if (i == LENGTH(fields) - 1 || i == 5) {
-		txt = malloc(512);
-		strcpy(txt, "This is not a valid category.\n");
-		strcat(txt, "Valid categories are:\n");
-		for (i = 2; i < LENGTH(fields) - 1; i++) {
-			if (i == 5) /* regional rank */
-				continue;
-			strcat(txt, fields[i]);
-			strcat(txt, "\n");
-		}
-		strcat(txt, "\nThis is case sensitive.");
+		txt = invalidlb();
 		struct discord_create_message msg = {
 			.content = txt
 		};
@@ -889,9 +908,7 @@ on_lb(struct discord *client, const struct discord_message *event)
 	}
 
 	category = i;
-	txt = malloc((LB_MAX + 2) * 32);
-	leaderboard(txt, event->author->id);
-
+	txt = leaderboard(event->author->id);
 	struct discord_create_message msg = {
 		.content = txt
 	};
@@ -903,7 +920,8 @@ void
 on_info(struct discord *client, const struct discord_message *event)
 {
 	int i = 0, j;
-	char buf[512 + 1], *p;
+	size_t sz = 512;
+	char buf[sz], *p;
 	u64snowflake userid;
 
 	if (event->author->bot)
@@ -914,15 +932,11 @@ on_info(struct discord *client, const struct discord_message *event)
 		return;
 #endif
 
-	if (strlen(event->content) == 0) {
-		struct discord_create_message msg = {
-			.content = "NO WRONG, YOU MUST USE AN ARGUMENT!"
-		};
-		discord_create_message(client, event->channel_id, &msg, NULL);
-		return;
-	}
+	if (strlen(event->content) == 0)
+		userid = event->author->id;
+	else
+		userid = useridtoul(event->content);
 
-	userid = useridtoul(event->content);
 	if (userid > 0) {
 		while (i < nplayers && players[i].userid != userid)
 			i++;
@@ -934,6 +948,9 @@ on_info(struct discord *client, const struct discord_message *event)
 	if (i == nplayers) {
 		struct discord_create_message msg = {
 			.content = "This player does not exist in the database."
+			           "\nTo check a player's info you can do "
+			           "?info @username or ?info username.\n"
+			           "To check your info you can just type ?info."
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
 		return;
@@ -972,24 +989,24 @@ on_info(struct discord *client, const struct discord_message *event)
 		discord_create_message(client, event->channel_id, &msg, NULL);
 		discord_embed_cleanup(&embed);
 	} else {
+		buf[0] = '\0';
 		for (j = 0; j < LENGTH(fields) - 1; j++) {
-			strcat(buf, fields[j]);
-			strcat(buf, ": ");
+			catstr(buf, fields[j], sz);
+			catstr(buf, ": ", sz);
 			if (j <= 1) { /* name and kingdom */
-				strcat(buf, ((char **)&players[i])[j]);
+				catstr(buf, ((char **)&players[i])[j], sz);
 			} else if (j == 7) { /* playtime */
 				p = playtimetostr(((long *)&players[i])[j]);
-				strcat(buf, p);
+				catstr(buf, p, sz);
 				free(p);
 			} else {
-				p = strchr(buf, 0);
-				sprintf(p, "%'ld", ((long *)&players[i])[j]);
+				p = strchr(buf, '\0');
+				snprintf(p, sz, "%'ld", ((long *)&players[i])[j]);
 				if (j == 18) /* distance */
-					strcat(buf, "m");
+					catstr(buf, "m", sz);
 			}
-			strcat(buf, "\n");
+			catstr(buf, "\n", sz);
 		}
-
 		struct discord_create_message msg = {
 			.content = buf
 		};
@@ -1000,39 +1017,38 @@ on_info(struct discord *client, const struct discord_message *event)
 void
 on_help(struct discord * client, const struct discord_message * event)
 {
-	char *txt = malloc(512), *p;
+	char *txt, *p;
 	int i, len = (int)LENGTH(stats_ids);
+	size_t sz = 512;
 
 #ifdef DEVEL
-	if (event->channel_id != DEVEL) {
-		free(txt);
+	if (event->channel_id != DEVEL)
 		return;
-	}
 #endif
 
-	strcpy(txt, "Post a screenshot of your stats to ");
+	txt = malloc(sz);
+	cpstr(txt, "Post a screenshot of your stats to ", sz);
 	for (i = 0; i < len; i++) {
-		p = strchr(txt, 0);;
-		sprintf(p, "<#%lu> ", stats_ids[i]);
+		p = strchr(txt, '\0');;
+		snprintf(p, sz, "<#%lu> ", stats_ids[i]);
 		if (i < len - 1)
-			strcat(txt, "or ");
+			catstr(txt, "or ", sz);
 	}
-	strcat(txt, "to enter the database.\n");
+	catstr(txt, "to enter the database.\n", sz);
 	/* TODO: add PREFIX */
-	strcat(txt, "Commands: \n");
-	strcat(txt, "\t?info *[@]user*\n");
-	strcat(txt, "\t?leaderboard or ?lb *category*\n");
-	/* strcat(txt, "\t?correct [category] [corrected value]\n"); */
-	strcat(txt, "\t?source or ?src [kingdom]\n");
-	strcat(txt, "\t?help\n\n");
-	strcat(txt, "[...] means optional.\n");
-	strcat(txt, "Try them or ask Ratakor to know what they do.");
+	catstr(txt, "Commands:\n", sz);
+	catstr(txt, "\t?info *[[@]user]*\n", sz);
+	catstr(txt, "\t?leaderboard or ?lb *category*\n", sz);
+	/* catstr(txt, "\t?correct [category] [corrected value]\n", sz); */
+	catstr(txt, "\t?source or ?src [kingdom]\n", sz);
+	catstr(txt, "\t?help\n\n", sz);
+	catstr(txt, "[...] means optional.\n", sz);
+	catstr(txt, "Try them or ask Ratakor to know what they do.", sz);
 
 	struct discord_create_message msg = {
 		.content = txt
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-
 	free(txt);
 }
 
@@ -1049,7 +1065,10 @@ main(void)
 
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT);
 	discord_set_prefix(client, PREFIX);
+	/* create_slash_commands(client); */
 	discord_set_on_ready(client, on_ready);
+	/* TODO: create and interaction for each command */
+	/* discord_set_on_interaction_create(client, &on_interaction_create); */
 	discord_set_on_message_create(client, on_message);
 	discord_set_on_commands(client, lb, LENGTH(lb), on_lb);
 	discord_set_on_command(client, "info", on_info);

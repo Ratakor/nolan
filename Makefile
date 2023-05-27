@@ -1,13 +1,15 @@
+NAME     = nolan
 PREFIX  ?= /usr/local
 CC      ?= cc
+
 DEBUG    = -g -W -Wmissing-prototypes
 CFLAGS  += -std=c99 -pedantic -Wall -O2 -D_DEFAULT_SOURCE
 LDFLAGS += -ltesseract -lleptonica -ldiscord -lcurl -lpthread
 
-SRC = nolan.c util.c
+SRC = ${wildcard *.c}
 OBJ = ${SRC:.c=.o}
 
-all: options nolan
+all: options ${NAME}
 
 options:
 	@echo nolan build options:
@@ -23,18 +25,21 @@ ${OBJ}: config.h
 config.h:
 	cp config.def.h $@
 
-nolan: ${OBJ}
+${NAME}: ${OBJ}
 	${CC} -o $@ ${OBJ} ${LDFLAGS}
 
+debug: CFLAGS += ${DEBUG}
+debug: all
+
 clean:
-	rm -f nolan ${OBJ}
+	rm -f ${NAME} ${OBJ}
 
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin
-	cp -f nolan ${DESTDIR}${PREFIX}/bin
-	chmod 755 ${DESTDIR}${PREFIX}/bin/nolan
+	cp -f ${NAME} ${DESTDIR}${PREFIX}/bin
+	chmod 755 ${DESTDIR}${PREFIX}/bin/${NAME}
 
 uninstall:
-	rm -f ${DESTDIR}${PREFIX}/bin/nolan
+	rm -f ${DESTDIR}${PREFIX}/bin/${NAME}
 
-.PHONY: all options clean install uninstall
+.PHONY: all options debug clean install uninstall
