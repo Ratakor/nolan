@@ -3,18 +3,22 @@
 #include <stdlib.h>
 #include <locale.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include <leptonica/allheaders.h>
 #include <tesseract/capi.h>
 #include <curl/curl.h>
 #include <concord/discord.h>
 
 #include "util.h"
-#include "config.h"
+#include "../config.h"
 
-#define LINE_SIZE   300 + 1
-#define LEN(X)      (sizeof X - 1)
-#define MAX_PLAYERS LENGTH(kingdoms) * 50
-#define ICON_URL    "https://orna.guide/static/orna/img/npcs/master_gnome.png"
+#define SAVE_FOLDER  "/var/lib/nolan/"
+#define IMAGE_FOLDER SAVE_FOLDER "images/"
+#define STATS_FILE   SAVE_FOLDER FILENAME
+#define LINE_SIZE    300 + 1
+#define LEN(X)       (sizeof X - 1)
+#define MAX_PLAYERS  LENGTH(kingdoms) * 50
+#define ICON_URL     "https://orna.guide/static/orna/img/npcs/master_gnome.png"
 
 /* ALL FIELDS MUST HAVE THE SAME SIZE */
 typedef struct {
@@ -73,7 +77,7 @@ static void on_info(struct discord *client, const struct discord_message *event)
 static void on_help(struct discord *client, const struct discord_message *event);
 
 static Player players[MAX_PLAYERS];
-static int nplayers = 0;
+static size_t nplayers = 0;
 static int category = 0;
 static const char *fields[] = {
 	"Name",
@@ -171,13 +175,13 @@ loadplayer(unsigned int line)
 
 	if (line <= 1)
 		die("nolan: Tried to load the description line as a player\n");
-	if ((fp = fopen(FILENAME, "r")) == NULL)
-		die("nolan: Failed to open %s (read)\n", FILENAME);
+	if ((fp = fopen(STATS_FILE, "r")) == NULL)
+		die("nolan: Failed to open %s (read)\n", STATS_FILE);
 
 	while (i++ < line && (p = fgets(buf, LINE_SIZE, fp)) != NULL);
 	fclose(fp);
 	if (p == NULL)
-		die("nolan: Line %d is not present in %s\n", line, FILENAME);
+		die("nolan: Line %d is not present in %s\n", line, STATS_FILE);
 
 	player.name = malloc(32 + 1);
 	player.kingdom = malloc(32 + 1);
@@ -208,10 +212,10 @@ initplayers(void)
 {
 	FILE *fp;
 	char buf[LINE_SIZE];
-	int i;
+	unsigned long i;
 
-	if ((fp = fopen(FILENAME, "r")) == NULL)
-		die("nolan: Failed to open %s (read)\n", FILENAME);
+	if ((fp = fopen(STATS_FILE, "r")) == NULL)
+		die("nolan: Failed to open %s (read)\n", STATS_FILE);
 
 	while (fgets(buf, LINE_SIZE, fp))
 		nplayers++;
@@ -228,7 +232,7 @@ initplayers(void)
 void
 updateplayers(Player *player)
 {
-	int i = 0, j;
+	unsigned long i = 0, j;
 
 	/* while (i < nplayers && strcmp(players[i].name, player->name) != 0) */
 	while (i < nplayers && players[i].userid != player->userid)
@@ -446,16 +450,17 @@ void
 createfile(void)
 {
 	FILE *fp;
-	int i, size = 0;
+	unsigned long i;
+	long size = 0;
 
-	fp = fopen(FILENAME, "r");
+	fp = fopen(STATS_FILE, "r");
 
 	if (fp != NULL) {
 		fseek(fp, 0, SEEK_END);
 		size = ftell(fp);
 	}
 
-	if (size == 0 && (fp = fopen(FILENAME, "w")) != NULL) {
+	if (size == 0 && (fp = fopen(STATS_FILE, "w")) != NULL) {
 		for (i = 0; i < LENGTH(fields) - 1; i++)
 			fprintf(fp, "%s%c", fields[i], DELIM);
 		fprintf(fp, "%s\n", fields[LENGTH(fields) - 1]);
@@ -470,12 +475,12 @@ savetofile(Player *player)
 {
 	FILE *w, *r;
 	char buf[LINE_SIZE], *p, *endname;
-	int iplayer = 0, cpt = 1, i;
+	unsigned long iplayer = 0, cpt = 1, i;
 
-	if ((r = fopen(FILENAME, "r")) == NULL)
-		die("nolan: Failed to open %s (read)\n", FILENAME);
+	if ((r = fopen(STATS_FILE, "r")) == NULL)
+		die("nolan: Failed to open %s (read)\n", STATS_FILE);
 	if ((w = fopen("tmpfile", "w")) == NULL)
-		die("nolan: Failed to open %s (write)\n", FILENAME);
+		die("nolan: Failed to open %s (write)\n", STATS_FILE);
 
 	while ((p = fgets(buf, LINE_SIZE, r)) != NULL) {
 		endname = strchr(p, DELIM);
@@ -505,8 +510,8 @@ savetofile(Player *player)
 
 	fclose(r);
 	fclose(w);
-	remove(FILENAME);
-	rename("tmpfile", FILENAME);
+	remove(STATS_FILE);
+	rename("tmpfile", STATS_FILE);
 
 	return iplayer;
 }
@@ -514,8 +519,9 @@ savetofile(Player *player)
 char *
 updatemsg(Player *player, int iplayer)
 {
-	int i, sz = 1024;
+	size_t sz = 1024;
 	char *buf = malloc(sz + 1), *p, *plto, *pltn, *pltd;
+	unsigned long i;
 	long old, new, diff;
 
 	sz -= snprintf(buf, sz, "%s's profile has been updated.\n\n",
@@ -551,8 +557,6 @@ updatemsg(Player *player, int iplayer)
 			               fields[i], old, new, diff);
 		}
 		p = strchr(buf, '\0');
-		sz -= snprintf(p, sz, "%s: %'ld -> %'ld (%'+ld)\n",
-		               fields[i], old, new, diff);
 	}
 
 	/* TODO */
@@ -568,8 +572,8 @@ loadfilekd(char *kingdom, size_t *fszp)
 	char *res, line[LINE_SIZE], *kd, *endkd;
 	size_t mfsz = LINE_SIZE + nplayers * LINE_SIZE;
 
-	if ((fp = fopen(FILENAME, "r")) == NULL)
-		die("nolan: Failed to open %s (read)\n", FILENAME);
+	if ((fp = fopen(STATS_FILE, "r")) == NULL)
+		die("nolan: Failed to open %s (read)\n", STATS_FILE);
 
 	res = malloc(mfsz);
 	fgets(line, LINE_SIZE, fp); /* fields name */
@@ -633,12 +637,13 @@ playerinlb(int i)
 char *
 leaderboard(u64snowflake userid)
 {
-	int i, lb_max, in_lb = 0;
+	int in_lb = 0;
+	unsigned long i, lb_max;
 	size_t siz;
 	char *buf, *player;
 
 	qsort(players, nplayers, sizeof(players[0]), compare);
-	lb_max = (nplayers < LB_MAX) ? nplayers : LB_MAX;
+	lb_max = MIN(nplayers, LB_MAX);
 	siz = (lb_max + 2) * 64;
 	buf = malloc(siz);
 
@@ -668,7 +673,7 @@ leaderboard(u64snowflake userid)
 char *
 invalidlb(void)
 {
-	int i;
+	unsigned long i;
 	size_t siz = 512;
 	char *buf = malloc(siz);
 
@@ -818,12 +823,13 @@ on_message(struct discord *client, const struct discord_message *event)
 		return;
 	if (strchr(event->attachments->array->filename, '.') == NULL)
 		return;
-	if (strncmp(event->attachments->array->content_type, "image", 5) != 0)
+	if (strncmp(event->attachments->array->content_type, "image/jpeg",
+	                sizeof("image/jpeg") - 1) != 0)
 		return;
 
 #ifdef DEVEL
 	if (event->channel_id == DEVEL)
-		raids(client, event);
+		stats(client, event);
 	return;
 #endif
 
@@ -853,12 +859,12 @@ on_source(struct discord *client, const struct discord_message *event)
 #endif
 
 	if (strlen(event->content) == 0)
-		fbuf = cog_load_whole_file(FILENAME, &fsize);
+		fbuf = cog_load_whole_file(STATS_FILE, &fsize);
 	else
 		fbuf = loadfilekd(event->content, &fsize);
 
 	struct discord_attachment attachment = {
-		.filename = FILENAME,
+		.filename = STATS_FILE,
 		.content = fbuf,
 		.size = fsize
 	};
@@ -877,7 +883,7 @@ on_source(struct discord *client, const struct discord_message *event)
 void
 on_lb(struct discord *client, const struct discord_message *event)
 {
-	int i = 2; /* ignore name and kingdom */
+	unsigned long i = 2; /* ignore name and kingdom */
 	char *txt;
 
 	if (event->author->bot)
@@ -923,7 +929,7 @@ on_lb(struct discord *client, const struct discord_message *event)
 void
 on_info(struct discord *client, const struct discord_message *event)
 {
-	int i = 0, j;
+	unsigned long i = 0, j;
 	size_t sz = 512;
 	char buf[sz], *p;
 	u64snowflake userid;
@@ -952,9 +958,9 @@ on_info(struct discord *client, const struct discord_message *event)
 	if (i == nplayers) {
 		struct discord_create_message msg = {
 			.content = "This player does not exist in the database."
-			           "\nTo check a player's info you can do "
+			           "\nTo check a player's info type "
 			           "?info @username or ?info username.\n"
-			           "To check your info you can just type ?info."
+			           "To check your info just type ?info."
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
 		return;
@@ -1022,7 +1028,7 @@ void
 on_help(struct discord * client, const struct discord_message * event)
 {
 	char *txt, *p;
-	int i, len = (int)LENGTH(stats_ids);
+	unsigned long i, len = LENGTH(stats_ids);
 	size_t sz = 512;
 
 #ifdef DEVEL
@@ -1057,11 +1063,16 @@ on_help(struct discord * client, const struct discord_message * event)
 }
 
 int
-main(void)
+main(int argc, char *argv[])
 {
 	char *src[] = { "src", "source" };
 	char *lb[] = { "lb", "leaderboard" };
 	struct discord *client;
+
+#ifndef DEVEL
+	if (getuid() != 0)
+		die("Please run %s as root\n", argv[0]);
+#endif
 
 	setlocale(LC_NUMERIC, "");
 	ccord_global_init();
@@ -1079,8 +1090,12 @@ main(void)
 	discord_set_on_commands(client, src, LENGTH(src), on_source);
 	discord_set_on_command(client, "help", on_help);
 
-	if (mkdir("./images/", 0755) == 1)
-		die("nolan: Failed to create the images folder\n");
+	if (!file_exists(SAVE_FOLDER)) {
+		if (mkdir(SAVE_FOLDER, 0755) == -1)
+			die("nolan: Failed to create %s\n", SAVE_FOLDER);
+		if (mkdir(IMAGE_FOLDER, 0755) == -1)
+			die("nolan: Failed to create %s\n", IMAGE_FOLDER);
+	}
 	createfile();
 	initplayers();
 

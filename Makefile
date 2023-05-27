@@ -1,38 +1,42 @@
-NAME     = nolan
-PREFIX  ?= /usr/local
-CC      ?= cc
+NAME         = nolan
+PREFIX      ?= /usr/local
+CC          ?= cc
 
-DEBUG    = -g -W -Wmissing-prototypes
-CFLAGS  += -std=c99 -pedantic -Wall -O2 -D_DEFAULT_SOURCE
-LDFLAGS += -ltesseract -lleptonica -ldiscord -lcurl -lpthread
+BUILD_DIR   ?= build
+SRC_DIR     ?= src
 
-SRC = ${wildcard *.c}
-OBJ = ${SRC:.c=.o}
+SRCS        := ${wildcard ${SRC_DIR}/*.c}
+OBJS        := ${SRCS:%=${BUILD_DIR}/%.o}
+
+DEBUG_FLAGS  = -O0 -g -W -Wall -Wmissing-prototypes
+CFLAGS      += -std=c99 -pedantic -D_DEFAULT_SOURCE -O2
+LDFLAGS     += -ltesseract -lleptonica -ldiscord -lcurl -lpthread
 
 all: options ${NAME}
 
 options:
-	@echo nolan build options:
+	@echo ${NAME} build options:
 	@echo "CFLAGS   = ${CFLAGS}"
 	@echo "LDFLAGS  = ${LDFLAGS}"
 	@echo "CC       = ${CC}"
 
-.c.o:
-	${CC} -c ${CFLAGS} $<
+${BUILD_DIR}/%.c.o: %.c
+	mkdir -p ${dir $@}
+	${CC} -c ${CFLAGS} $< -o $@
 
-${OBJ}: config.h
+${OBJS}: config.h
 
 config.h:
 	cp config.def.h $@
 
-${NAME}: ${OBJ}
-	${CC} -o $@ ${OBJ} ${LDFLAGS}
+${NAME}: ${OBJS}
+	${CC} -o $@ ${OBJS} ${LDFLAGS}
 
-debug: CFLAGS += ${DEBUG}
-debug: all
+debug:
+	@CFLAGS="${DEBUG_FLAGS}" ${MAKE}
 
 clean:
-	rm -f ${NAME} ${OBJ}
+	rm -rf ${NAME} ${BUILD_DIR}
 
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin

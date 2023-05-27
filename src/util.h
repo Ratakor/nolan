@@ -1,4 +1,4 @@
-#define LENGTH(X) (int)(sizeof X / sizeof X[0])
+#define LENGTH(X) (sizeof X / sizeof X[0])
 #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 
@@ -8,3 +8,4 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *src, size_t siz);
 size_t cpstr(char *dst, const char *src, size_t siz);
 size_t catstr(char *dst, const char *src, size_t siz);
+int file_exists(char *filename);
