@@ -514,21 +514,23 @@ savetofile(Player *player)
 char *
 updatemsg(Player *player, int iplayer)
 {
-	int i;
-	char *buf = malloc(2000 + 1), *p, *plto, *pltn, *pltd;
+	int i, sz = 1024;
+	char *buf = malloc(sz + 1), *p, *plto, *pltn, *pltd;
 	long old, new, diff;
 
-	sprintf(buf, "%s's profile has been updated.\n\n", player->name);
-	return buf; /* FIXME: bug with iplayer or i + unsafe */
+	sz -= snprintf(buf, sz, "%s's profile has been updated.\n\n",
+	               player->name);
 	p = strchr(buf, '\0');
 
 	if (strcmp(players[iplayer].kingdom, player->kingdom) != 0) {
-		sprintf(p, "%s: %s -> %s\n", fields[1],
-		        players[iplayer].kingdom, player->kingdom);
+		sz -= snprintf(p, sz, "%s: %s -> %s\n", fields[1],
+		               players[iplayer].kingdom, player->kingdom);
 		p = strchr(buf, '\0');
 	}
 
 	for (i = 2; i < LENGTH(fields) - 1; i++) {
+		if (sz <= 0)
+			die("nolan: truncation in updatemsg\n");
 		old = ((long *)&players[iplayer])[i];
 		new = ((long *)player)[i];
 		diff = new - old;
@@ -539,20 +541,22 @@ updatemsg(Player *player, int iplayer)
 			plto = playtimetostr(old);
 			pltn = playtimetostr(new);
 			pltd = playtimetostr(diff);
-			sprintf(p, "%s: %s -> %s (+ %s)\n",
-			        fields[7], plto, pltn, pltd);
+			sz -= snprintf(p, sz, "%s: %s -> %s (+ %s)\n",
+			               fields[7], plto, pltn, pltd);
 			free(plto);
 			free(pltn);
 			free(pltd);
 		} else {
-			sprintf(p, "%s: %'ld -> %'ld (%'+ld)\n",
-			        fields[i], old, new, diff);
+			sz -= snprintf(p, sz, "%s: %'ld -> %'ld (%'+ld)\n",
+			               fields[i], old, new, diff);
 		}
 		p = strchr(buf, '\0');
+		sz -= snprintf(p, sz, "%s: %'ld -> %'ld (%'+ld)\n",
+		               fields[i], old, new, diff);
 	}
 
 	/* TODO */
-	/* sprintf(p, "Last update was xxx ago\n"); */
+	/* Last update was xxx ago */
 
 	return buf;
 }
