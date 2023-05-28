@@ -373,14 +373,12 @@ void
 stats(struct discord *client, const struct discord_message *event)
 {
 	int i, iplayer;
-	char *txt, *fname = malloc(64);
+	char *txt, fname[64];
 	Player player;
 
-	snprintf(fname, 64, "./images/%s.jpg", event->author->username);
+	snprintf(fname, 64, "%s/%s.jpg", IMAGE_FOLDER, event->author->username);
 	curl(event->attachments->array->url, fname);
 	txt = ocr(fname);
-	free(fname);
-
 	if (txt == NULL) {
 		struct discord_create_message msg = {
 			.content = "Error: Failed to read image"

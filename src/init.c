@@ -177,7 +177,7 @@ on_message(struct discord *client, const struct discord_message *event)
 
 #ifdef DEVEL
 	if (event->channel_id == DEVEL)
-		stats(client, event);
+		raids(client, event);
 	return;
 #endif
 

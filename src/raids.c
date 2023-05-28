@@ -5,12 +5,14 @@
 void
 raids(struct discord *client, const struct discord_message *event)
 {
-	char *txt, *line, *endline;
+	char *txt, *line, *endline, fname[64];
 
-	curl(event->attachments->array->url, "./images/raids.jpg");
-	txt = ocr("./images/raids.jpg");
+	snprintf(fname, 64, "%s/raids.jpg", IMAGE_FOLDER);
+	curl(event->attachments->array->url, fname);
+	txt = ocr(fname);
 
 	/* TODO */
+	/*
 	line = txt;
 	while (line) {
 		endline = strchr(line, '\n');
@@ -22,6 +24,7 @@ raids(struct discord *client, const struct discord_message *event)
 		}
 		line = endline ? (endline + 1) : 0;
 	}
+	*/
 
 	struct discord_create_message msg = {
 		.content = line
