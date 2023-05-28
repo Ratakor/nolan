@@ -1,0 +1,189 @@
+#include <stdlib.h>
+#include "string.h"
+#include "nolan.h"
+
+#define ICON_URL "https://orna.guide/static/orna/img/npcs/master_gnome.png"
+
+static u64snowflake str_to_uid(char *id);
+static void write_invalid(char *buf, size_t siz);
+static void write_info_embed(struct discord *client, char *buf, size_t siz, int index);
+static void write_info(char *buf, size_t siz, int index);
+
+void
+create_slash_info(struct discord *client)
+{
+	struct discord_application_command_option options[] = {
+		{
+			.type = DISCORD_APPLICATION_OPTION_STRING,
+			.name = "user",
+			.description = "discord username or @",
+		},
+	};
+	struct discord_create_global_application_command cmd = {
+		.name = "info",
+		.description = "Shows Orna information about a user",
+		.options = &(struct discord_application_command_options)
+		{
+			.size = LENGTH(options),
+			.array = options
+		}
+	};
+	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
+}
+
+static u64snowflake
+str_to_uid(char *id)
+{
+	char *start = id, *end = strchr(id, '\0') - 1;
+
+	if (strncmp(start, "<@", 2) == 0 && strncmp(end, ">", 1) == 0)
+		return strtoul(start + 2, NULL, 10);
+	return 0;
+}
+
+static void
+write_invalid(char *buf, size_t siz)
+{
+	cpstr(buf, "This player does not exist in the database.\n", siz);
+	catstr(buf, "To check a player's info type /info ", siz);
+	catstr(buf, "@username or /info username.\n", siz);
+	catstr(buf, "To check your info just type ?info.", siz);
+}
+
+/* FIXME */
+/* static void */
+/* write_info_embed(struct discord *client, char *buf, size_t siz, int index) */
+/* { */
+/* 	unsigned long i; */
+/* 	char *p; */
+
+/* 	struct discord_embed embed = { */
+/* 		.color = 0x3498DB, */
+/* 		.timestamp = discord_timestamp(client), */
+/* 		.title = players[index].name */
+/* 	}; */
+/* 	discord_embed_set_footer(&embed, "Nolan", ICON_URL, NULL); */
+/* 	discord_embed_add_field( */
+/* 	        &embed, (char *)fields[1], players[index].kingdom, true); */
+/* 	for (i = 2; i < LENGTH(fields) - 1; i++) { */
+/* 		if (i == 7) { /1* playtime *1/ */
+/* 			p = playtime_to_str(((long *)&players[index])[i]); */
+/* 			discord_embed_add_field( */
+/* 			        &embed, (char *)fields[i], p, true); */
+/* 			free(p); */
+/* 		} else { */
+/* 			sprintf(buf, "%'ld", ((long *)&players[index])[i]); */
+/* 			if (i == 18) /1* distance *1/ */
+/* 				strcat(buf, "m"); */
+/* 			discord_embed_add_field( */
+/* 			        &embed, (char *)fields[index], buf, true); */
+/* 		} */
+/* 	} */
+/* 	struct discord_create_message msg = { */
+/* 		.embeds = &(struct discord_embeds) */
+/* 		{ */
+/* 			.size = 1, */
+/* 			.array = &embed, */
+/* 		} */
+/* 	}; */
+/* } */
+
+static void
+write_info(char *buf, size_t siz, int index)
+{
+	unsigned long i;
+	char *p;
+
+	buf[0] = '\0';
+	for (i = 0; i < LENGTH(fields) - 1; i++) {
+		catstr(buf, fields[i], siz);
+		catstr(buf, ": ", siz);
+		if (i <= 1) { /* name and kingdom */
+			catstr(buf, ((char **)&players[index])[i], siz);
+		} else if (i == 7) { /* playtime */
+			p = playtime_to_str(((long *)&players[index])[i]);
+			catstr(buf, p, siz);
+			free(p);
+		} else {
+			p = strchr(buf, '\0');
+			snprintf(p, siz, "%'ld", ((long *)&players[index])[i]);
+			if (i == 18) /* distance */
+				catstr(buf, "m", siz);
+		}
+		catstr(buf, "\n", siz);
+	}
+}
+
+void
+info_from_uid(char *buf, size_t siz, u64snowflake userid)
+{
+	unsigned long i = 0;
+
+	while (i < nplayers && players[i].userid != userid)
+		i++;
+
+	if (i == nplayers)
+		write_invalid(buf, siz);
+	else
+		write_info(buf, siz, i);
+}
+
+void
+info_from_txt(char *buf, size_t siz, char *txt)
+{
+	unsigned long i = 0;
+	u64snowflake userid;
+
+	userid = str_to_uid(txt);
+	if (userid > 0) {
+		info_from_uid(buf, siz, userid);
+		return;
+	}
+
+	while (i < nplayers && strcmp(players[i].name, txt) != 0)
+		i++;
+	if (i == nplayers)
+		write_invalid(buf, siz);
+	else
+		write_info(buf, siz, i);
+}
+
+void
+on_info(struct discord *client, const struct discord_message *event)
+{
+	size_t siz = DISCORD_MAX_MESSAGE_LEN;
+	char buf[siz];
+
+	if (event->author->bot)
+		return;
+
+#ifdef DEVEL
+	if (event->channel_id != DEVEL)
+		return;
+#endif
+
+	if (strlen(event->content) == 0)
+		info_from_uid(buf, siz, event->author->id);
+	else
+		info_from_txt(buf, siz, event->content);
+
+	/*
+	if (use_embed) {
+		write_info_embed(client, buf, siz, i);
+		struct discord_create_message msg = {
+			.embeds = &(struct discord_embeds)
+			{
+				.size = 1,
+				.array = &embed,
+			}
+		};
+		discord_create_message(client, event->channel_id, &msg, NULL);
+		discord_embed_cleanup(&embed);
+	}
+	*/
+
+	struct discord_create_message msg = {
+		.content = buf
+	};
+	discord_create_message(client, event->channel_id, &msg, NULL);
+}

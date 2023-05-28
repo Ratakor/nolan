@@ -1,4 +1,3 @@
-#define RAIDS_ID 1109604402102276217 /* Channel ID for raids */
 #define DELIM    ','                 /* Delimiter for the save file */
 #define FILENAME "source.csv"        /* Filename of the save file */
 #define LB_MAX   10                  /* Max players to be shown with !lb */
@@ -7,12 +6,17 @@
 #define PREFIX   "?"
 
 static const int kingdom_verification = 0; /* 0 means no verification */
-static const int use_embed            = 1; /* 0 means no embed on info */
+static const int use_embed            = 0; /* 0 means no embed on info */
 
-/* list of ids to check for stats image */
+/* list of channel ids to check for stats screenshots */
 static const u64snowflake stats_ids[] = {
 	1110185440285302855,
 	1110767040890941590,
+};
+
+/* list of channel ids to check for raids screenshots */
+static const u64snowflake raids_ids[] = {
+	1109604402102276217,
 };
 
 /* list of kingdom to accept if verification is on */

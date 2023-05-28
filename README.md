@@ -7,16 +7,13 @@ A discord bot for Orna.
 
 ## TODO:
 
-- use / instead of prefix -> rewrite on_help()
-- separate everything in multiple files
-- store images and source in a sane directory
-
+- raids
+- improve tesseract recognition by binarzing the image with opencv and adding
+usernames to tesseract dictionary
 - refactor parseline()
-- improve tesseract recognition smh
 - add player with name in event->content for ham
 - add option to correct stats
 
-- raids
 - automatic roles attribution (for Orna FR) -> with updatemsg
 - ascensions (track mats)
 - detect wrong screenshot
