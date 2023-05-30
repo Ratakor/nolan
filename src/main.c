@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <stdlib.h>
 #include <locale.h>
 #include "nolan.h"
@@ -51,7 +52,9 @@ main(void)
 	client = discord_init(TOKEN);
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT);
 	discord_set_prefix(client, PREFIX);
+#ifndef DEVEL
 	create_slash_commands(client);
+#endif
 	discord_set_on_ready(client, on_ready);
 	discord_set_on_interaction_create(client, &on_interaction);
 	discord_set_on_message_create(client, on_message);

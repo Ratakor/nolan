@@ -9,8 +9,8 @@ SRCS        := ${wildcard ${SRC_DIR}/*.c}
 OBJS        := ${SRCS:%=${BUILD_DIR}/%.o}
 
 DEBUG_FLAGS  = -O0 -g -W -Wall -Wmissing-prototypes
-CFLAGS      += -std=c99 -pedantic -D_DEFAULT_SOURCE -O2
-LDFLAGS     += -ltesseract -lleptonica -ldiscord -lcurl -lpthread
+CFLAGS      += -std=c99 -pedantic -D_DEFAULT_SOURCE
+LDFLAGS     += -ltesseract -lleptonica -ldiscord -lcurl -lpthread -lgd
 
 all: options ${NAME}
 

@@ -45,7 +45,6 @@ create_stats_file(void)
 			fprintf(fp, "%s%c", fields[i], DELIM);
 		fprintf(fp, "%s\n", fields[LENGTH(fields) - 1]);
 	}
-
 	fclose(fp);
 }
 
@@ -171,25 +170,27 @@ on_message(struct discord *client, const struct discord_message *event)
 		return;
 	if (strchr(event->attachments->array->filename, '.') == NULL)
 		return;
-	if (strncmp(event->attachments->array->content_type, "image/jpeg",
-	                sizeof("image/jpeg") - 1) != 0)
+	if (strcmp(event->attachments->array->content_type, "image/jpeg") != 0
+	                && strcmp(event->attachments->array->content_type,
+	                          "image/png") != 0)
 		return;
+
 
 #ifdef DEVEL
 	if (event->channel_id == DEVEL)
-		raids(client, event);
+		on_raids(client, event);
 	return;
 #endif
 
 	for (i = 0; i < LENGTH(stats_ids); i++) {
 		if (event->channel_id == stats_ids[i]) {
-			stats(client, event);
+			on_stats(client, event);
 			break;
 		}
 	}
 	for (i = 0; i < LENGTH(raids_ids); i++) {
 		if (event->channel_id == raids_ids[i]) {
-			raids(client, event);
+			on_raids(client, event);
 			break;
 		}
 	}

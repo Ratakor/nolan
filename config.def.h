@@ -2,6 +2,7 @@
 #define FILENAME "source.csv"        /* Filename of the save file */
 #define LB_MAX   10                  /* Max players to be shown with !lb */
 #define APP_ID   1109604402102273245 /* The bot's application ID */
+#define ADMIN    277534384175841280  /* Admin user ID for bug reports */
 #define TOKEN    "YOUR-BOT-TOKEN"
 #define PREFIX   "?"
 
@@ -16,7 +17,7 @@ static const u64snowflake stats_ids[] = {
 
 /* list of channel ids to check for raids screenshots */
 static const u64snowflake raids_ids[] = {
-	1109604402102276217,
+	1112094855691239616,
 };
 
 /* list of kingdom to accept if verification is on */

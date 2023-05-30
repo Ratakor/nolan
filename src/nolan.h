@@ -45,21 +45,25 @@ void create_folders(void);
 void create_stats_file(void);
 void init_players(void);
 void create_slash_commands(struct discord *client);
-void on_interaction(struct discord *client, const struct discord_interaction *event);
+void on_interaction(struct discord *client,
+		const struct discord_interaction *event);
 void on_ready(struct discord *client, const struct discord_ready *event);
 void on_message(struct discord *client, const struct discord_message *event);
 
 /* ocr.c */
 void curl(char *url, char *fname);
+int crop(char *fname, int type);
 char *ocr(char *fname);
 
 /* stats.c */
 char *playtime_to_str(long playtime);
 Player create_player(unsigned int line);
-void stats(struct discord *client, const struct discord_message *event);
+void on_stats(struct discord *client, const struct discord_message *event);
 
 /* raids.c */
-void raids(struct discord *client, const struct discord_message *event);
+void on_raids(struct discord *client, const struct discord_message *event);
+void get_chan_name(struct discord *client, struct discord_response *rep,
+                   const struct discord_channel *ret);
 
 /* cmd_help.c */
 void create_slash_help(struct discord *client);
@@ -75,7 +79,8 @@ void on_info(struct discord *client, const struct discord_message *event);
 /* cmd_leaderboard.c */
 void create_slash_leaderboard(struct discord *client);
 void leaderboard(char *buf, size_t siz, char *txt, u64snowflake userid);
-void on_leaderboard(struct discord *client, const struct discord_message *event);
+void on_leaderboard(struct discord *client,
+		const struct discord_message *event);
 
 /* cmd_source.c */
 void create_slash_source(struct discord *client);

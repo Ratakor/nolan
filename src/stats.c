@@ -6,9 +6,9 @@
 
 static void update_players(Player *player);
 static long playtime_to_long(char *playtime, char *str);
-static void trim_all(char *str);
+static char *trim_all(char *str);
 static void parse_line(Player *player, char *line);
-static void for_line(Player *player, char *src);
+static void for_line(Player *player, char *txt);
 static int save_player_to_file(Player *player);
 static char *update_msg(Player *player, int iplayer);
 
@@ -134,7 +134,7 @@ playtime_to_str(long playtime)
 }
 
 /* trim everything that is not a number or a left parenthesis */
-static void
+static char *
 trim_all(char *str)
 {
 	const char *r = str;
@@ -144,8 +144,9 @@ trim_all(char *str)
 		if ((*r >= 48 && *r <= 57) || *r == '(')
 			*w++ = *r;
 	} while (*r++);
-
 	*w = '\0';
+
+	return str;
 }
 
 static void
@@ -181,79 +182,60 @@ parse_line(Player *player, char *line)
 
 	if (strncmp(line, "ASCENSION LEVEL", LEN("ASCENSION LEVEL")) == 0 ||
 	                strncmp(line, "NIVEAU D'ELEVATION", LEN("NIVEAU D'ELEVATION")) == 0) {
-		trim_all(line);
-		player->ascension = atol(line);
+		player->ascension = atol(trim_all(line));
 	} else if (strncmp(line, "LEVEL", LEN("LEVEL")) == 0 ||
 	                strncmp(line, "NIVEAU", LEN("NIVEAU")) == 0) {
-		trim_all(line);
-		player->level = atol(line);
+		player->level = atol(trim_all(line));
 	} else if (strncmp(line, "GLOBAL RANK", LEN("GLOBAL RANK")) == 0 ||
 	                strncmp(line, "RANG GLOBAL", LEN("RANG GLOBAL")) == 0) {
-		trim_all(line);
-		player->global = atol(line);
+		player->global = atol(trim_all(line));
 	} else if (strncmp(line, "REGIONAL RANK", LEN("REGIONAL RANK")) == 0 ||
 	                strncmp(line, "RANG REGIONAL", LEN("RANG REGIONAL")) == 0) {
-		trim_all(line);
-		player->regional = atol(line);
+		player->regional = atol(trim_all(line));
 	} else if (strncmp(line, "COMPETITIVE RANK", LEN("COMPETITIVE RANK")) == 0 ||
 	                strncmp(line, "RANG COMPETITIF", LEN("RANG COMPETITIF")) == 0) {
-		trim_all(line);
-		player->competitive = atol(line);
+		player->competitive = atol(trim_all(line));
 	} else if (strncmp(line, "MONSTERS SLAIN", LEN("MONSTERS SLAIN")) == 0 ||
 	                strncmp(line, "MONSTRES TUES", LEN("MONSTRES TUES")) == 0) {
-		trim_all(line);
-		player->monsters = atol(line);
+		player->monsters = atol(trim_all(line));
 	} else if (strncmp(line, "BOSSES SLAIN", LEN("BOSSES SLAIN")) == 0 ||
 	                strncmp(line, "BOSS TUES", LEN("BOSS TUES")) == 0) {
-		trim_all(line);
-		player->bosses = atol(line);
+		player->bosses = atol(trim_all(line));
 	} else if (strncmp(line, "PLAYERS DEFEATED", LEN("PLAYERS DEFEATED")) == 0 ||
 	                strncmp(line, "JOUEURS VAINCUS", LEN("JOUEURS VAINCUS")) == 0) {
-		trim_all(line);
-		player->players = atol(line);
+		player->players = atol(trim_all(line));
 	} else if (strncmp(line, "QUESTS COMPLETED", LEN("QUESTS COMPLETED")) == 0 ||
 	                strncmp(line, "QUETES TERMINEES", LEN("QUETES TERMINEES")) == 0) {
-		trim_all(line);
-		player->quests = atol(line);
+		player->quests = atol(trim_all(line));
 	} else if (strncmp(line, "AREAS EXPLORED", LEN("AREAS EXPLORED")) == 0 ||
 	                strncmp(line, "TERRES EXPLOREES", LEN("TERRES EXPLOREES")) == 0) {
-		trim_all(line);
-		player->explored = atol(line);
+		player->explored = atol(trim_all(line));
 	} else if (strncmp(line, "AREAS TAKEN", LEN("AREAS TAKEN")) == 0 ||
 	                strncmp(line, "TERRES PRISES", LEN("TERRES PRISES")) == 0) {
-		trim_all(line);
-		player->taken = atol(line);
+		player->taken = atol(trim_all(line));
 	} else if (strncmp(line, "DUNGEONS CLEARED", LEN("DUNGEONS CLEARED")) == 0 ||
 	                strncmp(line, "DONJONS TERMINES", LEN("DONJONS TERMINES")) == 0) {
-		trim_all(line);
-		player->dungeons = atol(line);
+		player->dungeons = atol(trim_all(line));
 	} else if (strncmp(line, "COLISEUM WINS", LEN("COLISEUM WINS")) == 0 ||
 	                strncmp(line, "VICTOIRES DANS LE COLISEE", LEN("VICTOIRES DANS LE COLISEE")) == 0) {
-		trim_all(line);
-		player->coliseum = atol(line);
+		player->coliseum = atol(trim_all(line));
 	} else if (strncmp(line, "ITEMS UPGRADED", LEN("ITEMS UPGRADED")) == 0 ||
 	                strncmp(line, "OBJETS AMELIORES", LEN("OBJETS AMELIORES")) == 0) {
-		trim_all(line);
-		player->items = atol(line);
+		player->items = atol(trim_all(line));
 	} else if (strncmp(line, "FISH CAUGHT", LEN("FISH CAUGHT")) == 0 ||
 	                strncmp(line, "POISSONS ATTRAPES", LEN("POISSONS ATTRAPES")) == 0) {
-		trim_all(line);
-		player->fish = atol(line);
+		player->fish = atol(trim_all(line));
 	} else if (strncmp(line, "DISTANCE TRAVELLED", LEN("DISTANCE TRAVELLED")) == 0 ||
 	                strncmp(line, "DISTANCE VOYAGEE", LEN("DISTANCE VOYAGEE")) == 0) {
-		trim_all(line);
-		player->distance = atol(line);
+		player->distance = atol(trim_all(line));
 	} else if (strncmp(line, "REPUTATION", LEN("REPUTATION")) == 0) {
-		trim_all(line);
-		player->reputation = atol(line);
+		player->reputation = atol(trim_all(line));
 	} else if (strncmp(line, "ENDLESS RECORD", LEN("ENDLESS RECORD")) == 0 ||
 	                strncmp(line, "RECORD DU MODE SANS-FIN", LEN("RECORD DU MODE SANS-FIN")) == 0) {
-		trim_all(line);
-		player->endless = atol(line);
+		player->endless = atol(trim_all(line));
 	} else if (strncmp(line, "ENTRIES COMPLETED", LEN("ENTRIES COMPLETED")) == 0 ||
 	                strncmp(line, "RECHERCHES TERMINEES", LEN("RECHERCHES TERMINEES")) == 0) {
-		trim_all(line);
-		player->codex = atol(line);
+		player->codex = atol(trim_all(line));
 	}
 }
 
@@ -370,7 +352,7 @@ update_msg(Player *player, int iplayer)
 }
 
 void
-stats(struct discord *client, const struct discord_message *event)
+on_stats(struct discord *client, const struct discord_message *event)
 {
 	int i, iplayer;
 	char *txt, fname[64];
@@ -384,7 +366,6 @@ stats(struct discord *client, const struct discord_message *event)
 			.content = "Error: Failed to read image"
 		};
 		discord_create_message(client, event->channel_id, &msg, NULL);
-		free(txt);
 		return;
 	}
 
