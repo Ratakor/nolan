@@ -4,26 +4,19 @@
 #include "nolan.h"
 
 #define MAX_SLAYERS 50
-#define DAMAGE_CAP  10000000
-#define RAIDS_FILE  SAVE_FOLDER "%d-%m-%Y.csv"
-
-struct Slayer {
-	char *name;
-	unsigned long damage;
-	int found_in_file;
-};
+#define DAMAGE_CAP  10000000 /* daily */
 
 static void emsg(struct discord *client, const struct discord_message *event);
 static char *skip_to_slayers(char *txt);
 static char *trim_dmg(char *str);
-static int get_slayers(struct Slayer slayers[], char *txt);
-static int parse(struct Slayer slayers[], char *txt);
+static int get_slayers(Slayer slayers[], char *txt);
+static int parse(Slayer slayers[], char *txt);
 static unsigned long adjust(unsigned long dmg, char *raid);
-static void save_to_new_file(struct Slayer slayers[], int nslayers,
-                             char *fname, char *raid);
+static void save_to_new_file(Slayer slayers[], int nslayers, char *fname,
+                             char *raid);
 static void overcap_msg(char *name, unsigned long dmg, struct discord *client,
                         const struct discord_message *event);
-static void save_to_file(struct Slayer slayers[], int nslayers, char *raid,
+static void save_to_file(Slayer slayers[], int nslayers, char *raid,
                          struct discord *client,
                          const struct discord_message *event);
 
@@ -126,7 +119,7 @@ trim_dmg(char *dmg)
 }
 
 static int
-get_slayers(struct Slayer slayers[], char *txt)
+get_slayers(Slayer slayers[], char *txt)
 {
 	char *line = txt, *endline;
 	int n = 0, i, found = 0;
@@ -168,7 +161,7 @@ get_slayers(struct Slayer slayers[], char *txt)
 }
 
 static int
-parse(struct Slayer slayers[], char *txt)
+parse(Slayer slayers[], char *txt)
 {
 	return get_slayers(slayers, skip_to_slayers(txt));
 }
@@ -188,7 +181,7 @@ adjust(unsigned long dmg, char *raid)
 }
 
 static void
-save_to_new_file(struct Slayer slayers[], int nslayers, char *fname, char *raid)
+save_to_new_file(Slayer slayers[], int nslayers, char *fname, char *raid)
 {
 	FILE *fp;
 	int i;
@@ -203,15 +196,15 @@ save_to_new_file(struct Slayer slayers[], int nslayers, char *fname, char *raid)
 }
 
 static void
-overcap_msg(char *name, unsigned long dmg,
-            struct discord *client, const struct discord_message *event)
+overcap_msg(char *name, unsigned long dmg, struct discord *client,
+            const struct discord_message *event)
 {
 	char buf[DISCORD_MAX_MESSAGE_LEN];
 
 	if (dmg < DAMAGE_CAP)
 		return;
 
-	snprintf(buf, sizeof(buf), "User '%s' has overcapped its limit by %'lu \
+	snprintf(buf, sizeof(buf), "%s has overcapped the limit by %'lu \
 damage he is now at %'lu damage.", name, dmg - DAMAGE_CAP,
 	         dmg);
 
@@ -222,17 +215,16 @@ damage he is now at %'lu damage.", name, dmg - DAMAGE_CAP,
 }
 
 static void
-save_to_file(struct Slayer slayers[], int nslayers, char *raid,
+save_to_file(Slayer slayers[], int nslayers, char *raid,
              struct discord *client, const struct discord_message *event)
 {
 	FILE *w, *r;
 	char line[LINE_SIZE], *endname, fname[64], tmpfname[64];
 	int i;
 	unsigned long olddmg, newdmg;
-	time_t t = time(NULL);
-	struct tm *tm = localtime(&t);
+	long day = time(NULL) / 86400;
 
-	strftime(fname, sizeof(fname), RAIDS_FILE, tm);
+	snprintf(fname, sizeof(fname), "%s%ld.csv", RAIDS_FOLDER, day);
 	cpstr(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
 	catstr(tmpfname, "tmpfile2", sizeof(tmpfname));
 	if ((r = fopen(fname, "r")) == NULL) {
@@ -245,7 +237,7 @@ save_to_file(struct Slayer slayers[], int nslayers, char *raid,
 	while (fgets(line, LINE_SIZE, r)) {
 		endname = strchr(line, DELIM);
 		if (endname)
-			*endname = 0;
+			*endname = '\0';
 		for (i = 0; i < nslayers; i++) {
 			if (!slayers[i].found_in_file) {
 				if (strcmp(slayers[i].name, line) == 0) {
@@ -284,7 +276,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 {
 	char *txt, fname[64];
 	int nslayers;
-	struct Slayer slayers[MAX_SLAYERS];
+	Slayer slayers[MAX_SLAYERS];
 	struct discord_channel chan;
 	struct discord_ret_channel rchan = {
 		.keep = event,

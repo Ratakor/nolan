@@ -11,6 +11,7 @@
 #define SAVE_FOLDER  "/var/lib/nolan/"
 #endif
 #define IMAGE_FOLDER SAVE_FOLDER "images/"
+#define RAIDS_FOLDER SAVE_FOLDER "raids/"
 #define STATS_FILE   SAVE_FOLDER FILENAME
 
 /* ALL FIELDS MUST HAVE THE SAME SIZE */
@@ -39,6 +40,13 @@ typedef struct {
 	long codex;
 	u64snowflake userid;
 } Player;
+
+/* this is for raids */
+typedef struct {
+	char *name;
+	unsigned long damage;
+	int found_in_file;
+} Slayer;
 
 extern Player players[MAX_PLAYERS];
 extern size_t nplayers;
@@ -88,3 +96,13 @@ void on_leaderboard(struct discord *client,
 void create_slash_source(struct discord *client);
 char *sort_source(char *kingdom, size_t *fszp);
 void on_source(struct discord *client, const struct discord_message *event);
+
+/* cmd_lbraid.c */
+void create_slash_lbraid(struct discord *client);
+void lbraid(char *buf, size_t siz);
+void on_lbraid(struct discord *client, const struct discord_message *event);
+
+/* cmd_uraid.c */
+void create_slash_uraid(struct discord *client);
+void uraid(char *buf, size_t siz, char *txt);
+void on_uraid(struct discord *client, const struct discord_message *event);

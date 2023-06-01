@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
+#include <sys/stat.h>
 
 #include "util.h"
 
@@ -72,4 +73,11 @@ catstr(char *dst, const char *src, size_t siz)
 	if (rsiz >= siz)
 		die("catstr: string truncation happened during concatenation\n");
 	return rsiz;
+}
+
+int
+file_exists(char *filename)
+{
+	struct stat buf;
+	return (stat(filename, &buf) == 0);
 }

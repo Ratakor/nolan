@@ -3,15 +3,6 @@
 #include <sys/stat.h>
 #include "nolan.h"
 
-static int file_exists(char *filename);
-
-static int
-file_exists(char *filename)
-{
-	struct stat buf;
-	return (stat(filename, &buf) == 0);
-}
-
 void
 create_folders(void)
 {
@@ -22,6 +13,10 @@ create_folders(void)
 	if (!file_exists(IMAGE_FOLDER)) {
 		if (mkdir(IMAGE_FOLDER, 0755) == -1)
 			die("nolan: Failed to create %s\n", IMAGE_FOLDER);
+	}
+	if (!file_exists(RAIDS_FOLDER)) {
+		if (mkdir(RAIDS_FOLDER, 0755) == -1)
+			die("nolan: Failed to create %s\n", RAIDS_FOLDER);
 	}
 }
 
@@ -54,6 +49,8 @@ create_slash_commands(struct discord *client)
 	create_slash_help(client);
 	create_slash_info(client);
 	create_slash_leaderboard(client);
+	create_slash_lbraid(client);
+	create_slash_uraid(client);
 	/* TODO */
 	/* create_slash_source(client); */
 }
@@ -112,6 +109,8 @@ on_interaction(struct discord *client, const struct discord_interaction *event)
 			            event->data->options->array[0].value,
 			            event->member->user->id);
 		}
+	} else if (strcmp(event->data->name, "lbraid") == 0) {
+		lbraid(buf, siz);
 	} /*else if (strcmp(event->data->name, "source") == 0) {
 		if (!event->data || !event->data->options) {
 			source(buf, siz);

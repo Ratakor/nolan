@@ -62,6 +62,8 @@ main(void)
 	discord_set_on_command(client, "info", on_info);
 	discord_set_on_commands(client, src, LENGTH(src), on_source);
 	discord_set_on_command(client, "help", on_help);
+	discord_set_on_command(client, "lbraid", on_lbraid);
+	discord_set_on_command(client, "uraid", on_uraid);
 
 	discord_run(client);
 

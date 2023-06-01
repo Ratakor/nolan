@@ -181,7 +181,7 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 
 	cpstr(buf, fields[category], siz);
 	catstr(buf, ":\n", siz);
-	for (i = 0; i < lb_max ; i++) {
+	for (i = 0; i < lb_max; i++) {
 		if (userid == players[i].userid)
 			in_lb = 1;
 		write_player(player, psiz, i);
@@ -199,12 +199,12 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 }
 
 void
-leaderboard(char *buf, size_t siz, char *txt, u64snowflake userid)
+leaderboard(char *buf, size_t siz, char *categ, u64snowflake userid)
 {
 	unsigned long i = 2; /* ignore name and kingdom */
 
 	while (i < LENGTH(fields) - 1 &&
-	                strcasecmp(fields[i], txt) != 0)
+	                strcasecmp(fields[i], categ) != 0)
 		i++;
 
 	if (i == LENGTH(fields) - 1 || i == 5) { /* 5 = regional rank */
