@@ -54,6 +54,7 @@ create_slash_commands(struct discord *client)
 	create_slash_help(client);
 	create_slash_info(client);
 	create_slash_leaderboard(client);
+	/* TODO */
 	/* create_slash_source(client); */
 }
 
@@ -175,7 +176,6 @@ on_message(struct discord *client, const struct discord_message *event)
 	                          "image/png") != 0)
 		return;
 
-
 #ifdef DEVEL
 	if (event->channel_id == DEVEL)
 		on_raids(client, event);
@@ -188,10 +188,12 @@ on_message(struct discord *client, const struct discord_message *event)
 			break;
 		}
 	}
-	for (i = 0; i < LENGTH(raids_ids); i++) {
-		if (event->channel_id == raids_ids[i]) {
-			on_raids(client, event);
-			break;
+	if (enable_raids) {
+		for (i = 0; i < LENGTH(raids_ids); i++) {
+			if (event->channel_id == raids_ids[i]) {
+				on_raids(client, event);
+				break;
+			}
 		}
 	}
 }

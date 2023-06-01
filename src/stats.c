@@ -258,19 +258,21 @@ static int
 save_player_to_file(Player *player)
 {
 	FILE *w, *r;
-	char buf[LINE_SIZE], *p, *endname;
+	char line[LINE_SIZE], *endname, tmpfname[64];
 	unsigned long iplayer = 0, cpt = 1, i;
 
+	cpstr(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
+	catstr(tmpfname, "tmpfile", sizeof(tmpfname));
 	if ((r = fopen(STATS_FILE, "r")) == NULL)
-		die("nolan: Failed to open %s (read)\n", STATS_FILE);
-	if ((w = fopen("tmpfile", "w")) == NULL)
-		die("nolan: Failed to open %s (write)\n", STATS_FILE);
+		die("nolan: Failed to open %s\n", STATS_FILE);
+	if ((w = fopen(tmpfname, "w")) == NULL)
+		die("nolan: Failed to open %s\n", tmpfname);
 
-	while ((p = fgets(buf, LINE_SIZE, r)) != NULL) {
-		endname = strchr(p, DELIM);
+	while (fgets(line, LINE_SIZE, r)) {
+		endname = strchr(line, DELIM);
 		if (endname)
 			*endname = 0;
-		if (strcmp(player->name, p) == 0) {
+		if (strcmp(player->name, line) == 0) {
 			iplayer = cpt;
 			fprintf(w, "%s%c", player->name, DELIM);
 			fprintf(w, "%s%c", player->kingdom, DELIM);
@@ -280,7 +282,7 @@ save_player_to_file(Player *player)
 		} else {
 			if (endname)
 				*endname = DELIM;
-			fprintf(w, "%s", p);
+			fprintf(w, "%s", line);
 		}
 		cpt++;
 	}
@@ -295,7 +297,7 @@ save_player_to_file(Player *player)
 	fclose(r);
 	fclose(w);
 	remove(STATS_FILE);
-	rename("tmpfile", STATS_FILE);
+	rename(tmpfname, STATS_FILE);
 
 	return iplayer;
 }

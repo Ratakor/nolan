@@ -1,4 +1,6 @@
 tests/
 build/
+images/
+*.csv
 nolan
 config.h

@@ -5,7 +5,11 @@
 
 #define MAX_PLAYERS  LENGTH(kingdoms) * 50
 #define LINE_SIZE    300 + 1
+#ifdef DEVEL
+#define SAVE_FOLDER "./"
+#else
 #define SAVE_FOLDER  "/var/lib/nolan/"
+#endif
 #define IMAGE_FOLDER SAVE_FOLDER "images/"
 #define STATS_FILE   SAVE_FOLDER FILENAME
 
@@ -62,8 +66,6 @@ void on_stats(struct discord *client, const struct discord_message *event);
 
 /* raids.c */
 void on_raids(struct discord *client, const struct discord_message *event);
-void get_chan_name(struct discord *client, struct discord_response *rep,
-                   const struct discord_channel *ret);
 
 /* cmd_help.c */
 void create_slash_help(struct discord *client);

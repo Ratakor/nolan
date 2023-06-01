@@ -8,6 +8,7 @@
 
 static const int kingdom_verification = 0; /* 0 means no verification */
 static const int use_embed            = 0; /* 0 means no embed on info */
+static const int enable_raids         = 0; /* this is very specific to SoT */
 
 /* list of channel ids to check for stats screenshots */
 static const u64snowflake stats_ids[] = {
