@@ -10,7 +10,6 @@ A discord bot for Orna.
 
 ### features
 - automatic roles attribution (for Orna FR) -> with updatemsg
-- add player with name in event->content for ham
 - add option to correct stats
 - ascensions (track mats)
 

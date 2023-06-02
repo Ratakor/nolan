@@ -33,14 +33,14 @@ create_slash_uraid(struct discord *client)
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
 
-static void
+void
 write_invalid(char *buf, size_t siz)
 {
 	strlcpy(buf, "NO WRONG YOU MUST USE AN ARGUMENT.\n", siz);
 	strlcat(buf, "Valid argument is an Orna username.\n", siz);
 }
 
-static unsigned long
+unsigned long
 parse_file(char *fname, char *username)
 {
 	FILE *fp;
@@ -65,7 +65,7 @@ parse_file(char *fname, char *username)
 	return 0;
 }
 
-static unsigned long *
+unsigned long *
 load_files(char *username)
 {
 	int i;
@@ -84,7 +84,7 @@ load_files(char *username)
 	return dmgs;
 }
 
-static void
+void
 write_uraid(char *buf, int siz, char *username, unsigned long *dmgs)
 {
 	int i, n = 1;
@@ -104,7 +104,7 @@ write_uraid(char *buf, int siz, char *username, unsigned long *dmgs)
 
 }
 
-static void
+void
 uraid(char *buf, size_t siz, char *username)
 {
 	unsigned long *dmgs;

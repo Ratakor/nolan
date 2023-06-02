@@ -54,13 +54,13 @@ create_player(unsigned int line)
 	return player;
 }
 
-static void
+void
 update_players(Player *player)
 {
 	unsigned long i = 0, j;
 
-	/* while (i < nplayers && strcmp(players[i].name, player->name) != 0) */
-	while (i < nplayers && players[i].userid != player->userid)
+	/* while (i < nplayers && players[i].userid != player->userid) */
+	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
 		i++;
 
 	if (i == nplayers) { /* new player */
@@ -76,13 +76,14 @@ update_players(Player *player)
 		}
 		if (player->kingdom)
 			strlcpy(players[i].kingdom, player->kingdom, 32 + 1);
-		/* keep original userid */
 		for (j = 2; j < LENGTH(fields) - 1; j++)
 			((long *)&players[i])[j] = ((long *)player)[j];
+		if (player->userid != 0)
+			players[i].userid = player->userid;
 	}
 }
 
-static long
+long
 playtime_to_long(char *playtime, char str[])
 {
 	char *p;
@@ -134,7 +135,7 @@ playtime_to_str(long playtime)
 }
 
 /* trim everything that is not a number or a left parenthesis */
-static char *
+char *
 trim_all(char *str)
 {
 	const char *r = str;
@@ -149,7 +150,7 @@ trim_all(char *str)
 	return str;
 }
 
-static void
+void
 parse_line(Player *player, char *line)
 {
 	char *str;
@@ -239,7 +240,7 @@ parse_line(Player *player, char *line)
 	}
 }
 
-static void
+void
 for_line(Player *player, char *txt)
 {
 	char *line = txt, *endline;
@@ -254,7 +255,8 @@ for_line(Player *player, char *txt)
 }
 
 /* Save player to file and return player's index in file if it was found */
-static int
+/* TODO: don't modify userid if player->userid == 0 */
+int
 save_player_to_file(Player *player)
 {
 	FILE *w, *r;
@@ -357,10 +359,18 @@ void
 on_stats(struct discord *client, const struct discord_message *event)
 {
 	int i, iplayer;
-	char *txt, fname[64];
+	int ham = strlen(event->content) > 0 && event->author->id == HAM;
+	char *txt, fname[128];
 	Player player;
 
-	snprintf(fname, 64, "%s/%s.jpg", IMAGE_FOLDER, event->author->username);
+	/* not always a jpg but idc */
+	if (ham) {
+		snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGE_FOLDER,
+		         event->content);
+	} else {
+		snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGE_FOLDER,
+		         event->author->username);
+	}
 	curl(event->attachments->array->url, fname);
 	txt = ocr(fname);
 	if (txt == NULL) {
@@ -373,8 +383,12 @@ on_stats(struct discord *client, const struct discord_message *event)
 	}
 
 	memset(&player, 0, sizeof(player));
-	player.name = event->author->username;
-	player.userid = event->author->id;
+	if (ham) {
+		player.name = event->content;
+	} else {
+		player.name = event->author->username;
+		player.userid = event->author->id;
+	}
 	for_line(&player, txt);
 	free(txt);
 

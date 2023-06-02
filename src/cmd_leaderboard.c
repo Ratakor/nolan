@@ -117,7 +117,7 @@ create_slash_leaderboard(struct discord *client)
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
 
-static void
+void
 write_invalid(char *buf, size_t siz)
 {
 	unsigned long i;
@@ -132,7 +132,7 @@ write_invalid(char *buf, size_t siz)
 	}
 }
 
-static int
+int
 compare(const void *p1, const void *p2)
 {
 	const long l1 = ((long *)(Player *)p1)[category];
@@ -150,7 +150,7 @@ compare(const void *p1, const void *p2)
 	return l2 - l1;
 }
 
-static void
+void
 write_player(char *buf, size_t siz, int i)
 {
 	size_t ssiz = 32;
@@ -170,7 +170,7 @@ write_player(char *buf, size_t siz, int i)
 	strlcat(buf, "\n", siz);
 }
 
-static void
+void
 write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 {
 	int in_lb = 0;
@@ -206,7 +206,7 @@ leaderboard, this is probably because LB_MAX is too big\n");
 	}
 }
 
-static void
+void
 leaderboard(char *buf, size_t siz, char *categ, u64snowflake userid)
 {
 	unsigned long i = 2; /* ignore name and kingdom */

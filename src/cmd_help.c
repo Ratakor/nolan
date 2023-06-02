@@ -13,7 +13,7 @@ create_slash_help(struct discord *client)
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
 
-static void
+void
 help(char *buf, size_t siz)
 {
 	char *p;

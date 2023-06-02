@@ -34,7 +34,7 @@ create_slash_info(struct discord *client)
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
 
-static u64snowflake
+u64snowflake
 str_to_uid(char *id)
 {
 	char *start = id, *end = strchr(id, '\0') - 1;
@@ -44,7 +44,7 @@ str_to_uid(char *id)
 	return 0;
 }
 
-static void
+void
 write_invalid(char *buf, size_t siz)
 {
 	strlcpy(buf, "This player does not exist in the database.\n", siz);
@@ -54,7 +54,7 @@ write_invalid(char *buf, size_t siz)
 }
 
 /* TODO */
-/* static void */
+/* void */
 /* write_info_embed(struct discord *client, char *buf, size_t siz, int index) */
 /* { */
 /* 	unsigned long i; */
@@ -91,7 +91,7 @@ write_invalid(char *buf, size_t siz)
 /* 	}; */
 /* } */
 
-static void
+void
 write_info(char *buf, size_t siz, int index)
 {
 	unsigned long i;
@@ -117,7 +117,7 @@ write_info(char *buf, size_t siz, int index)
 	}
 }
 
-static void
+void
 info_from_uid(char *buf, size_t siz, u64snowflake userid)
 {
 	unsigned long i = 0;
@@ -131,7 +131,7 @@ info_from_uid(char *buf, size_t siz, u64snowflake userid)
 		write_info(buf, siz, i);
 }
 
-static void
+void
 info_from_txt(char *buf, size_t siz, char *txt)
 {
 	unsigned long i = 0;

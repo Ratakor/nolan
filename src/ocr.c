@@ -45,7 +45,7 @@ curl(char *url, char *fname)
 	curl_global_cleanup();
 }
 
-static int
+int
 write_rect(gdRect *rect, gdImagePtr im)
 {
 	rect->y = 0;
@@ -63,7 +63,7 @@ write_rect(gdRect *rect, gdImagePtr im)
 }
 
 /* destroy im too */
-static int
+int
 crop_and_save_jpeg(char *fname, gdImagePtr im)
 {
 	FILE *fp;
@@ -92,7 +92,7 @@ crop_and_save_jpeg(char *fname, gdImagePtr im)
 }
 
 /* destroy im too */
-static int
+int
 crop_and_save_png(char *fname, gdImagePtr im)
 {
 	FILE *fp;

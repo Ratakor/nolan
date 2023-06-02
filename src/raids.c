@@ -7,6 +7,7 @@
 
 static void emsg(struct discord *client, const struct discord_message *event);
 static char *skip_to_slayers(char *txt);
+static char *trim_name(char *name);
 static char *trim_dmg(char *str);
 static int get_slayers(Slayer slayers[], char *txt);
 static int parse(Slayer slayers[], char *txt);
@@ -32,7 +33,7 @@ static const char *garbageslayer[] = {
 	"Uccissore",
 };
 
-static void
+void
 emsg(struct discord *client, const struct discord_message *event)
 {
 	char buf[128];
@@ -44,7 +45,7 @@ emsg(struct discord *client, const struct discord_message *event)
 	discord_create_message(client, event->channel_id, &msg, NULL);
 }
 
-static char *
+char *
 skip_to_slayers(char *txt)
 {
 	char *line = txt, *endline;
@@ -80,7 +81,7 @@ skip_to_slayers(char *txt)
 }
 
 /* trim everything that is not in the ascii table (not all of it) */
-static char *
+char *
 trim_name(char *name)
 {
 	const char *r;
@@ -102,7 +103,7 @@ trim_name(char *name)
 }
 
 /* trim everything that is not a number, returns a pointer to the trimmed str*/
-static char *
+char *
 trim_dmg(char *dmg)
 {
 	const char *r = dmg;
@@ -117,7 +118,7 @@ trim_dmg(char *dmg)
 	return dmg;
 }
 
-static int
+int
 get_slayers(Slayer slayers[], char *txt)
 {
 	char *line = txt, *endline;
@@ -159,27 +160,27 @@ get_slayers(Slayer slayers[], char *txt)
 	return n;
 }
 
-static int
+int
 parse(Slayer slayers[], char *txt)
 {
 	return get_slayers(slayers, skip_to_slayers(txt));
 }
 
-static unsigned long
+unsigned long
 adjust(unsigned long dmg, char *raid)
 {
 	if (strcmp(raid, "starlord") == 0)
 		return dmg * 2;
-	else if (strcmp(raid, "titan") == 0)
+	if (strcmp(raid, "titan") == 0)
 		return dmg * 2;
-	else if (strcmp(raid, "maelor") == 0)
+	if (strcmp(raid, "maelor") == 0)
 		return dmg * 2;
 	/* if (strcmp(raid, "arisen-morrigan") == 0) */
 	/* 	return *dmg / 2; */
 	return dmg;
 }
 
-static void
+void
 save_to_new_file(Slayer slayers[], int nslayers, char *fname, char *raid)
 {
 	FILE *fp;
@@ -194,7 +195,7 @@ save_to_new_file(Slayer slayers[], int nslayers, char *fname, char *raid)
 	fclose(fp);
 }
 
-static void
+void
 overcap_msg(char *name, unsigned long dmg, struct discord *client,
             const struct discord_message *event)
 {
@@ -212,7 +213,7 @@ damage he is now at %'lu damage.", name, dmg - DAMAGE_CAP, dmg);
 	discord_create_message(client, event->channel_id, &msg, NULL);
 }
 
-static void
+void
 save_to_file(Slayer slayers[], int nslayers, char *raid,
              struct discord *client, const struct discord_message *event)
 {

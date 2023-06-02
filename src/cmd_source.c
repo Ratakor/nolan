@@ -26,7 +26,7 @@ create_slash_source(struct discord *client)
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
 
-static char *
+char *
 sort_source(char *kingdom, size_t *fszp)
 {
 	FILE *fp;

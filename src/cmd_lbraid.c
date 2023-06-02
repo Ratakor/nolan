@@ -19,7 +19,7 @@ create_slash_lbraid(struct discord *client)
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
 
-static void
+void
 parse_file(char *fname, Slayer slayers[], int *nslayers)
 {
 	FILE *fp;
@@ -51,7 +51,7 @@ parse_file(char *fname, Slayer slayers[], int *nslayers)
 	fclose(fp);
 }
 
-static void
+void
 load_files(Slayer slayers[], int *nslayers)
 {
 	int i;
@@ -67,7 +67,7 @@ load_files(Slayer slayers[], int *nslayers)
 	}
 }
 
-static int
+int
 compare(const void *s1, const void *s2)
 {
 	const long dmg1 = ((unsigned long *)(Slayer *)s1)[1];
@@ -76,7 +76,7 @@ compare(const void *s1, const void *s2)
 	return dmg2 - dmg1;
 }
 
-static void
+void
 write_lbraid(char *buf, int siz, Slayer slayers[], int nslayers)
 {
 	int i, lb_max = MIN(nslayers, LB_MAX);
@@ -90,7 +90,7 @@ write_lbraid(char *buf, int siz, Slayer slayers[], int nslayers)
 	}
 }
 
-static void
+void
 lbraid(char *buf, size_t siz)
 {
 	int i, nslayers = 0;
