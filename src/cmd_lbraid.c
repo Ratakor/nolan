@@ -12,11 +12,12 @@ static void lbraid(char *buf, size_t siz);
 void
 create_slash_lbraid(struct discord *client)
 {
-	struct discord_create_global_application_command cmd = {
+	struct discord_create_guild_application_command cmd = {
 		.name = "lbraid",
 		.description = "Shows the raid leaderboard for the last 7 days",
 	};
-	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
+	discord_create_guild_application_command(client, APP_ID, GUILD_ID,
+	                &cmd, NULL);
 }
 
 void
@@ -119,7 +120,11 @@ on_lbraid(struct discord *client, const struct discord_message *event)
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
 		return;
+#else
+	if (event->guild_id != GUILD_ID)
+		return;
 #endif /* DEVEL */
+
 
 	lbraid(buf, siz);
 	struct discord_create_message msg = {

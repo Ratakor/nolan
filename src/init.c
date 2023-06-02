@@ -50,10 +50,8 @@ create_slash_commands(struct discord *client)
 	create_slash_info(client);
 	create_slash_leaderboard(client);
 	create_slash_source(client);
-	if (enable_raids) {
-		create_slash_lbraid(client);
-		create_slash_uraid(client);
-	}
+	create_slash_lbraid(client);
+	create_slash_uraid(client);
 }
 
 void
@@ -97,12 +95,10 @@ on_interaction(struct discord *client, const struct discord_interaction *event)
 		on_leaderboard_interaction(client, event);
 	else if (strcmp(event->data->name, "source") == 0)
 		on_source_interaction(client, event);
-	else if (enable_raids) {
-		if (strcmp(event->data->name, "lbraid") == 0)
-			on_lbraid_interaction(client, event);
-		else if (strcmp(event->data->name, "uraid") == 0)
-			on_uraid_interaction(client, event);
-	}
+	else if (strcmp(event->data->name, "lbraid") == 0)
+		on_lbraid_interaction(client, event);
+	else if (strcmp(event->data->name, "uraid") == 0)
+		on_uraid_interaction(client, event);
 }
 
 void
@@ -159,12 +155,11 @@ on_message(struct discord *client, const struct discord_message *event)
 			break;
 		}
 	}
-	if (enable_raids) {
-		for (i = 0; i < LENGTH(raids_ids); i++) {
-			if (event->channel_id == raids_ids[i]) {
-				on_raids(client, event);
-				break;
-			}
+
+	for (i = 0; i < LENGTH(raids_ids); i++) {
+		if (event->channel_id == raids_ids[i]) {
+			on_raids(client, event);
+			break;
 		}
 	}
 }

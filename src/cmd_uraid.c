@@ -21,7 +21,7 @@ create_slash_uraid(struct discord *client)
 			.required = true
 		},
 	};
-	struct discord_create_global_application_command cmd = {
+	struct discord_create_guild_application_command cmd = {
 		.name = "uraid",
 		.description = "Shows the user raid damage for the last 7 days",
 		.options = &(struct discord_application_command_options)
@@ -30,7 +30,8 @@ create_slash_uraid(struct discord *client)
 			.array = options
 		},
 	};
-	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
+	discord_create_guild_application_command(client, APP_ID, GUILD_ID,
+	                &cmd, NULL);
 }
 
 void
@@ -125,6 +126,9 @@ on_uraid(struct discord *client, const struct discord_message *event)
 
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
+		return;
+#else
+	if (event->guild_id != GUILD_ID)
 		return;
 #endif /* DEVEL */
 

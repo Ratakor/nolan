@@ -37,8 +37,8 @@ probably way too much channels for stats\n");
 	strlcat(buf, "\t/leaderboard *category*\n", siz);
 	/* catstr(buf, "\t/correct [category] [corrected value]\n", siz); */
 	strlcat(buf, "\t/source *[kingdom]*\n", siz);
-	strlcat(buf, "\t/uraid *username*\n", siz);
-	strlcat(buf, "\t/lbraid\n", siz);
+	strlcat(buf, "\t/uraid *username* (only for Scream of Terra)\n", siz);
+	strlcat(buf, "\t/lbraid (only for Scream of Terra)\n", siz);
 	strlcat(buf, "\t/help\n", siz);
 	strlcat(buf, "\n[...] means optional.\n", siz);
 	strlcat(buf, "Also works with ", siz);

@@ -3,11 +3,11 @@
 #include "../config.h"
 #include "util.h"
 
-#define MAX_PLAYERS  LENGTH(kingdoms) * 50
-#define MAX_SLAYERS 50
+#define MAX_PLAYERS  LENGTH(kingdoms) * 50 /* might need to update that */
+#define MAX_SLAYERS  50
 #define LINE_SIZE    300 + 1
 #ifdef DEVEL
-#define SAVE_FOLDER "./"
+#define SAVE_FOLDER  "./"
 #else
 #define SAVE_FOLDER  "/var/lib/nolan/"
 #endif /* DEVEL */
