@@ -76,10 +76,10 @@ update_players(Player *player)
 		}
 		if (player->kingdom)
 			strlcpy(players[i].kingdom, player->kingdom, 32 + 1);
-		for (j = 2; j < LENGTH(fields) - 1; j++)
-			((long *)&players[i])[j] = ((long *)player)[j];
-		if (player->userid != 0)
-			players[i].userid = player->userid;
+		for (j = 2; j < LENGTH(fields); j++) {
+			if (((long *)player)[j] != 0)
+				((long *)&players[i])[j] = ((long *)player)[j];
+		}
 	}
 }
 
@@ -255,7 +255,6 @@ for_line(Player *player, char *txt)
 }
 
 /* Save player to file and return player's index in file if it was found */
-/* TODO: don't modify userid if player->userid == 0 */
 int
 save_player_to_file(Player *player)
 {
@@ -279,8 +278,18 @@ save_player_to_file(Player *player)
 			fprintf(w, "%s%c", player->name, DELIM);
 			fprintf(w, "%s%c", player->kingdom, DELIM);
 			for (i = 2; i < LENGTH(fields) - 1; i++)
-				fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
-			fprintf(w, "%lu\n", player->userid);
+				if (((long *)player)[i] != 0) {
+					fprintf(w, "%ld%c",
+					        ((long *)player)[i], DELIM);
+				} else {
+					fprintf(w, "%ld%c",
+					        ((long *)&players[cpt - 2])[i],
+					        DELIM);
+				}
+			if (player->userid != 0)
+				fprintf(w, "%lu\n", player->userid);
+			else
+				fprintf(w, "%lu\n", players[iplayer].userid);
 		} else {
 			if (endname)
 				*endname = DELIM;
@@ -328,7 +337,7 @@ update_msg(Player *player, int iplayer)
 		old = ((long *)&players[iplayer])[i];
 		new = ((long *)player)[i];
 		diff = new - old;
-		if (diff == 0)
+		if (new == 0 || diff == 0)
 			continue;
 
 		if (i == 7) { /* playtime */

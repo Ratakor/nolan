@@ -103,7 +103,7 @@ on_source_interaction(struct discord *client,
 		fbuf = sort_source(event->data->options->array[0].value, &fsiz);
 
 	struct discord_attachment attachment = {
-		.filename = STATS_FILE,
+		.filename = FILENAME,
 		.content = fbuf,
 		.size = fsiz
 	};
