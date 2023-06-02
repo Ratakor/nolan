@@ -43,6 +43,7 @@ probably way too much channels for stats\n");
 	strlcat(buf, "\n[...] means optional.\n", siz);
 	strlcat(buf, "Also works with ", siz);
 	strlcat(buf, PREFIX, siz);
+	strlcat(buf, " instead of /", siz);
 }
 
 void

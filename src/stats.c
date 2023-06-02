@@ -4,12 +4,12 @@
 
 #define LEN(X) (sizeof X - 1)
 
-static void update_players(Player *player);
+static int update_players(Player *player);
 static long playtime_to_long(char *playtime, char *str);
 static char *trim_all(char *str);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
-static int save_player_to_file(Player *player);
+static void save_player_to_file(Player *player);
 static char *update_msg(Player *player, int iplayer);
 
 Player
@@ -54,7 +54,7 @@ create_player(unsigned int line)
 	return player;
 }
 
-void
+int
 update_players(Player *player)
 {
 	unsigned long i = 0, j;
@@ -69,18 +69,19 @@ update_players(Player *player)
 			    MAX_PLAYERS);
 		players[nplayers] = create_player(nplayers + 2);
 		nplayers++;
-	} else {
-		if (player->name) {
-			strlcpy(players[i].name, player->name,
-			        DISCORD_MAX_USERNAME_LEN);
-		}
-		if (player->kingdom)
-			strlcpy(players[i].kingdom, player->kingdom, 32 + 1);
-		for (j = 2; j < LENGTH(fields); j++) {
-			if (((long *)player)[j] != 0)
-				((long *)&players[i])[j] = ((long *)player)[j];
-		}
+		return 0;
 	}
+
+	/* if (player->name) */
+	/* 	strlcpy(players[i].name, player->name, DISCORD_MAX_USERNAME_LEN); */
+	if (player->kingdom)
+		strlcpy(players[i].kingdom, player->kingdom, 32 + 1);
+	for (j = 2; j < LENGTH(fields); j++) {
+		if (((long *)player)[j] != 0)
+			((long *)&players[i])[j] = ((long *)player)[j];
+	}
+
+	return i;
 }
 
 long
@@ -255,12 +256,13 @@ for_line(Player *player, char *txt)
 }
 
 /* Save player to file and return player's index in file if it was found */
-int
+void
 save_player_to_file(Player *player)
 {
 	FILE *w, *r;
-	char line[LINE_SIZE], *endname, tmpfname[64];
-	unsigned long iplayer = 0, cpt = 1, i;
+	char line[LINE_SIZE], *endname, tmpfname[128];
+	unsigned long i;
+	int found = 0;
 
 	strlcpy(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
 	strlcat(tmpfname, "tmpfile", sizeof(tmpfname));
@@ -274,30 +276,19 @@ save_player_to_file(Player *player)
 		if (endname)
 			*endname = 0;
 		if (strcmp(player->name, line) == 0) {
-			iplayer = cpt;
+			found = 1;
 			fprintf(w, "%s%c", player->name, DELIM);
 			fprintf(w, "%s%c", player->kingdom, DELIM);
 			for (i = 2; i < LENGTH(fields) - 1; i++)
-				if (((long *)player)[i] != 0) {
-					fprintf(w, "%ld%c",
-					        ((long *)player)[i], DELIM);
-				} else {
-					fprintf(w, "%ld%c",
-					        ((long *)&players[cpt - 2])[i],
-					        DELIM);
-				}
-			if (player->userid != 0)
-				fprintf(w, "%lu\n", player->userid);
-			else
-				fprintf(w, "%lu\n", players[iplayer].userid);
+				fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
+			fprintf(w, "%lu\n", player->userid);
 		} else {
 			if (endname)
 				*endname = DELIM;
 			fprintf(w, "%s", line);
 		}
-		cpt++;
 	}
-	if (!iplayer) {
+	if (!found) {
 		fprintf(w, "%s%c", player->name, DELIM);
 		fprintf(w, "%s%c", player->kingdom, DELIM);
 		for (i = 2; i < LENGTH(fields) - 1; i++)
@@ -309,8 +300,6 @@ save_player_to_file(Player *player)
 	fclose(w);
 	remove(STATS_FILE);
 	rename(tmpfname, STATS_FILE);
-
-	return iplayer;
 }
 
 char *
@@ -367,7 +356,7 @@ update_msg(Player *player, int iplayer)
 void
 on_stats(struct discord *client, const struct discord_message *event)
 {
-	int i, iplayer;
+	int i;
 	int ham = strlen(event->content) > 0 && event->author->id == HAM;
 	char *txt, fname[128];
 	Player player;
@@ -413,13 +402,14 @@ on_stats(struct discord *client, const struct discord_message *event)
 			struct discord_create_message msg = {
 				.content = "Sorry you're not part of the kingdom :/"
 			};
-			discord_create_message(client, event->channel_id, &msg, NULL);
+			discord_create_message(client, event->channel_id, &msg,
+			                       NULL);
 			return;
 		}
 	}
 
-	if ((iplayer = save_player_to_file(&player))) {
-		txt = update_msg(&player, iplayer - 2);
+	if ((i = update_players(&player))) {
+		txt = update_msg(&player, i);
 	} else {
 		txt = malloc(128);
 		snprintf(txt, 128, "**%s** has been registrated in the database.",
@@ -429,6 +419,6 @@ on_stats(struct discord *client, const struct discord_message *event)
 		.content = txt
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	update_players(&player);
+	save_player_to_file(&players[i]);
 	free(txt);
 }

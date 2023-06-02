@@ -15,7 +15,6 @@ A discord bot for Orna.
 
 ### chore
 - redefine weird DISCORD_MAX macro (/4 because no wide char)
-- bug with updatemsg ?
 - refactor cropping in ocr.c
 - refactor parseline() in stats.c
 
