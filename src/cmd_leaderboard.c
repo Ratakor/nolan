@@ -6,6 +6,7 @@ static void write_invalid(char *buf, size_t siz);
 static int compare(const void *p1, const void *p2);
 static void write_player(char *buf, size_t siz, int i);
 static void write_leaderboard(char *buf, size_t siz, u64snowflake userid);
+static void leaderboard(char *buf, size_t siz, char *txt, u64snowflake userid);
 
 static int category = 0;
 
@@ -121,13 +122,13 @@ write_invalid(char *buf, size_t siz)
 {
 	unsigned long i;
 
-	cpstr(buf, "NO WRONG, this is not a valid category.\n", siz);
-	catstr(buf, "Valid categories are:\n", siz);
+	strlcpy(buf, "NO WRONG, this is not a valid category.\n", siz);
+	strlcat(buf, "Valid categories are:\n", siz);
 	for (i = 2; i < LENGTH(fields) - 1; i++) {
 		if (i == 5) /* regional rank */
 			continue;
-		catstr(buf, fields[i], siz);
-		catstr(buf, "\n", siz);
+		strlcat(buf, fields[i], siz);
+		strlcat(buf, "\n", siz);
 	}
 }
 
@@ -155,19 +156,18 @@ write_player(char *buf, size_t siz, int i)
 	size_t ssiz = 32;
 	char *plt, stat[ssiz];
 
-	/* *buf = '\0'; */
 	snprintf(buf, siz, "%d. %s: ", i + 1, players[i].name);
 	if (category == 7) { /* playtime */
 		plt = playtime_to_str(((long *)&players[i])[category]);
-		catstr(buf, plt, siz);
+		strlcat(buf, plt, siz);
 		free(plt);
 	} else {
 		snprintf(stat, ssiz, "%'ld", ((long *)&players[i])[category]);
-		catstr(buf, stat, siz);
+		strlcat(buf, stat, siz);
 		if (i == 18) /* distance */
-			catstr(buf, "m", siz);
+			strlcat(buf, "m", siz);
 	}
-	catstr(buf, "\n", siz);
+	strlcat(buf, "\n", siz);
 }
 
 static void
@@ -175,30 +175,38 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 {
 	int in_lb = 0;
 	unsigned long i, lb_max = MIN(nplayers, LB_MAX);
-	size_t psiz = 128;
+	size_t psiz = 256, rsiz;
 	char player[psiz];
 	/* siz = (lb_max + 2) * 64; */
 
-	cpstr(buf, fields[category], siz);
-	catstr(buf, ":\n", siz);
+	strlcpy(buf, fields[category], siz);
+	strlcat(buf, ":\n", siz);
 	for (i = 0; i < lb_max; i++) {
 		if (userid == players[i].userid)
 			in_lb = 1;
 		write_player(player, psiz, i);
-		catstr(buf, player, siz);
+		rsiz = strlcat(buf, player, siz);
+		if (rsiz >= siz) {
+			warn("nolan: truncation happened while writing\
+leaderboard, this is probably because LB_MAX is too big\n");
+		}
 	}
 
 	if (!in_lb) {
-		catstr(buf, "...\n", siz);
+		strlcat(buf, "...\n", siz);
 		i = lb_max;
 		while (i < nplayers && players[i].userid != userid)
 			i++;
 		write_player(player, psiz, i);
-		catstr(buf, player, siz);
+		rsiz = strlcat(buf, player, siz);
+		if (rsiz >= siz) {
+			warn("nolan: truncation happened while writing\
+leaderboard, this is probably because LB_MAX is too big\n");
+		}
 	}
 }
 
-void
+static void
 leaderboard(char *buf, size_t siz, char *categ, u64snowflake userid)
 {
 	unsigned long i = 2; /* ignore name and kingdom */
@@ -229,7 +237,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
 		return;
-#endif
+#endif /* DEVEL */
 
 	if (strlen(event->content) == 0)
 		write_invalid(buf, siz);
@@ -241,3 +249,29 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
 }
+
+void
+on_leaderboard_interaction(struct discord *client,
+                           const struct discord_interaction *event)
+{
+	size_t siz = DISCORD_MAX_MESSAGE_LEN;
+	char buf[siz];
+
+	if (!event->data || !event->data->options) {
+		write_invalid(buf, siz);
+	} else {
+		leaderboard(buf, siz, event->data->options->array[0].value,
+		            event->member->user->id);
+	}
+
+	struct discord_interaction_response params = {
+		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
+		.data = &(struct discord_interaction_callback_data)
+		{
+			.content = buf,
+		}
+	};
+	discord_create_interaction_response(client, event->id, event->token,
+	                                    &params, NULL);
+}
+

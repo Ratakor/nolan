@@ -9,7 +9,7 @@
 #define SAVE_FOLDER "./"
 #else
 #define SAVE_FOLDER  "/var/lib/nolan/"
-#endif
+#endif /* DEVEL */
 #define IMAGE_FOLDER SAVE_FOLDER "images/"
 #define RAIDS_FOLDER SAVE_FOLDER "raids/"
 #define STATS_FILE   SAVE_FOLDER FILENAME
@@ -77,32 +77,37 @@ void on_raids(struct discord *client, const struct discord_message *event);
 
 /* cmd_help.c */
 void create_slash_help(struct discord *client);
-void help(char *buf, size_t siz);
 void on_help(struct discord *client, const struct discord_message *event);
+void on_help_interaction(struct discord *client,
+		const struct discord_interaction *event);
 
 /* cmd_info.c */
 void create_slash_info(struct discord *client);
-void info_from_uid(char *buf, size_t siz, u64snowflake userid);
-void info_from_txt(char *buf, size_t siz, char *txt);
 void on_info(struct discord *client, const struct discord_message *event);
+void on_info_interaction(struct discord *client,
+		const struct discord_interaction *event);
 
 /* cmd_leaderboard.c */
 void create_slash_leaderboard(struct discord *client);
-void leaderboard(char *buf, size_t siz, char *txt, u64snowflake userid);
 void on_leaderboard(struct discord *client,
 		const struct discord_message *event);
+void on_leaderboard_interaction(struct discord *client,
+		const struct discord_interaction *event);
 
 /* cmd_source.c */
 void create_slash_source(struct discord *client);
-char *sort_source(char *kingdom, size_t *fszp);
 void on_source(struct discord *client, const struct discord_message *event);
+void on_source_interaction(struct discord *client,
+		const struct discord_interaction *event);
 
 /* cmd_lbraid.c */
 void create_slash_lbraid(struct discord *client);
-void lbraid(char *buf, size_t siz);
 void on_lbraid(struct discord *client, const struct discord_message *event);
+void on_lbraid_interaction(struct discord *client,
+		const struct discord_interaction *event);
 
 /* cmd_uraid.c */
 void create_slash_uraid(struct discord *client);
-void uraid(char *buf, size_t siz, char *txt);
 void on_uraid(struct discord *client, const struct discord_message *event);
+void on_uraid_interaction(struct discord *client,
+		const struct discord_interaction *event);

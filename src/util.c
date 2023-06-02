@@ -7,13 +7,24 @@
 #include "util.h"
 
 void
-die(const char *errstr, ...)
+warn(const char *fmt, ...)
 {
 	va_list ap;
 
-	va_start(ap, errstr);
-	vfprintf(stderr, errstr, ap);
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
 	va_end(ap);
+}
+
+void
+die(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+
 	exit(EXIT_FAILURE);
 }
 
@@ -55,24 +66,6 @@ strlcat(char *dst, const char *src, size_t siz)
 	if (dsiz >= siz)
 		return strlen(src) + siz;
 	return dsiz + strlcpy(dst + dsiz, src, siz - dsiz);
-}
-
-size_t
-cpstr(char *dst, const char *src, size_t siz)
-{
-	size_t rsiz = strlcpy(dst, src, siz);
-	if (rsiz >= siz)
-		die("cpstr: string truncation happened during copy\n");
-	return rsiz;
-}
-
-size_t
-catstr(char *dst, const char *src, size_t siz)
-{
-	size_t rsiz = strlcat(dst, src, siz);
-	if (rsiz >= siz)
-		die("catstr: string truncation happened during concatenation\n");
-	return rsiz;
 }
 
 int

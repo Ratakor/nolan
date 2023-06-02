@@ -4,7 +4,14 @@
 
 #define MAX_SLAYERS 60 /* different from raids.c in case a lot joined */
 
+/* FIXME rsiz >= siz with strncpy + clean */
+
 static void write_invalid(char *buf, size_t siz);
+static unsigned long parse_file(char *fname, char *username);
+static void write_uraid(char *buf, size_t siz, char *username,
+                        unsigned long *dmgs);
+static unsigned long *load_files(char *username);
+static void uraid(char *buf, size_t siz, char *username);
 
 void
 create_slash_uraid(struct discord *client)
@@ -32,7 +39,7 @@ create_slash_uraid(struct discord *client)
 static void
 write_invalid(char *buf, size_t siz)
 {
-	cpstr(buf, "NO WRONG YOU MUST USE AN ARGUMENT.\n", siz);
+	strlcpy(buf, "NO WRONG YOU MUST USE AN ARGUMENT.\n", siz);
 }
 
 static unsigned long
@@ -60,6 +67,7 @@ parse_file(char *fname, char *username)
 	return 0;
 }
 
+/* FIXME: unsafe */
 static void
 write_uraid(char *buf, size_t siz, char *username, unsigned long *dmgs)
 {
@@ -97,7 +105,7 @@ load_files(char *username)
 	return dmgs;
 }
 
-void
+static void
 uraid(char *buf, size_t siz, char *username)
 {
 	unsigned long *dmgs;
@@ -119,7 +127,7 @@ on_uraid(struct discord *client, const struct discord_message *event)
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
 		return;
-#endif
+#endif /* DEVEL */
 
 	if (strlen(event->content) == 0)
 		write_invalid(buf, siz);
@@ -130,4 +138,27 @@ on_uraid(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+}
+
+void
+on_uraid_interaction(struct discord *client,
+                     const struct discord_interaction *event)
+{
+	size_t siz = DISCORD_MAX_MESSAGE_LEN;
+	char buf[siz];
+
+	if (!event->data || !event->data->options)
+		write_invalid(buf, siz);
+	else
+		uraid(buf, siz, event->data->options->array[0].value);
+
+	struct discord_interaction_response params = {
+		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
+		.data = &(struct discord_interaction_callback_data)
+		{
+			.content = buf,
+		}
+	};
+	discord_create_interaction_response(client, event->id, event->token,
+	                                    &params, NULL);
 }

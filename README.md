@@ -8,17 +8,15 @@ A discord bot for Orna.
 
 ## TODO:
 
-- separate nolan.h in a raids and stats header
-- for on_interactions, do the content testing in on_... instead to throw an
-  error when needed
-- update cmd_help
+- refactor cmd_lbraid and cmd_uraid
 - refactor cropping in ocr.c
-- refactor parseline() in stats.c
-- add player with name in event->content for ham
-- add option to correct stats
-
 - automatic roles attribution (for Orna FR) -> with updatemsg
+- add player with name in event->content for ham
+- redefine weird DISCORD_MAX macro (/4 because no wide char)
+
+- add option to correct stats
 - ascensions (track mats)
 - better wrong image input detection
 
 - bug with updatemsg ?
+- refactor parseline() in stats.c

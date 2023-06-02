@@ -49,10 +49,11 @@ create_slash_commands(struct discord *client)
 	create_slash_help(client);
 	create_slash_info(client);
 	create_slash_leaderboard(client);
-	create_slash_lbraid(client);
-	create_slash_uraid(client);
-	/* TODO */
-	/* create_slash_source(client); */
+	create_slash_source(client);
+	if (enable_raids) {
+		create_slash_lbraid(client);
+		create_slash_uraid(client);
+	}
 }
 
 void
@@ -77,60 +78,31 @@ init_players(void)
 		players[i] = create_player(i + 2);
 }
 
-/* TODO: handle files and embed (and no opt/opt better), ephemeral... */
 void
 on_interaction(struct discord *client, const struct discord_interaction *event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[DISCORD_MAX_MESSAGE_LEN] = "";
-
 	if (event->type != DISCORD_INTERACTION_APPLICATION_COMMAND)
 		return;
-	/* if (!event->data || !event->data->options) */
-	/* 	return; */
 
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
 		return;
-#endif
+#endif /* DEVEL */
 
-	if (strcmp(event->data->name, "help") == 0) {
-		help(buf, siz);
-	} else if (strcmp(event->data->name, "info") == 0) {
-		if (!event->data || !event->data->options) {
-			info_from_uid(buf, siz, event->member->user->id);
-		} else {
-			info_from_txt(buf, siz,
-			              event->data->options->array[0].value);
-		}
-	} else if (strcmp(event->data->name, "leaderboard") == 0) {
-		if (event->data && event->data->options) {
-			leaderboard(buf, siz,
-			            event->data->options->array[0].value,
-			            event->member->user->id);
-		}
-	} else if (strcmp(event->data->name, "lbraid") == 0) {
-		lbraid(buf, siz);
-	} /*else if (strcmp(event->data->name, "source") == 0) {
-		if (!event->data || !event->data->options) {
-			source(buf, siz);
-		} else {
-			source_sorted(buf, siz,
-			             event->data->options->array[0].value);
-		}
-	}*/
-
-	struct discord_interaction_response params = {
-		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
-		.data = &(struct discord_interaction_callback_data)
-		{
-			.content = buf,
-			/* .flags = DISCORD_MESSAGE_EPHEMERAL */
-		}
-	};
-
-	discord_create_interaction_response(client, event->id, event->token,
-	                                    &params, NULL);
+	if (strcmp(event->data->name, "help") == 0)
+		on_help_interaction(client, event);
+	else if (strcmp(event->data->name, "info") == 0)
+		on_info_interaction(client, event);
+	else if (strcmp(event->data->name, "leaderboard") == 0)
+		on_leaderboard_interaction(client, event);
+	else if (strcmp(event->data->name, "source") == 0)
+		on_source_interaction(client, event);
+	else if (enable_raids) {
+		if (strcmp(event->data->name, "lbraid") == 0)
+			on_lbraid_interaction(client, event);
+		else if (strcmp(event->data->name, "uraid") == 0)
+			on_uraid_interaction(client, event);
+	}
 }
 
 void
@@ -179,7 +151,7 @@ on_message(struct discord *client, const struct discord_message *event)
 	if (event->channel_id == DEVEL)
 		on_raids(client, event);
 	return;
-#endif
+#endif /* DEVEL */
 
 	for (i = 0; i < LENGTH(stats_ids); i++) {
 		if (event->channel_id == stats_ids[i]) {

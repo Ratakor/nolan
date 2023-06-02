@@ -6,8 +6,11 @@
 
 static u64snowflake str_to_uid(char *id);
 static void write_invalid(char *buf, size_t siz);
-static void write_info_embed(struct discord *client, char *buf, size_t siz, int index);
+/* static void write_info_embed(struct discord *client, char *buf, size_t siz, */
+/* 		int index); */
 static void write_info(char *buf, size_t siz, int index);
+static void info_from_uid(char *buf, size_t siz, u64snowflake userid);
+static void info_from_txt(char *buf, size_t siz, char *txt);
 
 void
 create_slash_info(struct discord *client)
@@ -44,13 +47,13 @@ str_to_uid(char *id)
 static void
 write_invalid(char *buf, size_t siz)
 {
-	cpstr(buf, "This player does not exist in the database.\n", siz);
-	catstr(buf, "To check a player's info type /info ", siz);
-	catstr(buf, "@username or /info username.\n", siz);
-	catstr(buf, "To check your info just type ?info.", siz);
+	strlcpy(buf, "This player does not exist in the database.\n", siz);
+	strlcat(buf, "To check a player's info type /info ", siz);
+	strlcat(buf, "@username or /info username.\n", siz);
+	strlcat(buf, "To check your info just type ?info.", siz);
 }
 
-/* FIXME */
+/* TODO */
 /* static void */
 /* write_info_embed(struct discord *client, char *buf, size_t siz, int index) */
 /* { */
@@ -94,27 +97,27 @@ write_info(char *buf, size_t siz, int index)
 	unsigned long i;
 	char *p;
 
-	buf[0] = '\0';
+	*buf = '\0';
 	for (i = 0; i < LENGTH(fields) - 1; i++) {
-		catstr(buf, fields[i], siz);
-		catstr(buf, ": ", siz);
+		strlcat(buf, fields[i], siz);
+		strlcat(buf, ": ", siz);
 		if (i <= 1) { /* name and kingdom */
-			catstr(buf, ((char **)&players[index])[i], siz);
+			strlcat(buf, ((char **)&players[index])[i], siz);
 		} else if (i == 7) { /* playtime */
 			p = playtime_to_str(((long *)&players[index])[i]);
-			catstr(buf, p, siz);
+			strlcat(buf, p, siz);
 			free(p);
 		} else {
 			p = strchr(buf, '\0');
 			snprintf(p, siz, "%'ld", ((long *)&players[index])[i]);
 			if (i == 18) /* distance */
-				catstr(buf, "m", siz);
+				strlcat(buf, "m", siz);
 		}
-		catstr(buf, "\n", siz);
+		strlcat(buf, "\n", siz);
 	}
 }
 
-void
+static void
 info_from_uid(char *buf, size_t siz, u64snowflake userid)
 {
 	unsigned long i = 0;
@@ -128,7 +131,7 @@ info_from_uid(char *buf, size_t siz, u64snowflake userid)
 		write_info(buf, siz, i);
 }
 
-void
+static void
 info_from_txt(char *buf, size_t siz, char *txt)
 {
 	unsigned long i = 0;
@@ -160,7 +163,7 @@ on_info(struct discord *client, const struct discord_message *event)
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
 		return;
-#endif
+#endif /* DEVEL */
 
 	if (strlen(event->content) == 0)
 		info_from_uid(buf, siz, event->author->id);
@@ -186,4 +189,27 @@ on_info(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+}
+
+void
+on_info_interaction(struct discord *client,
+                    const struct discord_interaction *event)
+{
+	size_t siz = DISCORD_MAX_MESSAGE_LEN;
+	char buf[siz];
+
+	if (!event->data || !event->data->options)
+		info_from_uid(buf, siz, event->member->user->id);
+	else
+		info_from_txt(buf, siz, event->data->options->array[0].value);
+
+	struct discord_interaction_response params = {
+		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
+		.data = &(struct discord_interaction_callback_data)
+		{
+			.content = buf,
+		}
+	};
+	discord_create_interaction_response(client, event->id, event->token,
+	                                    &params, NULL);
 }

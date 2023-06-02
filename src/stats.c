@@ -41,7 +41,7 @@ create_player(unsigned int line)
 			continue;
 		*end = '\0';
 		if (i <= 1) /* name and kingdom */
-			cpstr(((char **)&player)[i], p, 32 + 1);
+			strlcpy(((char **)&player)[i], p, 32 + 1);
 		else
 			((long *)&player)[i] = atol(p);
 		p = end + 1;
@@ -71,11 +71,11 @@ update_players(Player *player)
 		nplayers++;
 	} else {
 		if (player->name) {
-			cpstr(players[i].name, player->name,
-			      DISCORD_MAX_USERNAME_LEN);
+			strlcpy(players[i].name, player->name,
+			        DISCORD_MAX_USERNAME_LEN);
 		}
 		if (player->kingdom)
-			cpstr(players[i].kingdom, player->kingdom, 32 + 1);
+			strlcpy(players[i].kingdom, player->kingdom, 32 + 1);
 		/* keep original userid */
 		for (j = 2; j < LENGTH(fields) - 1; j++)
 			((long *)&players[i])[j] = ((long *)player)[j];
@@ -261,8 +261,8 @@ save_player_to_file(Player *player)
 	char line[LINE_SIZE], *endname, tmpfname[64];
 	unsigned long iplayer = 0, cpt = 1, i;
 
-	cpstr(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
-	catstr(tmpfname, "tmpfile", sizeof(tmpfname));
+	strlcpy(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
+	strlcat(tmpfname, "tmpfile", sizeof(tmpfname));
 	if ((r = fopen(STATS_FILE, "r")) == NULL)
 		die("nolan: Failed to open %s\n", STATS_FILE);
 	if ((w = fopen(tmpfname, "w")) == NULL)
@@ -305,8 +305,8 @@ save_player_to_file(Player *player)
 char *
 update_msg(Player *player, int iplayer)
 {
-	size_t sz = 1024;
-	char *buf = malloc(sz + 1), *p, *plto, *pltn, *pltd;
+	size_t sz = DISCORD_MAX_MESSAGE_LEN;
+	char *buf = malloc(sz), *p, *plto, *pltn, *pltd;
 	unsigned long i;
 	long old, new, diff;
 
@@ -322,7 +322,7 @@ update_msg(Player *player, int iplayer)
 
 	for (i = 2; i < LENGTH(fields) - 1; i++) {
 		if (sz <= 0)
-			die("nolan: truncation in updatemsg\n");
+			warn("nolan: truncation in updatemsg\n");
 		old = ((long *)&players[iplayer])[i];
 		new = ((long *)player)[i];
 		diff = new - old;
@@ -364,6 +364,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 	curl(event->attachments->array->url, fname);
 	txt = ocr(fname);
 	if (txt == NULL) {
+		warn("nolan: Failed to read image\n");
 		struct discord_create_message msg = {
 			.content = "Error: Failed to read image"
 		};

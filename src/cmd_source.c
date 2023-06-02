@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include "nolan.h"
 
+static char *sort_source(char *kingdom, size_t *fszp);
+
 void
 create_slash_source(struct discord *client)
 {
@@ -24,7 +26,7 @@ create_slash_source(struct discord *client)
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
 
-char *
+static char *
 sort_source(char *kingdom, size_t *fszp)
 {
 	FILE *fp;
@@ -36,7 +38,7 @@ sort_source(char *kingdom, size_t *fszp)
 
 	res = malloc(mfsz);
 	fgets(line, LINE_SIZE, fp); /* fields name */
-	cpstr(res, line, mfsz);
+	strlcpy(res, line, mfsz);
 	while (fgets(line, LINE_SIZE, fp) != NULL) {
 		kd = strchr(line, DELIM) + 1;
 		endkd = nstrchr(line, DELIM, 2);
@@ -44,7 +46,7 @@ sort_source(char *kingdom, size_t *fszp)
 			*endkd = '\0';
 		if (strcmp(kd, kingdom) == 0) {
 			*endkd = DELIM;
-			catstr(res, line, mfsz);
+			strlcat(res, line, mfsz);
 		}
 	}
 
@@ -56,7 +58,7 @@ sort_source(char *kingdom, size_t *fszp)
 void
 on_source(struct discord *client, const struct discord_message *event)
 {
-	size_t fsize = 0;
+	size_t fsiz = 0;
 	char *fbuf = NULL;
 
 	if (event->author->bot)
@@ -65,17 +67,17 @@ on_source(struct discord *client, const struct discord_message *event)
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
 		return;
-#endif
+#endif /* DEVEL */
 
 	if (strlen(event->content) == 0)
-		fbuf = cog_load_whole_file(STATS_FILE, &fsize);
+		fbuf = cog_load_whole_file(STATS_FILE, &fsiz);
 	else
-		fbuf = sort_source(event->content, &fsize);
+		fbuf = sort_source(event->content, &fsiz);
 
 	struct discord_attachment attachment = {
 		.filename = STATS_FILE,
 		.content = fbuf,
-		.size = fsize
+		.size = fsiz
 	};
 	struct discord_attachments attachments = {
 		.size = 1,
@@ -85,5 +87,38 @@ on_source(struct discord *client, const struct discord_message *event)
 		.attachments = &attachments
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	free(fbuf);
+}
+
+void
+on_source_interaction(struct discord *client,
+                      const struct discord_interaction *event)
+{
+	size_t fsiz = 0;
+	char *fbuf = NULL;
+
+	if (!event->data || !event->data->options)
+		fbuf = cog_load_whole_file(STATS_FILE, &fsiz);
+	else
+		fbuf = sort_source(event->data->options->array[0].value, &fsiz);
+
+	struct discord_attachment attachment = {
+		.filename = STATS_FILE,
+		.content = fbuf,
+		.size = fsiz
+	};
+	struct discord_attachments attachments = {
+		.size = 1,
+		.array = &attachment
+	};
+	struct discord_interaction_response params = {
+		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
+		.data = &(struct discord_interaction_callback_data)
+		{
+			.attachments = &attachments
+		}
+	};
+	discord_create_interaction_response(client, event->id, event->token,
+	                                    &params, NULL);
 	free(fbuf);
 }

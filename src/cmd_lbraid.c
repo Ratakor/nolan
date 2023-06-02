@@ -8,6 +8,9 @@ static void parse_file(char *fname, Slayer slayers[], int *nslayers);
 static void load_files(Slayer slayers[], int *nslayers);
 static int compare(const void *s1, const void *s2);
 static void write_lbraid(char *buf, size_t siz, Slayer slayers[], int nslayers);
+static void lbraid(char *buf, size_t siz);
+
+/* FIXME rsiz >= siz with strncpy + clean */
 
 void
 create_slash_lbraid(struct discord *client)
@@ -89,7 +92,7 @@ write_lbraid(char *buf, size_t siz, Slayer slayers[], int nslayers)
 	}
 }
 
-void
+static void
 lbraid(char *buf, size_t siz)
 {
 	int i, nslayers = 0;
@@ -118,11 +121,30 @@ on_lbraid(struct discord *client, const struct discord_message *event)
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
 		return;
-#endif
+#endif /* DEVEL */
 
 	lbraid(buf, siz);
 	struct discord_create_message msg = {
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+}
+
+void
+on_lbraid_interaction(struct discord *client,
+                      const struct discord_interaction *event)
+{
+	size_t siz = DISCORD_MAX_MESSAGE_LEN;
+	char buf[DISCORD_MAX_MESSAGE_LEN];
+
+	lbraid(buf, siz);
+	struct discord_interaction_response params = {
+		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
+		.data = &(struct discord_interaction_callback_data)
+		{
+			.content = buf,
+		}
+	};
+	discord_create_interaction_response(client, event->id, event->token,
+	                                    &params, NULL);
 }

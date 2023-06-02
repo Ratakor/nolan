@@ -41,7 +41,7 @@ main(void)
 #ifndef DEVEL
 	if (getuid() != 0)
 		die("Please run nolan as root\n");
-#endif
+#endif /* DEVEL */
 
 	setlocale(LC_NUMERIC, "");
 	create_folders();
@@ -54,7 +54,7 @@ main(void)
 	discord_set_prefix(client, PREFIX);
 #ifndef DEVEL
 	create_slash_commands(client);
-#endif
+#endif /* DEVEL */
 	discord_set_on_ready(client, on_ready);
 	discord_set_on_interaction_create(client, &on_interaction);
 	discord_set_on_message_create(client, on_message);

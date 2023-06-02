@@ -4,7 +4,7 @@
 #include "nolan.h"
 
 #define MAX_SLAYERS 50
-#define DAMAGE_CAP  10000000 /* daily */
+#define DAMAGE_CAP  300000000 / 7 /* daily */
 
 static void emsg(struct discord *client, const struct discord_message *event);
 static char *skip_to_slayers(char *txt);
@@ -219,14 +219,15 @@ save_to_file(Slayer slayers[], int nslayers, char *raid,
              struct discord *client, const struct discord_message *event)
 {
 	FILE *w, *r;
-	char line[LINE_SIZE], *endname, fname[64], tmpfname[64];
+	char line[LINE_SIZE], *endname, fname[128], tmpfname[128];
 	int i;
 	unsigned long olddmg, newdmg;
 	long day = time(NULL) / 86400;
 
+	/* assert with rsiz >= siz ? */
 	snprintf(fname, sizeof(fname), "%s%ld.csv", RAIDS_FOLDER, day);
-	cpstr(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
-	catstr(tmpfname, "tmpfile2", sizeof(tmpfname));
+	strlcpy(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
+	strlcat(tmpfname, "tmpfile2", sizeof(tmpfname));
 	if ((r = fopen(fname, "r")) == NULL) {
 		save_to_new_file(slayers, nslayers, fname, raid);
 		return;
