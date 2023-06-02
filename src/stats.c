@@ -305,7 +305,7 @@ save_player_to_file(Player *player)
 char *
 update_msg(Player *player, int iplayer)
 {
-	size_t sz = DISCORD_MAX_MESSAGE_LEN;
+	int sz = DISCORD_MAX_MESSAGE_LEN;
 	char *buf = malloc(sz), *p, *plto, *pltn, *pltd;
 	unsigned long i;
 	long old, new, diff;

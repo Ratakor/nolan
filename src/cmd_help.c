@@ -17,7 +17,8 @@ static void
 help(char *buf, size_t siz)
 {
 	char *p;
-	int i, rsiz, len = LENGTH(stats_ids);
+	size_t rsiz;
+	int i, len = LENGTH(stats_ids);
 
 	strlcpy(buf, "Post a screenshot of your stats to ", siz);
 	for (i = 0; i < len; i++) {
@@ -48,7 +49,7 @@ void
 on_help(struct discord * client, const struct discord_message * event)
 {
 	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[DISCORD_MAX_MESSAGE_LEN];
+	char buf[siz];
 
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
@@ -67,7 +68,7 @@ on_help_interaction(struct discord *client,
                     const struct discord_interaction *event)
 {
 	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[DISCORD_MAX_MESSAGE_LEN];
+	char buf[siz];
 
 	help(buf, siz);
 	struct discord_interaction_response params = {

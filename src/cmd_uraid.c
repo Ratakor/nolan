@@ -1,14 +1,11 @@
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "nolan.h"
-
-#define MAX_SLAYERS 60 /* different from raids.c in case a lot joined */
-
-/* FIXME rsiz >= siz with strncpy + clean */
 
 static void write_invalid(char *buf, size_t siz);
 static unsigned long parse_file(char *fname, char *username);
-static void write_uraid(char *buf, size_t siz, char *username,
+static void write_uraid(char *buf, int siz, char *username,
                         unsigned long *dmgs);
 static unsigned long *load_files(char *username);
 static void uraid(char *buf, size_t siz, char *username);
@@ -26,7 +23,7 @@ create_slash_uraid(struct discord *client)
 	};
 	struct discord_create_global_application_command cmd = {
 		.name = "uraid",
-		.description = "Shows the past week damage for a user",
+		.description = "Shows the user raid damage for the last 7 days",
 		.options = &(struct discord_application_command_options)
 		{
 			.size = LENGTH(options),
@@ -40,6 +37,7 @@ static void
 write_invalid(char *buf, size_t siz)
 {
 	strlcpy(buf, "NO WRONG YOU MUST USE AN ARGUMENT.\n", siz);
+	strlcat(buf, "Valid argument is an Orna username.\n", siz);
 }
 
 static unsigned long
@@ -67,32 +65,13 @@ parse_file(char *fname, char *username)
 	return 0;
 }
 
-/* FIXME: unsafe */
-static void
-write_uraid(char *buf, size_t siz, char *username, unsigned long *dmgs)
-{
-	int i, n = 1;
-	char *p;
-	unsigned long total = 0;
-
-	snprintf(buf, siz, "%s raids stats for last week\n", username);
-	p = strchr(buf, '\0');
-	for (i = 6; i >= 0; i--) {
-		sprintf(p, "day %d: %'lu damage\n", n++, dmgs[i]);
-		total += dmgs[i];
-		p = strchr(buf, '\0');
-	}
-	sprintf(p, "\ntotal: %'lu damage\n", total);
-
-}
-
 static unsigned long *
 load_files(char *username)
 {
 	int i;
 	unsigned long *dmgs = calloc(7, sizeof(unsigned long));
 	long day = time(NULL) / 86400;
-	char fname[64];
+	char fname[128];
 
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
@@ -103,6 +82,26 @@ load_files(char *username)
 	}
 
 	return dmgs;
+}
+
+static void
+write_uraid(char *buf, int siz, char *username, unsigned long *dmgs)
+{
+	int i, n = 1;
+	char *p;
+	unsigned long total = 0;
+
+	siz -= snprintf(buf, siz, "%s raids stats for last 7 days\n", username);
+	p = strchr(buf, '\0');
+	for (i = 6; i >= 0; i--) {
+		siz -= snprintf(p, siz, "day %d: %'lu damage\n", n++, dmgs[i]);
+		if (siz <= 0)
+			warn("nolan: truncation in write_uraid\n");
+		total += dmgs[i];
+		p = strchr(buf, '\0');
+	}
+	snprintf(p, siz, "\ntotal: %'lu damage\n", total);
+
 }
 
 static void

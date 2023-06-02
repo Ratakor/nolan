@@ -3,7 +3,6 @@
 #include <time.h>
 #include "nolan.h"
 
-#define MAX_SLAYERS 50
 #define DAMAGE_CAP  300000000 / 7 /* daily */
 
 static void emsg(struct discord *client, const struct discord_message *event);
@@ -205,8 +204,7 @@ overcap_msg(char *name, unsigned long dmg, struct discord *client,
 		return;
 
 	snprintf(buf, sizeof(buf), "%s has overcapped the limit by %'lu \
-damage he is now at %'lu damage.", name, dmg - DAMAGE_CAP,
-	         dmg);
+damage he is now at %'lu damage.", name, dmg - DAMAGE_CAP, dmg);
 
 	struct discord_create_message msg = {
 		.content = buf

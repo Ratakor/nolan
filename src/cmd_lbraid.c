@@ -1,23 +1,20 @@
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include "nolan.h"
-
-#define MAX_SLAYERS 60 /* different from raids.c in case a lot joined */
 
 static void parse_file(char *fname, Slayer slayers[], int *nslayers);
 static void load_files(Slayer slayers[], int *nslayers);
 static int compare(const void *s1, const void *s2);
-static void write_lbraid(char *buf, size_t siz, Slayer slayers[], int nslayers);
+static void write_lbraid(char *buf, int siz, Slayer slayers[], int nslayers);
 static void lbraid(char *buf, size_t siz);
-
-/* FIXME rsiz >= siz with strncpy + clean */
 
 void
 create_slash_lbraid(struct discord *client)
 {
 	struct discord_create_global_application_command cmd = {
 		.name = "lbraid",
-		.description = "Shows the weekly raid leaderboard",
+		.description = "Shows the raid leaderboard for the last 7 days",
 	};
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
@@ -59,7 +56,7 @@ load_files(Slayer slayers[], int *nslayers)
 {
 	int i;
 	long day = time(NULL) / 86400;
-	char fname[64];
+	char fname[128];
 
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
@@ -79,15 +76,16 @@ compare(const void *s1, const void *s2)
 	return dmg2 - dmg1;
 }
 
-/* FIXME: unsafe */
 static void
-write_lbraid(char *buf, size_t siz, Slayer slayers[], int nslayers)
+write_lbraid(char *buf, int siz, Slayer slayers[], int nslayers)
 {
 	int i, lb_max = MIN(nslayers, LB_MAX);
 	char *p = buf;
 	for (i = 0; i < lb_max; i++) {
-		sprintf(p, "%d. %s: %'lu damage\n", i, slayers[i].name,
-		        slayers[i].damage);
+		siz -= snprintf(p, siz, "%d. %s: %'lu damage\n", i,
+		                slayers[i].name, slayers[i].damage);
+		if (siz <= 0)
+			warn("nolan: truncation in write_lbraid\n");
 		p = strchr(buf, '\0');
 	}
 }
@@ -135,7 +133,7 @@ on_lbraid_interaction(struct discord *client,
                       const struct discord_interaction *event)
 {
 	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[DISCORD_MAX_MESSAGE_LEN];
+	char buf[siz];
 
 	lbraid(buf, siz);
 	struct discord_interaction_response params = {

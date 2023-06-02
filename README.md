@@ -6,17 +6,19 @@ A discord bot for Orna.
 - [tesseract](https://github.com/tesseract-ocr/tesseract)
 - [gd](https://github.com/libgd/libgd)
 
-## TODO:
+## TODO
 
-- refactor cmd_lbraid and cmd_uraid
-- refactor cropping in ocr.c
+### features
 - automatic roles attribution (for Orna FR) -> with updatemsg
 - add player with name in event->content for ham
-- redefine weird DISCORD_MAX macro (/4 because no wide char)
-
 - add option to correct stats
 - ascensions (track mats)
-- better wrong image input detection
 
+### chore
+- redefine weird DISCORD_MAX macro (/4 because no wide char)
 - bug with updatemsg ?
+- refactor cropping in ocr.c
 - refactor parseline() in stats.c
+
+### misc
+- better wrong image input detection
