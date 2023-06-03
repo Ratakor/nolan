@@ -210,7 +210,7 @@ update_msg(char *buf, int siz, Player *player, unsigned int i)
 		if (new == 0 || diff == 0)
 			continue;
 
-		if (i == 7) { /* playtime */
+		if (j == 7) { /* playtime */
 			plto = playtime_to_str(old);
 			pltn = playtime_to_str(new);
 			pltd = playtime_to_str(diff);
