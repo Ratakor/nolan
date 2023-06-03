@@ -66,7 +66,7 @@ void on_message(struct discord *client, const struct discord_message *event);
 /* ocr.c */
 void curl(char *url, char *fname);
 int crop(char *fname, int type);
-char *ocr(char *fname);
+char *ocr(char *fname, char *lang);
 
 /* stats.c */
 char *playtime_to_str(long playtime);

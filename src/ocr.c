@@ -143,7 +143,7 @@ crop(char *fname, int type)
 }
 
 char *
-ocr(char *fname)
+ocr(char *fname, char *lang)
 {
 	TessBaseAPI *handle;
 	PIX *img;
@@ -153,7 +153,7 @@ ocr(char *fname)
 		die("nolan: Error reading image\n");
 
 	handle = TessBaseAPICreate();
-	if (TessBaseAPIInit3(handle, NULL, "eng") != 0)
+	if (TessBaseAPIInit3(handle, NULL, lang) != 0)
 		die("nolan: Error initialising tesseract\n");
 
 	TessBaseAPISetImage2(handle, img);

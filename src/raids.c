@@ -25,12 +25,14 @@ static const char *delims[] = {
 	"4+ Raid options",
 	"4+ Opciones de Asalto",
 	"4+ Opzioni Raid",
+	"十 “ 王 国 副 本 选 项"
 };
 static const char *garbageslayer[] = {
 	"Slayer",
 	"NEVE",
 	"Asesino",
 	"Uccissore",
+	"击 杀 者"
 };
 
 void
@@ -82,7 +84,7 @@ skip_to_slayers(char *txt)
 	return NULL;
 }
 
-/* trim everything that is not in the ascii table (not all of it) */
+/* trim everything that is not a letter or a space */
 char *
 trim_name(char *name)
 {
@@ -94,7 +96,7 @@ trim_name(char *name)
 	r = name;
 	w = name;
 	do {
-		if (*r >= 32 && *r <= 126)
+		if (*r == ' ' || (*r >= 'A' && *r <= 'Z') || (*r >= 'a' && *r <= 'z'))
 			*w++ = *r;
 	} while (*r++);
 	*w = '\0';
@@ -153,10 +155,25 @@ get_slayers(Slayer slayers[], char *txt)
 		line = endline + 1;
 
 		endline = strchr(line, '\n');
-		if (endline == 0)
+		if (endline == 0) {
+			free(slayers[nslayers].name);
 			break;
+		}
 		*endline = '\0';
+		if (strcmp(line, "阮 万") == 0) { /* skip chinese garbage */
+			line = endline + 1;
+			endline = strchr(line, '\n');
+			if (endline == 0) {
+				free(slayers[nslayers].name);
+				break;
+			}
+			*endline = '\0';
+		}
 		slayers[nslayers].damage = strtoul(trim_dmg(line), NULL, 10);
+		if (slayers[nslayers].damage == 0) {
+			free(slayers[nslayers].name);
+			break;
+		}
 		line = endline + 1;
 		slayers[nslayers].found_in_file = 0;
 		nslayers++;
@@ -245,7 +262,9 @@ save_to_file(Slayer slayers[], size_t nslayers, char *raid,
 			*endname = '\0';
 		for (i = 0; i < nslayers; i++) {
 			if (!slayers[i].found_in_file) {
-				if (strcmp(slayers[i].name, line) == 0) {
+				/* should be strcmp but for common mistakes */
+				if (strncmp(slayers[i].name, line,
+				                strlen(slayers[i].name) - 3) == 0) {
 					slayers[i].found_in_file = 1;
 					break;
 				}
@@ -279,7 +298,8 @@ save_to_file(Slayer slayers[], size_t nslayers, char *raid,
 void
 on_raids(struct discord *client, const struct discord_message *event)
 {
-	char *txt, fname[64];
+	unsigned int i;
+	char *txt = NULL, fname[128];
 	size_t nslayers;
 	Slayer slayers[MAX_SLAYERS];
 	struct discord_channel chan;
@@ -289,16 +309,29 @@ on_raids(struct discord *client, const struct discord_message *event)
 	};
 
 	if (strcmp(event->attachments->array->content_type, "image/png") == 0) {
-		snprintf(fname, 64, "%s/raids.png", IMAGE_FOLDER);
+		snprintf(fname, sizeof(fname), "%s/raids.png", IMAGE_FOLDER);
 		curl(event->attachments->array->url, fname);
 		crop(fname, 1);
-		txt = ocr(fname);
 	} else { /* always a jpg, check on_message() */
-		snprintf(fname, 64, "%s/raids.jpg", IMAGE_FOLDER);
+		snprintf(fname, sizeof(fname), "%s/raids.jpg", IMAGE_FOLDER);
 		curl(event->attachments->array->url, fname);
 		crop(fname, 0);
-		txt = ocr(fname);
 	}
+	for (i = 0; i < LENGTH(cn_slayer_ids); i++) {
+		if (event->author->id == cn_slayer_ids[i]) {
+			txt = ocr(fname, "chi_sim");
+			break;
+		}
+	}
+	if (txt == NULL)
+		txt = ocr(fname, "eng");
+
+#ifdef DEVEL
+	struct discord_create_message msg = {
+		.content = txt
+	};
+	discord_create_message(client, event->channel_id, &msg, NULL);
+#endif /* DEVEL */
 
 	if (txt == NULL || (nslayers = parse(slayers, txt)) == 0) {
 		emsg(client, event);

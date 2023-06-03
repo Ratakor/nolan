@@ -331,7 +331,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 		         event->author->username);
 	}
 	curl(event->attachments->array->url, fname);
-	txt = ocr(fname);
+	txt = ocr(fname, "eng");
 	if (txt == NULL) {
 		warn("nolan: Failed to read image\n");
 		struct discord_create_message msg = {

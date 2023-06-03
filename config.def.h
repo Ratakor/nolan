@@ -22,6 +22,11 @@ static const u64snowflake raids_ids[] = {
 	1112094855691239616,
 };
 
+/* list of chinese slayers for raids screenshots */
+static const u64snowflake cn_slayer_ids[] = {
+	0
+};
+
 /* list of kingdom to accept if verification is on */
 static const char *kingdoms[] = {
 	"Scream of Terra",
