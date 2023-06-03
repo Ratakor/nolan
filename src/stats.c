@@ -4,46 +4,14 @@
 
 #define LEN(X) (sizeof X - 1)
 
-static int update_players(Player *player);
 static long playtime_to_long(char *playtime, char *str);
 static char *trim_all(char *str);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
+static char *update_msg(char *buf, int siz, Player *player, unsigned int i);
+static void update_player(Player *player, unsigned int i);
 static void save_player_to_file(Player *player);
-static char *update_msg(Player *player, int iplayer);
-
-int
-update_players(Player *player)
-{
-	unsigned int i = 0, j;
-
-	/* while (i < nplayers && players[i].userid != player->userid) */
-	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
-		i++;
-
-	if (i == nplayers) { /* new player */
-		if (nplayers > MAX_PLAYERS)
-			die("nolan: There is too much players (max:%d)\n",
-			    MAX_PLAYERS);
-		players[i].name = strndup(player->name, DISCORD_MAX_USERNAME_LEN);
-		players[i].kingdom = strndup(player->kingdom, 32 + 1);
-		for (j = 2; j < LENGTH(fields); j++)
-			((long *)&players[i])[j] = ((long *)player)[j];
-		nplayers++;
-	} else {
-		/* if (player->name) */
-		/*  	strlcpy(players[i].name, player->name, */
-		/* 	DISCORD_MAX_USERNAME_LEN); */
-		if (player->kingdom)
-			strlcpy(players[i].kingdom, player->kingdom, 32 + 1);
-		for (j = 2; j < LENGTH(fields); j++) {
-			if (((long *)player)[j] != 0)
-				((long *)&players[i])[j] = ((long *)player)[j];
-		}
-	}
-
-	return i;
-}
+static char *update_players(Player *player);
 
 long
 playtime_to_long(char *playtime, char str[])
@@ -216,6 +184,71 @@ for_line(Player *player, char *txt)
 	}
 }
 
+char *
+update_msg(char *buf, int siz, Player *player, unsigned int i)
+{
+	char *p, *plto, *pltn, *pltd;
+	unsigned int j;
+	long old, new, diff;
+
+	siz -= snprintf(buf, siz, "%s's profile has been updated.\n\n",
+	                player->name);
+	p = strchr(buf, '\0');
+
+	if (strcmp(players[i].kingdom, player->kingdom) != 0) {
+		siz -= snprintf(p, siz, "%s: %s -> %s\n", fields[1],
+		                players[i].kingdom, player->kingdom);
+		p = strchr(buf, '\0');
+	}
+
+	for (j = 2; j < LENGTH(fields) - 1; j++) {
+		if (siz <= 0)
+			warn("nolan: truncation in updatemsg\n");
+		old = ((long *)&players[i])[j];
+		new = ((long *)player)[j];
+		diff = new - old;
+		if (new == 0 || diff == 0)
+			continue;
+
+		if (i == 7) { /* playtime */
+			plto = playtime_to_str(old);
+			pltn = playtime_to_str(new);
+			pltd = playtime_to_str(diff);
+			siz -= snprintf(p, siz, "%s: %s -> %s (+ %s)\n",
+			                fields[7], plto, pltn, pltd);
+			free(plto);
+			free(pltn);
+			free(pltd);
+		} else {
+			siz -= snprintf(p, siz, "%s: %'ld -> %'ld (%'+ld)\n",
+			                fields[j], old, new, diff);
+		}
+		p = strchr(buf, '\0');
+	}
+
+	/*
+	 * TODO
+	 * Last update was xxx ago
+	 */
+
+	return buf;
+}
+
+void
+update_player(Player *player, unsigned int i)
+{
+	unsigned int j;
+
+	free(players[i].name);
+	free(players[i].kingdom);
+	players[i].name = strndup(player->name, DISCORD_MAX_USERNAME_LEN);
+	players[i].kingdom = strndup(player->kingdom, 32 + 1);
+	for (j = 2; j < LENGTH(fields); j++) {
+		if (((long *)player)[j] != 0)
+			((long *)&players[i])[j] = ((long *)player)[j];
+	}
+}
+
 /* Save player to file and return player's index in file if it was found */
 void
 save_player_to_file(Player *player)
@@ -264,52 +297,29 @@ save_player_to_file(Player *player)
 }
 
 char *
-update_msg(Player *player, int iplayer)
+update_players(Player *player)
 {
-	int sz = DISCORD_MAX_MESSAGE_LEN;
-	char *buf = malloc(sz), *p, *plto, *pltn, *pltd;
-	unsigned int i;
-	long old, new, diff;
+	unsigned int i = 0;
+	size_t siz = DISCORD_MAX_MESSAGE_LEN;
+	char *buf = malloc(siz);
 
-	sz -= snprintf(buf, sz, "%s's profile has been updated.\n\n",
-	               player->name);
-	p = strchr(buf, '\0');
+	/* while (i < nplayers && players[i].userid != player->userid) */
+	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
+		i++;
 
-	if (strcmp(players[iplayer].kingdom, player->kingdom) != 0) {
-		sz -= snprintf(p, sz, "%s: %s -> %s\n", fields[1],
-		               players[iplayer].kingdom, player->kingdom);
-		p = strchr(buf, '\0');
+	if (i == nplayers) { /* new player */
+		nplayers++;
+		if (nplayers > MAX_PLAYERS)
+			die("nolan: There is too much players (max:%d)\n",
+			    MAX_PLAYERS);
+		snprintf(buf, siz,
+		         "**%s** has been registrated in the database.",
+		         player->name);
+	} else {
+		update_msg(buf, (int)siz, player, i);
 	}
-
-	for (i = 2; i < LENGTH(fields) - 1; i++) {
-		if (sz <= 0)
-			warn("nolan: truncation in updatemsg\n");
-		old = ((long *)&players[iplayer])[i];
-		new = ((long *)player)[i];
-		diff = new - old;
-		if (new == 0 || diff == 0)
-			continue;
-
-		if (i == 7) { /* playtime */
-			plto = playtime_to_str(old);
-			pltn = playtime_to_str(new);
-			pltd = playtime_to_str(diff);
-			sz -= snprintf(p, sz, "%s: %s -> %s (+ %s)\n",
-			               fields[7], plto, pltn, pltd);
-			free(plto);
-			free(pltn);
-			free(pltd);
-		} else {
-			sz -= snprintf(p, sz, "%s: %'ld -> %'ld (%'+ld)\n",
-			               fields[i], old, new, diff);
-		}
-		p = strchr(buf, '\0');
-	}
-
-	/*
-	 * TODO
-	 * Last update was xxx ago
-	 */
+	update_player(player, i);
+	save_player_to_file(&players[i]);
 
 	return buf;
 }
@@ -369,17 +379,10 @@ on_stats(struct discord *client, const struct discord_message *event)
 		}
 	}
 
-	if ((i = update_players(&player)) < nplayers) { /* FIXME */
-		txt = update_msg(&player, i);
-	} else {
-		txt = malloc(128);
-		snprintf(txt, 128, "**%s** has been registrated in the database.",
-		         player.name);
-	}
+	txt = update_players(&player);
 	struct discord_create_message msg = {
 		.content = txt
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	save_player_to_file(&players[i]);
 	free(txt);
 }
