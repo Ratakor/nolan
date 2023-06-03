@@ -9,14 +9,14 @@ static void emsg(struct discord *client, const struct discord_message *event);
 static char *skip_to_slayers(char *txt);
 static char *trim_name(char *name);
 static char *trim_dmg(char *str);
-static int get_slayers(Slayer slayers[], char *txt);
-static int parse(Slayer slayers[], char *txt);
+static size_t get_slayers(Slayer slayers[], char *txt);
+static size_t parse(Slayer slayers[], char *txt);
 static unsigned long adjust(unsigned long dmg, char *raid);
-static void save_to_new_file(Slayer slayers[], int nslayers, char *fname,
+static void save_to_new_file(Slayer slayers[], size_t nslayers, char *fname,
                              char *raid);
 static void overcap_msg(char *name, unsigned long dmg, struct discord *client,
                         const struct discord_message *event);
-static void save_to_file(Slayer slayers[], int nslayers, char *raid,
+static void save_to_file(Slayer slayers[], size_t nslayers, char *raid,
                          struct discord *client,
                          const struct discord_message *event);
 
@@ -37,7 +37,8 @@ void
 emsg(struct discord *client, const struct discord_message *event)
 {
 	char buf[128];
-	snprintf(buf, 128, "Error: Failed to read image <@%lu>.\nFix me <@%lu>",
+	snprintf(buf, sizeof(buf),
+	         "Error: Failed to read image <@%lu>.\nFix me <@%lu>",
 	         event->author->id, ADMIN);
 	struct discord_create_message msg = {
 		.content = buf
@@ -49,13 +50,14 @@ char *
 skip_to_slayers(char *txt)
 {
 	char *line = txt, *endline;
-	int i, found = 0;
+	unsigned int i;
+	int found = 0;
 
 	while (line && !found) {
 		endline = strchr(line, '\n');
 		if (endline)
 			*endline = '\0';
-		for (i = 0; i < (int)LENGTH(delims); i++) {
+		for (i = 0; i < LENGTH(delims); i++) {
 			if (strcmp(line, delims[i]) == 0) {
 				found = 1;
 				break;
@@ -118,11 +120,13 @@ trim_dmg(char *dmg)
 	return dmg;
 }
 
-int
+size_t
 get_slayers(Slayer slayers[], char *txt)
 {
 	char *line = txt, *endline;
-	int n = 0, i, found = 0;
+	size_t nslayers = 0;
+	unsigned int i;
+	int found = 0;
 
 	if (txt == NULL)
 		return 0;
@@ -133,7 +137,7 @@ get_slayers(Slayer slayers[], char *txt)
 			break;
 		*endline = '\0';
 		if (!found) { /* skip Slayer */
-			for (i = 0; i < (int)LENGTH(garbageslayer); i++) {
+			for (i = 0; i < LENGTH(garbageslayer); i++) {
 				if (strcmp(line, garbageslayer[i]) == 0) {
 					found = 1;
 					break;
@@ -145,22 +149,23 @@ get_slayers(Slayer slayers[], char *txt)
 			}
 
 		}
-		slayers[n].name = strdup(trim_name(line));
+		slayers[nslayers].name = strdup(trim_name(line));
 		line = endline + 1;
 
 		endline = strchr(line, '\n');
 		if (endline == 0)
 			break;
 		*endline = '\0';
-		slayers[n].damage = strtoul(trim_dmg(line), NULL, 10);
+		slayers[nslayers].damage = strtoul(trim_dmg(line), NULL, 10);
 		line = endline + 1;
-		slayers[n].found_in_file = 0;
-		n++;
+		slayers[nslayers].found_in_file = 0;
+		nslayers++;
 	}
-	return n;
+
+	return nslayers;
 }
 
-int
+size_t
 parse(Slayer slayers[], char *txt)
 {
 	return get_slayers(slayers, skip_to_slayers(txt));
@@ -181,10 +186,10 @@ adjust(unsigned long dmg, char *raid)
 }
 
 void
-save_to_new_file(Slayer slayers[], int nslayers, char *fname, char *raid)
+save_to_new_file(Slayer slayers[], size_t nslayers, char *fname, char *raid)
 {
 	FILE *fp;
-	int i;
+	unsigned int i;
 	if ((fp = fopen(fname, "w")) == NULL)
 		die("nolan: Failed to open %s\n", fname);
 	for (i = 0; i < nslayers; i++) {
@@ -214,12 +219,12 @@ damage he is now at %'lu damage.", name, dmg - DAMAGE_CAP, dmg);
 }
 
 void
-save_to_file(Slayer slayers[], int nslayers, char *raid,
+save_to_file(Slayer slayers[], size_t nslayers, char *raid,
              struct discord *client, const struct discord_message *event)
 {
 	FILE *w, *r;
 	char line[LINE_SIZE], *endname, fname[128], tmpfname[128];
-	int i;
+	unsigned int i;
 	unsigned long olddmg, newdmg;
 	long day = time(NULL) / 86400;
 
@@ -275,7 +280,7 @@ void
 on_raids(struct discord *client, const struct discord_message *event)
 {
 	char *txt, fname[64];
-	int nslayers;
+	size_t nslayers;
 	Slayer slayers[MAX_SLAYERS];
 	struct discord_channel chan;
 	struct discord_ret_channel rchan = {

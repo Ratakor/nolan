@@ -69,7 +69,7 @@ parse_file(char *fname, char *username)
 unsigned long *
 load_files(char *username)
 {
-	int i;
+	unsigned int i;
 	unsigned long *dmgs = calloc(7, sizeof(unsigned long));
 	long day = time(NULL) / 86400;
 	char fname[128];
@@ -88,9 +88,10 @@ load_files(char *username)
 void
 write_uraid(char *buf, int siz, char *username, unsigned long *dmgs)
 {
-	int i, n = 1;
 	char *p;
 	unsigned long total = 0;
+	unsigned int n = 1;
+	int i;
 
 	siz -= snprintf(buf, siz, "%s raids stats for last 7 days\n", username);
 	p = strchr(buf, '\0');
@@ -102,7 +103,6 @@ write_uraid(char *buf, int siz, char *username, unsigned long *dmgs)
 		p = strchr(buf, '\0');
 	}
 	snprintf(p, siz, "\ntotal: %'lu damage\n", total);
-
 }
 
 void
@@ -111,7 +111,7 @@ uraid(char *buf, size_t siz, char *username)
 	unsigned long *dmgs;
 
 	dmgs = load_files(username);
-	write_uraid(buf, siz, username, dmgs);
+	write_uraid(buf, (int)siz, username, dmgs);
 	free(dmgs);
 }
 

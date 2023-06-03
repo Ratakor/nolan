@@ -94,7 +94,7 @@ write_invalid(char *buf, size_t siz)
 void
 write_info(char *buf, size_t siz, int index)
 {
-	unsigned long i;
+	unsigned int i;
 	char *p;
 
 	*buf = '\0';
@@ -120,7 +120,7 @@ write_info(char *buf, size_t siz, int index)
 void
 info_from_uid(char *buf, size_t siz, u64snowflake userid)
 {
-	unsigned long i = 0;
+	unsigned int i = 0;
 
 	while (i < nplayers && players[i].userid != userid)
 		i++;
@@ -134,7 +134,7 @@ info_from_uid(char *buf, size_t siz, u64snowflake userid)
 void
 info_from_txt(char *buf, size_t siz, char *txt)
 {
-	unsigned long i = 0;
+	unsigned int i = 0;
 	u64snowflake userid;
 
 	userid = str_to_uid(txt);

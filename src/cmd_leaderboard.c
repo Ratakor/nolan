@@ -4,7 +4,7 @@
 
 static void write_invalid(char *buf, size_t siz);
 static int compare(const void *p1, const void *p2);
-static void write_player(char *buf, size_t siz, int i);
+static void write_player(char *buf, size_t siz, unsigned int i);
 static void write_leaderboard(char *buf, size_t siz, u64snowflake userid);
 static void leaderboard(char *buf, size_t siz, char *txt, u64snowflake userid);
 
@@ -120,7 +120,7 @@ create_slash_leaderboard(struct discord *client)
 void
 write_invalid(char *buf, size_t siz)
 {
-	unsigned long i;
+	unsigned int i;
 
 	strlcpy(buf, "NO WRONG, this is not a valid category.\n", siz);
 	strlcat(buf, "Valid categories are:\n", siz);
@@ -151,7 +151,7 @@ compare(const void *p1, const void *p2)
 }
 
 void
-write_player(char *buf, size_t siz, int i)
+write_player(char *buf, size_t siz, unsigned int i)
 {
 	size_t ssiz = 32;
 	char *plt, stat[ssiz];
@@ -174,7 +174,7 @@ void
 write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 {
 	int in_lb = 0;
-	unsigned long i, lb_max = MIN(nplayers, LB_MAX);
+	unsigned int i, lb_max = MIN(nplayers, LB_MAX);
 	size_t psiz = 256, rsiz;
 	char player[psiz];
 	/* siz = (lb_max + 2) * 64; */
@@ -209,7 +209,7 @@ leaderboard, this is probably because LB_MAX is too big\n");
 void
 leaderboard(char *buf, size_t siz, char *categ, u64snowflake userid)
 {
-	unsigned long i = 2; /* ignore name and kingdom */
+	unsigned int i = 2; /* ignore name and kingdom */
 
 	while (i < LENGTH(fields) - 1 &&
 	                strcasecmp(fields[i], categ) != 0)

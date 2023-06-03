@@ -70,7 +70,6 @@ char *ocr(char *fname);
 
 /* stats.c */
 char *playtime_to_str(long playtime);
-Player create_player(unsigned int line);
 void on_stats(struct discord *client, const struct discord_message *event);
 
 /* raids.c */

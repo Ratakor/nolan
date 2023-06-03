@@ -3,10 +3,10 @@
 #include <time.h>
 #include "nolan.h"
 
-static void parse_file(char *fname, Slayer slayers[], int *nslayers);
-static void load_files(Slayer slayers[], int *nslayers);
+static void parse_file(char *fname, Slayer slayers[], size_t *nslayers);
+static void load_files(Slayer slayers[], size_t *nslayers);
 static int compare(const void *s1, const void *s2);
-static void write_lbraid(char *buf, int siz, Slayer slayers[], int nslayers);
+static void write_lbraid(char *buf, int siz, Slayer slayers[], size_t nslayers);
 static void lbraid(char *buf, size_t siz);
 
 void
@@ -21,11 +21,11 @@ create_slash_lbraid(struct discord *client)
 }
 
 void
-parse_file(char *fname, Slayer slayers[], int *nslayers)
+parse_file(char *fname, Slayer slayers[], size_t *nslayers)
 {
 	FILE *fp;
-	int i;
 	char line[LINE_SIZE], *endname;
+	unsigned int i;
 	unsigned long dmg;
 
 	if ((fp = fopen(fname, "r")) == NULL)
@@ -53,9 +53,9 @@ parse_file(char *fname, Slayer slayers[], int *nslayers)
 }
 
 void
-load_files(Slayer slayers[], int *nslayers)
+load_files(Slayer slayers[], size_t *nslayers)
 {
-	int i;
+	unsigned int i;
 	long day = time(NULL) / 86400;
 	char fname[128];
 
@@ -71,17 +71,18 @@ load_files(Slayer slayers[], int *nslayers)
 int
 compare(const void *s1, const void *s2)
 {
-	const long dmg1 = ((unsigned long *)(Slayer *)s1)[1];
-	const long dmg2 = ((unsigned long *)(Slayer *)s2)[1];
+	const unsigned long dmg1 = ((Slayer *)s1)->damage;
+	const unsigned long dmg2 = ((Slayer *)s2)->damage;
 
 	return dmg2 - dmg1;
 }
 
 void
-write_lbraid(char *buf, int siz, Slayer slayers[], int nslayers)
+write_lbraid(char *buf, int siz, Slayer slayers[], size_t nslayers)
 {
-	int i, lb_max = MIN(nslayers, LB_MAX);
+	unsigned int i, lb_max = MIN(nslayers, LB_MAX);
 	char *p = buf;
+
 	for (i = 0; i < lb_max; i++) {
 		siz -= snprintf(p, siz, "%d. %s: %'lu damage\n", i,
 		                slayers[i].name, slayers[i].damage);
@@ -94,12 +95,13 @@ write_lbraid(char *buf, int siz, Slayer slayers[], int nslayers)
 void
 lbraid(char *buf, size_t siz)
 {
-	int i, nslayers = 0;
+	unsigned int i;
+	size_t nslayers = 0;
 	Slayer slayers[MAX_SLAYERS];
 
 	load_files(slayers, &nslayers);
 	qsort(slayers, nslayers, sizeof(slayers[0]), compare);
-	write_lbraid(buf, siz, slayers, nslayers);
+	write_lbraid(buf, (int)siz, slayers, nslayers);
 
 	if (nslayers > 0) {
 		for (i = 0; i < nslayers; i++) {
@@ -124,7 +126,6 @@ on_lbraid(struct discord *client, const struct discord_message *event)
 	if (event->guild_id != GUILD_ID)
 		return;
 #endif /* DEVEL */
-
 
 	lbraid(buf, siz);
 	struct discord_create_message msg = {

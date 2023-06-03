@@ -18,7 +18,7 @@ help(char *buf, size_t siz)
 {
 	char *p;
 	size_t rsiz;
-	int i, len = LENGTH(stats_ids);
+	unsigned int i, len = LENGTH(stats_ids);
 
 	strlcpy(buf, "Post a screenshot of your stats to ", siz);
 	for (i = 0; i < len; i++) {

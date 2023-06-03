@@ -12,52 +12,10 @@ static void for_line(Player *player, char *txt);
 static void save_player_to_file(Player *player);
 static char *update_msg(Player *player, int iplayer);
 
-Player
-create_player(unsigned int line)
-{
-	FILE *fp;
-	Player player;
-	char buf[LINE_SIZE], *p = NULL, *end;
-	unsigned int i = 0;
-
-	if (line <= 1)
-		die("nolan: Tried to load the description line as a player\n");
-	if ((fp = fopen(STATS_FILE, "r")) == NULL)
-		die("nolan: Failed to open %s (read)\n", STATS_FILE);
-
-	while (i++ < line && (p = fgets(buf, LINE_SIZE, fp)) != NULL);
-	fclose(fp);
-	if (p == NULL)
-		die("nolan: Line %d is not present in %s\n", line, STATS_FILE);
-
-	player.name = malloc(DISCORD_MAX_USERNAME_LEN);
-	player.kingdom = malloc(32 + 1);
-	i = 0;
-	end = p;
-
-	/* -1 because the last field in the file finish with a '\n' */
-	while (i < LENGTH(fields) - 1 && *++end != '\0') {
-		if (*end != DELIM)
-			continue;
-		*end = '\0';
-		if (i <= 1) /* name and kingdom */
-			strlcpy(((char **)&player)[i], p, 32 + 1);
-		else
-			((long *)&player)[i] = atol(p);
-		p = end + 1;
-		i++;
-	}
-	if (i != LENGTH(fields) - 1)
-		die("nolan: Player on line %d is missing a field\n", line);
-	player.userid = strtoul(p, NULL, 10);
-
-	return player;
-}
-
 int
 update_players(Player *player)
 {
-	unsigned long i = 0, j;
+	unsigned int i = 0, j;
 
 	/* while (i < nplayers && players[i].userid != player->userid) */
 	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
@@ -67,18 +25,21 @@ update_players(Player *player)
 		if (nplayers > MAX_PLAYERS)
 			die("nolan: There is too much players (max:%d)\n",
 			    MAX_PLAYERS);
-		players[nplayers] = create_player(nplayers + 2);
-		nplayers++;
-		return 0;
-	}
-
-	/* if (player->name) */
-	/* 	strlcpy(players[i].name, player->name, DISCORD_MAX_USERNAME_LEN); */
-	if (player->kingdom)
-		strlcpy(players[i].kingdom, player->kingdom, 32 + 1);
-	for (j = 2; j < LENGTH(fields); j++) {
-		if (((long *)player)[j] != 0)
+		players[i].name = strndup(player->name, DISCORD_MAX_USERNAME_LEN);
+		players[i].kingdom = strndup(player->kingdom, 32 + 1);
+		for (j = 2; j < LENGTH(fields); j++)
 			((long *)&players[i])[j] = ((long *)player)[j];
+		nplayers++;
+	} else {
+		/* if (player->name) */
+		/*  	strlcpy(players[i].name, player->name, */
+		/* 	DISCORD_MAX_USERNAME_LEN); */
+		if (player->kingdom)
+			strlcpy(players[i].kingdom, player->kingdom, 32 + 1);
+		for (j = 2; j < LENGTH(fields); j++) {
+			if (((long *)player)[j] != 0)
+				((long *)&players[i])[j] = ((long *)player)[j];
+		}
 	}
 
 	return i;
@@ -261,7 +222,7 @@ save_player_to_file(Player *player)
 {
 	FILE *w, *r;
 	char line[LINE_SIZE], *endname, tmpfname[128];
-	unsigned long i;
+	unsigned int i;
 	int found = 0;
 
 	strlcpy(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
@@ -307,7 +268,7 @@ update_msg(Player *player, int iplayer)
 {
 	int sz = DISCORD_MAX_MESSAGE_LEN;
 	char *buf = malloc(sz), *p, *plto, *pltn, *pltd;
-	unsigned long i;
+	unsigned int i;
 	long old, new, diff;
 
 	sz -= snprintf(buf, sz, "%s's profile has been updated.\n\n",
@@ -356,7 +317,7 @@ update_msg(Player *player, int iplayer)
 void
 on_stats(struct discord *client, const struct discord_message *event)
 {
-	int i;
+	unsigned int i;
 	int ham = strlen(event->content) > 0 && event->author->id == HAM;
 	char *txt, fname[128];
 	Player player;
@@ -408,7 +369,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 		}
 	}
 
-	if ((i = update_players(&player))) {
+	if ((i = update_players(&player)) < nplayers) { /* FIXME */
 		txt = update_msg(&player, i);
 	} else {
 		txt = malloc(128);
