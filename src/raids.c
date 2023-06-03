@@ -8,7 +8,7 @@
 static void emsg(struct discord *client, const struct discord_message *event);
 static char *skip_to_slayers(char *txt);
 static char *trim_name(char *name);
-static char *trim_dmg(char *str);
+static unsigned long trim_dmg(char *str);
 static size_t get_slayers(Slayer slayers[], char *txt);
 static size_t parse(Slayer slayers[], char *txt);
 static unsigned long adjust(unsigned long dmg, char *raid);
@@ -25,14 +25,16 @@ static const char *delims[] = {
 	"4+ Raid options",
 	"4+ Opciones de Asalto",
 	"4+ Opzioni Raid",
-	"十 “ 王 国 副 本 选 项"
+	"十 “ 王 国 副 本 选 项",
+	"十 レ イ ド オ プ シ ョ ン"
 };
 static const char *garbageslayer[] = {
 	"Slayer",
 	"NEVE",
 	"Asesino",
 	"Uccissore",
-	"击 杀 者"
+	"击 杀 者",
+	"討 伐 者"
 };
 
 void
@@ -106,22 +108,24 @@ trim_name(char *name)
 	return name;
 }
 
-/* trim everything that is not a number, returns a pointer to the trimmed str*/
-char *
-trim_dmg(char *dmg)
+/* trim everything that is not a number, could segfault in very rare case */
+unsigned long
+trim_dmg(char *str)
 {
-	const char *r = dmg;
-	char *w = dmg;
+	const char *p = str;
+	unsigned long dmg = 0;
 
 	do {
-		if (*r >= 48 && *r <= 57)
-			*w++ = *r;
-	} while (*r++);
-	*w = '\0';
+		if (*p >= '0' && *p <= '9')
+			dmg = (dmg * 10) + (*p - '0');
+		else if (*p >= "①"[2] && *p <= "⑳"[2] && *(p - 1) == "①"[1])
+			dmg = (dmg * 10) + (*p - "①"[2] + 1);
+	} while (*p++);
 
 	return dmg;
 }
 
+/* TODO: refactor skipping */
 size_t
 get_slayers(Slayer slayers[], char *txt)
 {
@@ -138,6 +142,14 @@ get_slayers(Slayer slayers[], char *txt)
 		if (endline == 0)
 			break;
 		*endline = '\0';
+		if (strlen(line) == 0) { /* skip empty line */
+			line = endline + 1;
+			endline = strchr(line, '\n');
+			if (endline == 0)
+				break;
+			*endline = '\0';
+
+		}
 		if (!found) { /* skip Slayer */
 			for (i = 0; i < LENGTH(garbageslayer); i++) {
 				if (strcmp(line, garbageslayer[i]) == 0) {
@@ -160,7 +172,8 @@ get_slayers(Slayer slayers[], char *txt)
 			break;
 		}
 		*endline = '\0';
-		if (strcmp(line, "阮 万") == 0) { /* skip chinese garbage */
+		/* skip empty line and chinese garbage */
+		if (strlen(line) == 0 || strcmp(line, "阮 万") == 0) {
 			line = endline + 1;
 			endline = strchr(line, '\n');
 			if (endline == 0) {
@@ -169,7 +182,7 @@ get_slayers(Slayer slayers[], char *txt)
 			}
 			*endline = '\0';
 		}
-		slayers[nslayers].damage = strtoul(trim_dmg(line), NULL, 10);
+		slayers[nslayers].damage = trim_dmg(line);
 		if (slayers[nslayers].damage == 0) {
 			free(slayers[nslayers].name);
 			break;
@@ -317,21 +330,23 @@ on_raids(struct discord *client, const struct discord_message *event)
 		curl(event->attachments->array->url, fname);
 		crop(fname, 0);
 	}
+
 	for (i = 0; i < LENGTH(cn_slayer_ids); i++) {
 		if (event->author->id == cn_slayer_ids[i]) {
 			txt = ocr(fname, "chi_sim");
 			break;
 		}
 	}
+	if (txt == NULL) {
+		for (i = 0; i < LENGTH(jp_slayer_ids); i++) {
+			if (event->author->id == jp_slayer_ids[i]) {
+				txt = ocr(fname, "jpn");
+				break;
+			}
+		}
+	}
 	if (txt == NULL)
 		txt = ocr(fname, "eng");
-
-#ifdef DEVEL
-	struct discord_create_message msg = {
-		.content = txt
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
-#endif /* DEVEL */
 
 	if (txt == NULL || (nslayers = parse(slayers, txt)) == 0) {
 		emsg(client, event);

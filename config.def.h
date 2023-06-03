@@ -24,7 +24,12 @@ static const u64snowflake raids_ids[] = {
 
 /* list of chinese slayers for raids screenshots */
 static const u64snowflake cn_slayer_ids[] = {
-	0
+	0,
+};
+
+/* list of japanese slayers for raids screenshots */
+static const u64snowflake jp_slayer_ids[] = {
+	0,
 };
 
 /* list of kingdom to accept if verification is on */
