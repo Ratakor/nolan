@@ -56,7 +56,10 @@ write_rect(gdRect *rect, gdImagePtr im)
 	while (x < X && gdImageGetPixel(im, x++, y) < WHITE);
 	if (x == X)
 		return 1;
-	x += DIFF;
+	if (x > 40)
+		x += DIFF + 5;
+	else
+		x += DIFF;
 	rect->x = x;
 	rect->width = X - x;
 	return 0;

@@ -8,8 +8,6 @@ A discord bot for Orna.
 
 ## TODO
 
-- make DIFF, from ocr.c, a variable
-
 ### features
 - automatic roles attribution (for Orna FR) -> with updatemsg
 - add option to correct stats
@@ -17,7 +15,7 @@ A discord bot for Orna.
 
 ### chore
 - redefine weird DISCORD_MAX macro (/4 because no wide char)
-- refactor cropping in ocr.c
+- refactor cropping in ocr.c and rework DIFF
 - refactor parseline() in stats.c
 
 ### misc
