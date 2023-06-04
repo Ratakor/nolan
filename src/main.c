@@ -51,7 +51,8 @@ main(void)
 
 	ccord_global_init();
 	client = discord_init(TOKEN);
-	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT);
+	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT |
+	                    DISCORD_GATEWAY_GUILD_MEMBERS);
 	discord_set_prefix(client, PREFIX);
 #ifndef DEVEL
 	create_slash_commands(client);
