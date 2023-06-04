@@ -1,5 +1,6 @@
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "nolan.h"
 
 static void write_invalid(char *buf, size_t siz);
@@ -228,8 +229,7 @@ leaderboard(char *buf, size_t siz, char *categ, u64snowflake userid)
 void
 on_leaderboard(struct discord *client, const struct discord_message *event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[siz];
+	char buf[MAX_MESSAGE_LEN];
 
 	if (event->author->bot)
 		return;
@@ -240,9 +240,10 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 #endif /* DEVEL */
 
 	if (strlen(event->content) == 0)
-		write_invalid(buf, siz);
+		write_invalid(buf, sizeof(buf));
 	else
-		leaderboard(buf, siz, event->content, event->author->id);
+		leaderboard(buf, sizeof(buf),
+		            event->content, event->author->id);
 
 	struct discord_create_message msg = {
 		.content = buf
@@ -254,13 +255,13 @@ void
 on_leaderboard_interaction(struct discord *client,
                            const struct discord_interaction *event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[siz];
+	char buf[MAX_MESSAGE_LEN];
 
 	if (!event->data || !event->data->options) {
-		write_invalid(buf, siz);
+		write_invalid(buf, sizeof(buf));
 	} else {
-		leaderboard(buf, siz, event->data->options->array[0].value,
+		leaderboard(buf, sizeof(buf),
+		            event->data->options->array[0].value,
 		            event->member->user->id);
 	}
 

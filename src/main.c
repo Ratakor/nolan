@@ -1,6 +1,7 @@
-#include <unistd.h>
-#include <stdlib.h>
 #include <locale.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 #include "nolan.h"
 
 Player players[MAX_PLAYERS];

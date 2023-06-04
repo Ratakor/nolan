@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+
 #include "nolan.h"
 
 static Player load_player(unsigned int line);
@@ -13,9 +14,9 @@ create_folders(void)
 		if (mkdir(SAVE_FOLDER, 0755) == -1)
 			die("nolan: Failed to create %s\n", SAVE_FOLDER);
 	}
-	if (!file_exists(IMAGE_FOLDER)) {
-		if (mkdir(IMAGE_FOLDER, 0755) == -1)
-			die("nolan: Failed to create %s\n", IMAGE_FOLDER);
+	if (!file_exists(IMAGES_FOLDER)) {
+		if (mkdir(IMAGES_FOLDER, 0755) == -1)
+			die("nolan: Failed to create %s\n", IMAGES_FOLDER);
 	}
 	if (!file_exists(RAIDS_FOLDER)) {
 		if (mkdir(RAIDS_FOLDER, 0755) == -1)
@@ -74,8 +75,8 @@ load_player(unsigned int line)
 	if (p == NULL)
 		die("nolan: Line %d is not present in %s\n", line, STATS_FILE);
 
-	player.name = malloc(DISCORD_MAX_USERNAME_LEN);
-	player.kingdom = malloc(32 + 1);
+	player.name = malloc(MAX_USERNAME_LEN);
+	player.kingdom = malloc(MAX_KINGDOM_LEN);
 	i = 0;
 	end = p;
 
@@ -84,8 +85,10 @@ load_player(unsigned int line)
 		if (*end != DELIM)
 			continue;
 		*end = '\0';
-		if (i <= 1) /* name and kingdom */
-			strlcpy(((char **)&player)[i], p, 32 + 1);
+		if (i == 0)
+			strlcpy(player.name, p, MAX_USERNAME_LEN);
+		else if (i == 1)
+			strlcpy(player.kingdom, p, MAX_KINGDOM_LEN);
 		else
 			((long *)&player)[i] = atol(p);
 		p = end + 1;
@@ -188,7 +191,7 @@ on_message(struct discord *client, const struct discord_message *event)
 
 #ifdef DEVEL
 	if (event->channel_id == DEVEL)
-		on_raids(client, event);
+		on_stats(client, event);
 	return;
 #endif /* DEVEL */
 

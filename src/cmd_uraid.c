@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
 #include "nolan.h"
 
 static void write_invalid(char *buf, size_t siz);
@@ -30,7 +31,7 @@ create_slash_uraid(struct discord *client)
 			.array = options
 		},
 	};
-	discord_create_guild_application_command(client, APP_ID, GUILD_ID,
+	discord_create_guild_application_command(client, APP_ID, RAID_GUILD_ID,
 	                &cmd, NULL);
 }
 
@@ -118,8 +119,7 @@ uraid(char *buf, size_t siz, char *username)
 void
 on_uraid(struct discord *client, const struct discord_message *event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[siz];
+	char buf[MAX_MESSAGE_LEN];
 
 	if (event->author->bot)
 		return;
@@ -128,14 +128,14 @@ on_uraid(struct discord *client, const struct discord_message *event)
 	if (event->channel_id != DEVEL)
 		return;
 #else
-	if (event->guild_id != GUILD_ID)
+	if (event->guild_id != RAID_GUILD_ID)
 		return;
 #endif /* DEVEL */
 
 	if (strlen(event->content) == 0)
-		write_invalid(buf, siz);
+		write_invalid(buf, sizeof(buf));
 	else
-		uraid(buf, siz, event->content);
+		uraid(buf, sizeof(buf), event->content);
 
 	struct discord_create_message msg = {
 		.content = buf
@@ -147,13 +147,12 @@ void
 on_uraid_interaction(struct discord *client,
                      const struct discord_interaction *event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[siz];
+	char buf[MAX_MESSAGE_LEN];
 
 	if (!event->data || !event->data->options)
-		write_invalid(buf, siz);
+		write_invalid(buf, sizeof(buf));
 	else
-		uraid(buf, siz, event->data->options->array[0].value);
+		uraid(buf, sizeof(buf), event->data->options->array[0].value);
 
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,

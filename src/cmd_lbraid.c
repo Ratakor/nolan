@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
 #include "nolan.h"
 
 static void parse_file(char *fname, Slayer slayers[], size_t *nslayers);
@@ -16,7 +17,7 @@ create_slash_lbraid(struct discord *client)
 		.name = "lbraid",
 		.description = "Shows the raid leaderboard for the last 7 days",
 	};
-	discord_create_guild_application_command(client, APP_ID, GUILD_ID,
+	discord_create_guild_application_command(client, APP_ID, RAID_GUILD_ID,
 	                &cmd, NULL);
 }
 
@@ -113,8 +114,7 @@ lbraid(char *buf, size_t siz)
 void
 on_lbraid(struct discord *client, const struct discord_message *event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[siz];
+	char buf[MAX_MESSAGE_LEN];
 
 	if (event->author->bot)
 		return;
@@ -123,11 +123,11 @@ on_lbraid(struct discord *client, const struct discord_message *event)
 	if (event->channel_id != DEVEL)
 		return;
 #else
-	if (event->guild_id != GUILD_ID)
+	if (event->guild_id != RAID_GUILD_ID)
 		return;
 #endif /* DEVEL */
 
-	lbraid(buf, siz);
+	lbraid(buf, sizeof(buf));
 	struct discord_create_message msg = {
 		.content = buf
 	};
@@ -138,10 +138,9 @@ void
 on_lbraid_interaction(struct discord *client,
                       const struct discord_interaction *event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[siz];
+	char buf[MAX_MESSAGE_LEN];
 
-	lbraid(buf, siz);
+	lbraid(buf, sizeof(buf));
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
 		.data = &(struct discord_interaction_callback_data)

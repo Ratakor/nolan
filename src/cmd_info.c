@@ -1,5 +1,6 @@
 #include <stdlib.h>
-#include "string.h"
+#include <string.h>
+
 #include "nolan.h"
 
 #define ICON_URL "https://orna.guide/static/orna/img/npcs/master_gnome.png"
@@ -154,8 +155,7 @@ info_from_txt(char *buf, size_t siz, char *txt)
 void
 on_info(struct discord *client, const struct discord_message *event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[siz];
+	char buf[MAX_MESSAGE_LEN];
 
 	if (event->author->bot)
 		return;
@@ -166,9 +166,9 @@ on_info(struct discord *client, const struct discord_message *event)
 #endif /* DEVEL */
 
 	if (strlen(event->content) == 0)
-		info_from_uid(buf, siz, event->author->id);
+		info_from_uid(buf, sizeof(buf), event->author->id);
 	else
-		info_from_txt(buf, siz, event->content);
+		info_from_txt(buf, sizeof(buf), event->content);
 
 	/*
 	if (use_embed) {
@@ -195,13 +195,13 @@ void
 on_info_interaction(struct discord *client,
                     const struct discord_interaction *event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[siz];
+	char buf[MAX_MESSAGE_LEN];
 
 	if (!event->data || !event->data->options)
-		info_from_uid(buf, siz, event->member->user->id);
+		info_from_uid(buf, sizeof(buf), event->member->user->id);
 	else
-		info_from_txt(buf, siz, event->data->options->array[0].value);
+		info_from_txt(buf, sizeof(buf),
+		              event->data->options->array[0].value);
 
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,

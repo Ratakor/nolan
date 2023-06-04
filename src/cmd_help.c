@@ -1,4 +1,5 @@
 #include <string.h>
+
 #include "nolan.h"
 
 static void help(char *buf, size_t siz);
@@ -49,15 +50,14 @@ probably way too much channels for stats\n");
 void
 on_help(struct discord * client, const struct discord_message * event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[siz];
+	char buf[MAX_MESSAGE_LEN];
 
 #ifdef DEVEL
 	if (event->channel_id != DEVEL)
 		return;
 #endif /* DEVEL */
 
-	help(buf, siz);
+	help(buf, sizeof(buf));
 	struct discord_create_message msg = {
 		.content = buf
 	};
@@ -68,10 +68,9 @@ void
 on_help_interaction(struct discord *client,
                     const struct discord_interaction *event)
 {
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char buf[siz];
+	char buf[MAX_MESSAGE_LEN];
 
-	help(buf, siz);
+	help(buf, sizeof(buf));
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
 		.data = &(struct discord_interaction_callback_data)

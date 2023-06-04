@@ -1,8 +1,9 @@
 #include <stdlib.h>
 #include <string.h>
+
 #include "nolan.h"
 
-#define LEN(X) (sizeof X - 1)
+#define LEN(X)        (sizeof X - 1)
 
 static long playtime_to_long(char *playtime, char *str);
 static char *trim_all(char *str);
@@ -11,7 +12,8 @@ static void for_line(Player *player, char *txt);
 static char *update_msg(char *buf, int siz, Player *player, unsigned int i);
 static void update_player(Player *player, unsigned int i);
 static void save_player_to_file(Player *player);
-static char *update_players(Player *player);
+static void update_players(Player *player, struct discord *client,
+                           const struct discord_message *event);
 
 long
 playtime_to_long(char *playtime, char str[])
@@ -228,6 +230,11 @@ update_msg(char *buf, int siz, Player *player, unsigned int i)
 
 	/*
 	 * TODO
+	 * New roles: ...
+	 */
+
+	/*
+	 * TODO
 	 * Last update was xxx ago
 	 */
 
@@ -241,8 +248,8 @@ update_player(Player *player, unsigned int i)
 
 	free(players[i].name);
 	free(players[i].kingdom);
-	players[i].name = strndup(player->name, DISCORD_MAX_USERNAME_LEN);
-	players[i].kingdom = strndup(player->kingdom, 32 + 1);
+	players[i].name = strndup(player->name, MAX_USERNAME_LEN);
+	players[i].kingdom = strndup(player->kingdom, MAX_KINGDOM_LEN);
 	for (j = 2; j < LENGTH(fields); j++) {
 		if (((long *)player)[j] != 0)
 			((long *)&players[i])[j] = ((long *)player)[j];
@@ -296,12 +303,13 @@ save_player_to_file(Player *player)
 	rename(tmpfname, STATS_FILE);
 }
 
-char *
-update_players(Player *player)
+/* will update players, source.csv and roles if Orna FR + post an update msg */
+void
+update_players(Player *player, struct discord *client,
+               const struct discord_message *event)
 {
 	unsigned int i = 0;
-	size_t siz = DISCORD_MAX_MESSAGE_LEN;
-	char *buf = malloc(siz);
+	char buf[MAX_MESSAGE_LEN];
 
 	/* while (i < nplayers && players[i].userid != player->userid) */
 	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
@@ -312,38 +320,45 @@ update_players(Player *player)
 		if (nplayers > MAX_PLAYERS)
 			die("nolan: There is too much players (max:%d)\n",
 			    MAX_PLAYERS);
-		snprintf(buf, siz,
+		snprintf(buf, sizeof(buf),
 		         "**%s** has been registrated in the database.",
 		         player->name);
 	} else {
-		update_msg(buf, (int)siz, player, i);
+		update_msg(buf, (int)sizeof(buf), player, i);
 	}
 	update_player(player, i);
 	save_player_to_file(&players[i]);
+#ifndef DEVEL
+	if (event->guild_id == ROLE_GUILD_ID)
+		update_roles(client, event->author->id, &players[i]);
+#endif /* DEVEL */
 
-	return buf;
+	struct discord_create_message msg = {
+		.content = buf
+	};
+	discord_create_message(client, event->channel_id, &msg, NULL);
 }
 
 void
 on_stats(struct discord *client, const struct discord_message *event)
 {
 	unsigned int i;
-	int ham = strlen(event->content) > 0 && event->author->id == HAM;
+	int ham = event->author->id == HAM && strlen(event->content) > 0;
 	char *txt, fname[128];
 	Player player;
 
 	/* not always a jpg but idc */
 	if (ham) {
-		snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGE_FOLDER,
+		snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGES_FOLDER,
 		         event->content);
 	} else {
-		snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGE_FOLDER,
+		snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGES_FOLDER,
 		         event->author->username);
 	}
 	curl(event->attachments->array->url, fname);
 	txt = ocr(fname, "eng");
 	if (txt == NULL) {
-		warn("nolan: Failed to read image\n");
+		warn("nolan: Failed to read stats image\n");
 		struct discord_create_message msg = {
 			.content = "Error: Failed to read image"
 		};
@@ -379,10 +394,5 @@ on_stats(struct discord *client, const struct discord_message *event)
 		}
 	}
 
-	txt = update_players(&player);
-	struct discord_create_message msg = {
-		.content = txt
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
-	free(txt);
+	update_players(&player, client, event);
 }

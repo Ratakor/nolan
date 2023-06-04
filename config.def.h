@@ -1,12 +1,12 @@
-#define DELIM    ','                 /* Delimiter for the save file */
-#define FILENAME "source.csv"        /* Filename of the save file */
-#define LB_MAX   10                  /* Max players to be shown with ?lb */
-#define APP_ID   1109604402102273245 /* The bot's application ID */
-#define ADMIN    277534384175841280  /* Admin user ID for bug reports */
-#define HAM      245010787817488384  /* user ID to add players by name */
-#define GUILD_ID 0                   /* Server ID for raids */
-#define TOKEN    "YOUR-BOT-TOKEN"
-#define PREFIX   "?"
+#define DELIM         ','                 /* Delimiter for the save file */
+#define FILENAME      "source.csv"        /* Filename of the save file */
+#define LB_MAX        10                  /* Max players to be shown with ?lb */
+#define APP_ID        1109604402102273245 /* The bot's application ID */
+#define ADMIN         277534384175841280  /* Admin user ID for bug reports */
+#define HAM           245010787817488384  /* user ID to add players by name */
+#define RAID_GUILD_ID 0                   /* Server ID for raids */
+#define TOKEN         "YOUR-BOT-TOKEN"
+#define PREFIX        "?"
 
 static const int kingdom_verification = 0; /* 0 means no verification */
 static const int use_embed            = 0; /* 0 means no embed on info */

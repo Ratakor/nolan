@@ -9,14 +9,15 @@ A discord bot for Orna.
 ## TODO
 
 ### features
-- automatic roles attribution (for Orna FR) -> with updatemsg
-- add option to correct stats
+- add option to correct stats ?
 - ascensions (track mats)
 
 ### chore
-- redefine weird DISCORD_MAX macro (/4 because no wide char)
-- refactor cropping in ocr.c and rework DIFF
+- rework DIFF in ocr.c
 - refactor parseline() in stats.c
 
 ### misc
+- DEINELENSY -> Damaquandey
+- use postgresql instead of csv
 - better wrong image input detection
+- async ?

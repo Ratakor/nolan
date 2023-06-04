@@ -1,5 +1,6 @@
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "nolan.h"
 
 static char *sort_source(char *kingdom, size_t *fszp);

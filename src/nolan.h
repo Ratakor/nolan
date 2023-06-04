@@ -3,17 +3,21 @@
 #include "../config.h"
 #include "util.h"
 
-#define MAX_PLAYERS  LENGTH(kingdoms) * 50 /* might need to update that */
-#define MAX_SLAYERS  50
-#define LINE_SIZE    300 + 1
+#define MAX_PLAYERS      LENGTH(kingdoms) * 50 /* might need to update that */
+#define MAX_SLAYERS      50
+#define LINE_SIZE        300 + 1
+#define MAX_MESSAGE_LEN  2000 + 1
+#define MAX_USERNAME_LEN 32 + 1
+#define MAX_KINGDOM_LEN  32 + 1
 #ifdef DEVEL
-#define SAVE_FOLDER  "./"
+#define SAVE_FOLDER      "./"
 #else
-#define SAVE_FOLDER  "/var/lib/nolan/"
+#define SAVE_FOLDER      "/var/lib/nolan/"
 #endif /* DEVEL */
-#define IMAGE_FOLDER SAVE_FOLDER "images/"
-#define RAIDS_FOLDER SAVE_FOLDER "raids/"
-#define STATS_FILE   SAVE_FOLDER FILENAME
+#define IMAGES_FOLDER    SAVE_FOLDER "images/"
+#define RAIDS_FOLDER     SAVE_FOLDER "raids/"
+#define STATS_FILE       SAVE_FOLDER FILENAME
+#define ROLE_GUILD_ID    999691133103919135 /* this is only for to Orna FR */
 
 /* ALL FIELDS MUST HAVE THE SAME SIZE */
 typedef struct {
@@ -74,6 +78,9 @@ void on_stats(struct discord *client, const struct discord_message *event);
 
 /* raids.c */
 void on_raids(struct discord *client, const struct discord_message *event);
+
+/* roles.c */
+void update_roles(struct discord *client, u64snowflake userid, Player *player);
 
 /* cmd_help.c */
 void create_slash_help(struct discord *client);

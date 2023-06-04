@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
 #include "nolan.h"
 
 #define DAMAGE_CAP  300000000 / 7 /* daily */
@@ -40,7 +41,9 @@ static const char *garbageslayer[] = {
 void
 emsg(struct discord *client, const struct discord_message *event)
 {
-	char buf[128];
+	char buf[MAX_MESSAGE_LEN];
+
+	warn("nolan: Failed to read raid image\n");
 	snprintf(buf, sizeof(buf),
 	         "Error: Failed to read image <@%lu>.\nFix me <@%lu>",
 	         event->author->id, ADMIN);
@@ -234,7 +237,7 @@ void
 overcap_msg(char *name, unsigned long dmg, struct discord *client,
             const struct discord_message *event)
 {
-	char buf[DISCORD_MAX_MESSAGE_LEN];
+	char buf[MAX_MESSAGE_LEN];
 
 	if (dmg < DAMAGE_CAP)
 		return;
@@ -322,11 +325,11 @@ on_raids(struct discord *client, const struct discord_message *event)
 	};
 
 	if (strcmp(event->attachments->array->content_type, "image/png") == 0) {
-		snprintf(fname, sizeof(fname), "%s/raids.png", IMAGE_FOLDER);
+		snprintf(fname, sizeof(fname), "%s/raids.png", IMAGES_FOLDER);
 		curl(event->attachments->array->url, fname);
 		crop(fname, 1);
 	} else { /* always a jpg, check on_message() */
-		snprintf(fname, sizeof(fname), "%s/raids.jpg", IMAGE_FOLDER);
+		snprintf(fname, sizeof(fname), "%s/raids.jpg", IMAGES_FOLDER);
 		curl(event->attachments->array->url, fname);
 		crop(fname, 0);
 	}
