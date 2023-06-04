@@ -59,31 +59,45 @@ playtime(struct discord *client, u64snowflake userid, Player *player)
 {
 	long playtime = player->playtime / 24;
 
-	if (playtime >= 100) {
+	if (playtime >= 150) {
 		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
 		                              1114895554254753873, NULL, NULL);
+	} else if (playtime >= 100) {
+		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
+		                              1114909422947410013, NULL, NULL);
+	} else if (playtime >= 50) {
+		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
+		                              1114909817463656460, NULL, NULL);
 	}
 }
-
 
 void
 monsters(struct discord *client, u64snowflake userid, Player *player)
 {
-	if (player->monsters >= 100000) {
+	if (player->monsters >= 500000) {
+		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
+		                              1114908471985438832, NULL, NULL);
+	} else if (player->monsters >= 250000) {
 		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
 		                              1000114023045537923, NULL, NULL);
+	} else if (player->monsters >= 100000) {
+		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
+		                              1114908461004759050, NULL, NULL);
 	}
 }
 
 void
 bosses(struct discord *client, u64snowflake userid, Player *player)
 {
-	if (player->bosses >= 100000) {
+	if (player->bosses >= 500000) {
 		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
 		                              1000113783043268719, NULL, NULL);
-	} else if (player->bosses >= 10000) {
+	} else if (player->bosses >= 250000) {
 		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
 		                              1000113738046787654, NULL, NULL);
+	} else if (player->bosses >= 100000) {
+		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
+		                              1114907696878071832, NULL, NULL);
 	}
 }
 
@@ -117,7 +131,10 @@ quests(struct discord *client, u64snowflake userid, Player *player)
 void
 dungeons(struct discord *client, u64snowflake userid, Player *player)
 {
-	if (player->dungeons >= 10000) {
+	if (player->dungeons >= 25000) {
+		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
+		                              1114908526050017330, NULL, NULL);
+	} else if (player->dungeons >= 10000) {
 		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,
 		                              999720735184527500, NULL, NULL);
 	} else if (player->dungeons >= 2000) {
