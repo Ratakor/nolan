@@ -37,7 +37,7 @@ sort_source(char *kingdom, size_t *fszp)
 	if ((fp = fopen(STATS_FILE, "r")) == NULL)
 		die("nolan: Failed to open %s (read)\n", STATS_FILE);
 
-	res = malloc(mfsz);
+	res = emalloc(mfsz);
 	fgets(line, LINE_SIZE, fp); /* fields name */
 	strlcpy(res, line, mfsz);
 	while (fgets(line, LINE_SIZE, fp) != NULL) {

@@ -62,7 +62,7 @@ load_player(unsigned int line)
 {
 	FILE *fp;
 	Player player;
-	char buf[LINE_SIZE], *p = NULL, *end;
+	char buf[LINE_SIZE], *p = NULL, *delim;
 	unsigned int i = 0;
 
 	if (line <= 1)
@@ -75,23 +75,22 @@ load_player(unsigned int line)
 	if (p == NULL)
 		die("nolan: Line %d is not present in %s\n", line, STATS_FILE);
 
-	player.name = malloc(MAX_USERNAME_LEN);
-	player.kingdom = malloc(MAX_KINGDOM_LEN);
 	i = 0;
-	end = p;
+	delim = p;
 
 	/* -1 because the last field in the file finish with a '\n' */
-	while (i < LENGTH(fields) - 1 && *++end != '\0') {
-		if (*end != DELIM)
+	while (i < LENGTH(fields) - 1 && *++delim != '\0') {
+		if (*delim != DELIM)
 			continue;
-		*end = '\0';
+
+		*delim = '\0';
 		if (i == 0)
-			strlcpy(player.name, p, MAX_USERNAME_LEN);
+			player.name = strndup(p, MAX_USERNAME_LEN);
 		else if (i == 1)
-			strlcpy(player.kingdom, p, MAX_KINGDOM_LEN);
+			player.kingdom = strndup(p, MAX_KINGDOM_LEN);
 		else
 			((long *)&player)[i] = atol(p);
-		p = end + 1;
+		p = delim + 1;
 		i++;
 	}
 	if (i != LENGTH(fields) - 1)

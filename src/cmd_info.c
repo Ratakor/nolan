@@ -9,7 +9,7 @@ static u64snowflake str_to_uid(char *id);
 static void write_invalid(char *buf, size_t siz);
 /* static void write_info_embed(struct discord *client, char *buf, size_t siz, */
 /* 		int index); */
-static void write_info(char *buf, size_t siz, int index);
+static void write_info(char *buf, size_t siz, unsigned int index);
 static void info_from_uid(char *buf, size_t siz, u64snowflake userid);
 static void info_from_txt(char *buf, size_t siz, char *txt);
 
@@ -93,7 +93,7 @@ write_invalid(char *buf, size_t siz)
 /* } */
 
 void
-write_info(char *buf, size_t siz, int index)
+write_info(char *buf, size_t siz, unsigned int index)
 {
 	unsigned int i;
 	char *p;

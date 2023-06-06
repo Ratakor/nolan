@@ -71,7 +71,7 @@ unsigned long *
 load_files(char *username)
 {
 	unsigned int i;
-	unsigned long *dmgs = calloc(7, sizeof(unsigned long));
+	unsigned long *dmgs = ecalloc(7, sizeof(unsigned long));
 	long day = time(NULL) / 86400;
 	char fname[128];
 

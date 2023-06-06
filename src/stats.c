@@ -36,7 +36,7 @@ playtime_to_str(long playtime)
 	long days = playtime / 24;
 	long hours = playtime % 24;
 	size_t siz = 32;
-	char *buf = malloc(siz);
+	char *buf = emalloc(siz);
 
 	switch (hours) {
 	case 0:

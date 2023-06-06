@@ -14,10 +14,11 @@ A discord bot for Orna.
 
 ### chore
 - rework DIFF in ocr.c
+- rework roles
 - refactor parseline() in stats.c
 
 ### misc
 - DEINELENSY -> Damaquandey
-- use postgresql instead of csv
+- use sql instead of csv
 - better wrong image input detection
 - async ?

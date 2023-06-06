@@ -74,3 +74,23 @@ file_exists(char *filename)
 	struct stat buf;
 	return (stat(filename, &buf) == 0);
 }
+
+void *
+emalloc(size_t size)
+{
+	void *p;
+
+	if ((p = malloc(size)) == NULL)
+		die("malloc failed\n");
+	return p;
+}
+
+void *
+ecalloc(size_t nmemb, size_t size)
+{
+	void *p;
+
+	if ((p = calloc(nmemb, size)) == NULL)
+		die("calloc failed\n");
+	return p;
+}
