@@ -9,7 +9,6 @@ static u64snowflake str_to_uid(char *id);
 static void write_invalid(char *buf, size_t siz);
 /* static void write_info_embed(struct discord *client, char *buf, size_t siz, */
 /* 		int index); */
-static void write_info(char *buf, size_t siz, unsigned int index);
 static void info_from_uid(char *buf, size_t siz, u64snowflake userid);
 static void info_from_txt(char *buf, size_t siz, char *txt);
 
@@ -93,7 +92,7 @@ write_invalid(char *buf, size_t siz)
 /* } */
 
 void
-write_info(char *buf, size_t siz, unsigned int index)
+write_info(char *buf, size_t siz, const Player *player)
 {
 	unsigned int i;
 	char *p;
@@ -104,14 +103,14 @@ write_info(char *buf, size_t siz, unsigned int index)
 		strlcat(buf, fields[i], siz);
 		strlcat(buf, ": ", siz);
 		if (i <= 1) { /* name and kingdom */
-			strlcat(buf, ((char **)&players[index])[i], siz);
+			strlcat(buf, ((char **)player)[i], siz);
 		} else if (i == 7) { /* playtime */
-			p = playtime_to_str(((long *)&players[index])[i]);
+			p = playtime_to_str(((long *)player)[i]);
 			strlcat(buf, p, siz);
 			free(p);
 		} else {
 			p = strchr(buf, '\0');
-			snprintf(p, siz, "%'ld", ((long *)&players[index])[i]);
+			snprintf(p, siz, "%'ld", ((long *)player)[i]);
 			if (i == 18) /* distance */
 				strlcat(buf, "m", siz);
 		}
@@ -130,7 +129,7 @@ info_from_uid(char *buf, size_t siz, u64snowflake userid)
 	if (i == nplayers)
 		write_invalid(buf, siz);
 	else
-		write_info(buf, siz, i);
+		write_info(buf, siz, &players[i]);
 }
 
 void
@@ -150,7 +149,7 @@ info_from_txt(char *buf, size_t siz, char *txt)
 	if (i == nplayers)
 		write_invalid(buf, siz);
 	else
-		write_info(buf, siz, i);
+		write_info(buf, siz, &players[i]);
 }
 
 void

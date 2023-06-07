@@ -44,7 +44,9 @@ probably way too much channels for stats\n");
 	strlcat(buf, "\n[...] means optional.\n", siz);
 	strlcat(buf, "Also works with ", siz);
 	strlcat(buf, PREFIX, siz);
-	strlcat(buf, " instead of /", siz);
+	rsiz = strlcat(buf, " instead of /.", siz);
+	if (rsiz >= siz)
+		warn("nolan: truncation happened while writing help\n");
 }
 
 void

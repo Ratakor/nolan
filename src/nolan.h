@@ -94,6 +94,7 @@ void on_help_interaction(struct discord *client,
 
 /* cmd_info.c */
 void create_slash_info(struct discord *client);
+void write_info(char *buf, size_t siz, const Player *player);
 void on_info(struct discord *client, const struct discord_message *event);
 void on_info_interaction(struct discord *client,
 		const struct discord_interaction *event);

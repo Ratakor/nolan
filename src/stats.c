@@ -310,6 +310,7 @@ update_players(Player *player, struct discord *client,
                const struct discord_message *event)
 {
 	unsigned int i = 0;
+	int r;
 	char buf[MAX_MESSAGE_LEN];
 
 	/* while (i < nplayers && players[i].userid != player->userid) */
@@ -321,9 +322,10 @@ update_players(Player *player, struct discord *client,
 		if (nplayers > MAX_PLAYERS)
 			die("nolan: There is too much players (max:%d)\n",
 			    MAX_PLAYERS);
-		snprintf(buf, sizeof(buf),
-		         "**%s** has been registrated in the database.",
-		         player->name);
+		r = snprintf(buf, sizeof(buf),
+		             "**%s** has been registrated in the database.\n\n",
+		             player->name);
+		write_info(buf + r, sizeof(buf) - r, player);
 	} else {
 		update_msg(buf, (int)sizeof(buf), player, i);
 	}
