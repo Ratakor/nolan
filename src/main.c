@@ -29,6 +29,7 @@ const char *fields[] = {
 	"Reputation",
 	"Endless Record",
 	"Codex",
+	"Last Update",
 	"User ID",
 };
 

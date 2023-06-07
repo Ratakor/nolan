@@ -99,7 +99,8 @@ write_info(char *buf, size_t siz, unsigned int index)
 	char *p;
 
 	*buf = '\0';
-	for (i = 0; i < LENGTH(fields) - 1; i++) {
+	/* -2 to not include upadte and userid */
+	for (i = 0; i < LENGTH(fields) - 2; i++) {
 		strlcat(buf, fields[i], siz);
 		strlcat(buf, ": ", siz);
 		if (i <= 1) { /* name and kingdom */

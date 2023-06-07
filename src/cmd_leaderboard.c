@@ -125,7 +125,8 @@ write_invalid(char *buf, size_t siz)
 
 	strlcpy(buf, "NO WRONG, this is not a valid category.\n", siz);
 	strlcat(buf, "Valid categories are:\n", siz);
-	for (i = 2; i < LENGTH(fields) - 1; i++) {
+	/* 2 to not include name and kd, -2 to not include userid and update */
+	for (i = 2; i < LENGTH(fields) - 2; i++) {
 		if (i == 5) /* regional rank */
 			continue;
 		strlcat(buf, fields[i], siz);
@@ -212,11 +213,12 @@ leaderboard(char *buf, size_t siz, char *categ, u64snowflake userid)
 {
 	unsigned int i = 2; /* ignore name and kingdom */
 
-	while (i < LENGTH(fields) - 1 &&
+	/* -2 to not include userid and update */
+	while (i < LENGTH(fields) - 2 &&
 	                strcasecmp(fields[i], categ) != 0)
 		i++;
 
-	if (i == LENGTH(fields) - 1 || i == 5) { /* 5 = regional rank */
+	if (i == LENGTH(fields) - 2 || i == 5) { /* 5 = regional rank */
 		write_invalid(buf, siz);
 		return;
 	}

@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "nolan.h"
 
@@ -192,6 +193,7 @@ update_msg(char *buf, int siz, Player *player, unsigned int i)
 	char *p, *plto, *pltn, *pltd;
 	unsigned int j;
 	long old, new, diff;
+	struct tm *tm = gmtime(&players[i].update);
 
 	siz -= snprintf(buf, siz, "%s's profile has been updated.\n\n",
 	                player->name);
@@ -203,7 +205,8 @@ update_msg(char *buf, int siz, Player *player, unsigned int i)
 		p = strchr(buf, '\0');
 	}
 
-	for (j = 2; j < LENGTH(fields) - 1; j++) {
+	/* -2 to not include update and userid */
+	for (j = 2; j < LENGTH(fields) - 2; j++) {
 		if (siz <= 0)
 			warn("nolan: truncation in updatemsg\n");
 		old = ((long *)&players[i])[j];
@@ -228,14 +231,12 @@ update_msg(char *buf, int siz, Player *player, unsigned int i)
 		p = strchr(buf, '\0');
 	}
 
-	/*
-	 * TODO
-	 * New roles: ...
-	 */
+	if (!strftime(p, siz, "\nLast update was on %d %b %Y at %R UTC\n", tm))
+		warn("nolan: strftime: truncation in updatemsg\n");
 
 	/*
 	 * TODO
-	 * Last update was xxx ago
+	 * New roles: ...
 	 */
 
 	return buf;
@@ -303,7 +304,7 @@ save_player_to_file(Player *player)
 	rename(tmpfname, STATS_FILE);
 }
 
-/* will update players, source.csv and roles if Orna FR + post an update msg */
+/* update players, source file, roles if Orna FR and post an update msg */
 void
 update_players(Player *player, struct discord *client,
                const struct discord_message *event)
@@ -373,6 +374,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 		player.name = event->author->username;
 		player.userid = event->author->id;
 	}
+	player.update = time(NULL);
 	for_line(&player, txt);
 	free(txt);
 

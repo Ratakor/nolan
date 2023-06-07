@@ -46,6 +46,7 @@ typedef struct {
 	long reputation;
 	long endless;
 	long codex;
+	time_t update;
 	u64snowflake userid;
 } Player;
 
@@ -58,7 +59,7 @@ typedef struct {
 
 extern Player players[MAX_PLAYERS];
 extern size_t nplayers;
-extern const char *fields[23];
+extern const char *fields[24];
 
 /* init.c */
 void create_folders(void);
