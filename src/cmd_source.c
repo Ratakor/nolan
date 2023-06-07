@@ -3,7 +3,8 @@
 
 #include "nolan.h"
 
-static char *sort_source(char *kingdom, size_t *fszp);
+static char *load_source(size_t *fszp);
+static char *load_sorted_source(size_t *fszp, char *kingdom);
 
 void
 create_slash_source(struct discord *client)
@@ -28,10 +29,36 @@ create_slash_source(struct discord *client)
 }
 
 char *
-sort_source(char *kingdom, size_t *fszp)
+load_source(size_t *fszp)
 {
 	FILE *fp;
-	char *res, line[LINE_SIZE], *kd, *endkd;
+	char *res, line[LINE_SIZE], *end;
+	size_t mfsz = LINE_SIZE + nplayers * LINE_SIZE;
+
+	if ((fp = fopen(STATS_FILE, "r")) == NULL)
+		die("nolan: Failed to open %s (read)\n", STATS_FILE);
+
+	res = emalloc(mfsz);
+	*res = '\0';
+	while (fgets(line, LINE_SIZE, fp) != NULL) {
+		/* skip everything after codex */
+		if ((end = nstrchr(line, DELIM, 22))) {
+			*end = '\n';
+			*(end + 1) = '\0';
+		}
+		strlcat(res, line, mfsz);
+	}
+
+	fclose(fp);
+	*fszp = strlen(res);
+	return res;
+}
+
+char *
+load_sorted_source(size_t *fszp, char *kingdom)
+{
+	FILE *fp;
+	char *res, line[LINE_SIZE], *kd, *endkd, *end;
 	size_t mfsz = LINE_SIZE + nplayers * LINE_SIZE;
 
 	if ((fp = fopen(STATS_FILE, "r")) == NULL)
@@ -39,14 +66,24 @@ sort_source(char *kingdom, size_t *fszp)
 
 	res = emalloc(mfsz);
 	fgets(line, LINE_SIZE, fp); /* fields name */
+	/* skip everything after codex */
+	if ((end = nstrchr(line, DELIM, 22))) {
+		*end = '\n';
+		*(end + 1) = '\0';
+	}
 	strlcpy(res, line, mfsz);
 	while (fgets(line, LINE_SIZE, fp) != NULL) {
 		kd = strchr(line, DELIM) + 1;
-		endkd = nstrchr(line, DELIM, 2);
-		if (endkd)
-			*endkd = '\0';
+		if ((endkd = nstrchr(line, DELIM, 2)))
+			* endkd = '\0';
 		if (strcmp(kd, kingdom) == 0) {
-			*endkd = DELIM;
+			if (endkd)
+				*endkd = DELIM;
+			/* skip everything after codex */
+			if ((end = nstrchr(line, DELIM, 22))) {
+				*end = '\n';
+				*(end + 1) = '\0';
+			}
 			strlcat(res, line, mfsz);
 		}
 	}
@@ -71,12 +108,12 @@ on_source(struct discord *client, const struct discord_message *event)
 #endif /* DEVEL */
 
 	if (strlen(event->content) == 0)
-		fbuf = cog_load_whole_file(STATS_FILE, &fsiz);
+		fbuf = load_source(&fsiz);
 	else
-		fbuf = sort_source(event->content, &fsiz);
+		fbuf = load_sorted_source(&fsiz, event->content);
 
 	struct discord_attachment attachment = {
-		.filename = STATS_FILE,
+		.filename = FILENAME,
 		.content = fbuf,
 		.size = fsiz
 	};
@@ -99,9 +136,10 @@ on_source_interaction(struct discord *client,
 	char *fbuf = NULL;
 
 	if (!event->data || !event->data->options)
-		fbuf = cog_load_whole_file(STATS_FILE, &fsiz);
+		fbuf = load_source(&fsiz);
 	else
-		fbuf = sort_source(event->data->options->array[0].value, &fsiz);
+		fbuf = load_sorted_source(&fsiz,
+		                          event->data->options->array[0].value);
 
 	struct discord_attachment attachment = {
 		.filename = FILENAME,

@@ -1,3 +1,6 @@
+#ifndef NOLAN_H
+#define NOLAN_H
+
 #include <concord/discord.h>
 
 #include "../config.h"
@@ -118,3 +121,5 @@ void create_slash_uraid(struct discord *client);
 void on_uraid(struct discord *client, const struct discord_message *event);
 void on_uraid_interaction(struct discord *client,
 		const struct discord_interaction *event);
+
+#endif /* NOLAN_H */

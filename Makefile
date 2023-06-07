@@ -1,6 +1,6 @@
 NAME         = nolan
 PREFIX      ?= /usr/local
-CC          ?= cc
+CC           = cc
 
 BUILD_DIR   ?= build
 SRC_DIR     ?= src
@@ -8,9 +8,16 @@ SRC_DIR     ?= src
 SRCS        := ${wildcard ${SRC_DIR}/*.c}
 OBJS        := ${SRCS:%=${BUILD_DIR}/%.o}
 
+DISCORDLIBS  = -ldiscord -lcurl -lpthread
+TESSLIBS     = -ltesseract -lleptonica
+GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
+
+INCS         = -I/usr/local/include -I/usr/include
+LIBS         = -L/usr/lib -L/usr/local/lib ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
+
 DEBUG_FLAGS  = -O0 -g -W -Wall -Wmissing-prototypes
-CFLAGS      += -std=c99 -pedantic -D_DEFAULT_SOURCE
-LDFLAGS     += -ltesseract -lleptonica -ldiscord -lcurl -lpthread -lgd
+CFLAGS      += -std=c99 -pedantic -D_DEFAULT_SOURCE ${INCS}
+LDFLAGS     += ${LIBS}
 
 all: options ${NAME}
 
