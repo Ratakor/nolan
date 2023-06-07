@@ -165,6 +165,7 @@ parse_line(Player *player, char *line)
 	} else if (strncmp(line, "REPUTATION", LEN("REPUTATION")) == 0) {
 		player->reputation = atol(trim_all(line));
 	} else if (strncmp(line, "ENDLESS RECORD", LEN("ENDLESS RECORD")) == 0 ||
+	                strncmp(line, "RECORD DU MODE", LEN("RECORD DU MODE")) == 0 ||
 	                strncmp(line, "RECORD DU MODE SANS-FIN", LEN("RECORD DU MODE SANS-FIN")) == 0) {
 		player->endless = atol(trim_all(line));
 	} else if (strncmp(line, "ENTRIES COMPLETED", LEN("ENTRIES COMPLETED")) == 0 ||

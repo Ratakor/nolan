@@ -50,7 +50,7 @@ write_invalid(char *buf, size_t siz)
 	strlcpy(buf, "This player does not exist in the database.\n", siz);
 	strlcat(buf, "To check a player's info type /info ", siz);
 	strlcat(buf, "@username or /info username.\n", siz);
-	strlcat(buf, "To check your info just type ?info.", siz);
+	strlcat(buf, "To check your info just type /info.", siz);
 }
 
 /* TODO */
