@@ -151,6 +151,7 @@ parse_line(Player *player, char *line)
 	                strncmp(line, "DONJONS TERMINES", LEN("DONJONS TERMINES")) == 0) {
 		player->dungeons = atol(trim_all(line));
 	} else if (strncmp(line, "COLISEUM WINS", LEN("COLISEUM WINS")) == 0 ||
+	                strncmp(line, "VICROIRE DANS LE", LEN("VICTOIRES DANS LE")) == 0 ||
 	                strncmp(line, "VICTOIRES DANS LE COLISEE", LEN("VICTOIRES DANS LE COLISEE")) == 0) {
 		player->coliseum = atol(trim_all(line));
 	} else if (strncmp(line, "ITEMS UPGRADED", LEN("ITEMS UPGRADED")) == 0 ||

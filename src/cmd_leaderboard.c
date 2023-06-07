@@ -5,7 +5,7 @@
 
 static void write_invalid(char *buf, size_t siz);
 static int compare(const void *p1, const void *p2);
-static void write_player(char *buf, size_t siz, unsigned int i);
+static void write_player(char *buf, size_t siz, unsigned int i, int author);
 static void write_leaderboard(char *buf, size_t siz, u64snowflake userid);
 static void leaderboard(char *buf, size_t siz, char *txt, u64snowflake userid);
 
@@ -153,12 +153,15 @@ compare(const void *p1, const void *p2)
 }
 
 void
-write_player(char *buf, size_t siz, unsigned int i)
+write_player(char *buf, size_t siz, unsigned int i, int author)
 {
 	size_t ssiz = 32;
 	char *plt, stat[ssiz];
 
-	snprintf(buf, siz, "%d. %s: ", i + 1, players[i].name);
+	if (author)
+		snprintf(buf, siz, "%d. **%s**: ", i + 1, players[i].name);
+	else
+		snprintf(buf, siz, "%d. %s: ", i + 1, players[i].name);
 	if (category == 7) { /* playtime */
 		plt = playtime_to_str(((long *)&players[i])[category]);
 		strlcat(buf, plt, siz);
@@ -184,9 +187,12 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 	strlcpy(buf, fields[category], siz);
 	strlcat(buf, ":\n", siz);
 	for (i = 0; i < lb_max; i++) {
-		if (userid == players[i].userid)
+		if (userid == players[i].userid) {
 			in_lb = 1;
-		write_player(player, psiz, i);
+			write_player(player, psiz, i, 1);
+		} else {
+			write_player(player, psiz, i, 0);
+		}
 		rsiz = strlcat(buf, player, siz);
 		if (rsiz >= siz) {
 			warn("nolan: truncation happened while writing\
@@ -199,7 +205,7 @@ leaderboard, this is probably because LB_MAX is too big\n");
 		i = lb_max;
 		while (i < nplayers && players[i].userid != userid)
 			i++;
-		write_player(player, psiz, i);
+		write_player(player, psiz, i, 1);
 		rsiz = strlcat(buf, player, siz);
 		if (rsiz >= siz) {
 			warn("nolan: truncation happened while writing\
