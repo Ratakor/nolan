@@ -13,6 +13,7 @@ A discord bot for Orna.
 - ascensions (track mats)
 
 ### chore
+- add documentation
 - rework DIFF in ocr.c
 - rework roles
 - refactor parseline() in stats.c
@@ -20,5 +21,5 @@ A discord bot for Orna.
 ### misc
 - DEINELENSY -> Damaquandey
 - use sql instead of csv
-- better wrong image input detection
+- better wrong image input detection for raids
 - async ?

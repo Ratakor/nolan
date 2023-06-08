@@ -11,8 +11,8 @@ static long playtime_to_long(char *playtime, char *str);
 static char *trim_all(char *str);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
-static char *update_msg(char *buf, int siz, Player *player, unsigned int i);
-static void update_player(Player *player, unsigned int i);
+static void create_player(Player *player, unsigned int i);
+static char *update_player(char *buf, int siz, Player *player, unsigned int i);
 static void save_player_to_file(Player *player);
 static void update_players(Player *player, struct discord *client,
                            const struct discord_message *event);
@@ -190,8 +190,20 @@ for_line(Player *player, char *txt)
 	}
 }
 
+
+void
+create_player(Player *player, unsigned int i)
+{
+	unsigned int j;
+
+	players[i].name = strndup(player->name, MAX_USERNAME_LEN);
+	players[i].kingdom = strndup(player->kingdom, MAX_KINGDOM_LEN);
+	for (j = 2; j < LENGTH(fields); j++)
+		((long *)&players[i])[j] = ((long *)player)[j];
+}
+
 char *
-update_msg(char *buf, int siz, Player *player, unsigned int i)
+update_player(char *buf, int siz, Player *player, unsigned int i)
 {
 	char *p, *plto, *pltn, *pltd;
 	unsigned int j;
@@ -202,10 +214,17 @@ update_msg(char *buf, int siz, Player *player, unsigned int i)
 	                player->name);
 	p = strchr(buf, '\0');
 
+	/* update player */
+	if (player->name)
+		strlcpy(players[i].name, player->name, MAX_USERNAME_LEN);
+
 	if (strcmp(players[i].kingdom, player->kingdom) != 0) {
 		siz -= snprintf(p, siz, "%s: %s -> %s\n", fields[1],
 		                players[i].kingdom, player->kingdom);
 		p = strchr(buf, '\0');
+
+		/* update player */
+		strlcpy(players[i].kingdom, player->kingdom, MAX_KINGDOM_LEN);
 	}
 
 	/* -2 to not include update and userid */
@@ -215,7 +234,8 @@ update_msg(char *buf, int siz, Player *player, unsigned int i)
 		old = ((long *)&players[i])[j];
 		new = ((long *)player)[j];
 		diff = new - old;
-		if (new == 0 || diff == 0)
+		/* don't update if stat decreases except for ranks */
+		if (diff <= 0 && j != 4 && j != 5 && j != 6)
 			continue;
 
 		if (j == 7) { /* playtime */
@@ -232,10 +252,17 @@ update_msg(char *buf, int siz, Player *player, unsigned int i)
 			                fields[j], old, new, diff);
 		}
 		p = strchr(buf, '\0');
+
+		/* update player */
+		((long *)&players[i])[j] = new;
 	}
 
 	if (!strftime(p, siz, "\nLast update was on %d %b %Y at %R UTC\n", tm))
 		warn("nolan: strftime: truncation in updatemsg\n");
+
+	players[i].update = player->update;
+	if (player->userid)
+		players[i].userid = player->userid;
 
 	/*
 	 * TODO
@@ -243,21 +270,6 @@ update_msg(char *buf, int siz, Player *player, unsigned int i)
 	 */
 
 	return buf;
-}
-
-void
-update_player(Player *player, unsigned int i)
-{
-	unsigned int j;
-
-	free(players[i].name);
-	free(players[i].kingdom);
-	players[i].name = strndup(player->name, MAX_USERNAME_LEN);
-	players[i].kingdom = strndup(player->kingdom, MAX_KINGDOM_LEN);
-	for (j = 2; j < LENGTH(fields); j++) {
-		if (((long *)player)[j] != 0)
-			((long *)&players[i])[j] = ((long *)player)[j];
-	}
 }
 
 /* Save player to file and return player's index in file if it was found */
@@ -316,24 +328,29 @@ update_players(Player *player, struct discord *client,
 	int r;
 	char buf[MAX_MESSAGE_LEN];
 
-	/* while (i < nplayers && players[i].userid != player->userid) */
-	/* while (i < nplayers && strcmp(players[i].name, player->name) != 0) */
-	while (i < nplayers && strcasecmp(players[i].name, player->name) != 0)
-		i++;
+	if (player->userid) {
+		while (i < nplayers && players[i].userid != player->userid)
+			i++;
+	} else {
+		/* should use strcmp instead */
+		while (i < nplayers &&
+		                strcasecmp(players[i].name, player->name) != 0)
+			i++;
+	}
 
 	if (i == nplayers) { /* new player */
 		nplayers++;
 		if (nplayers > MAX_PLAYERS)
 			die("nolan: There is too much players (max:%d)\n",
 			    MAX_PLAYERS);
+		create_player(player, i);
 		r = snprintf(buf, sizeof(buf),
 		             "**%s** has been registrated in the database.\n\n",
 		             player->name);
 		write_info(buf + r, sizeof(buf) - r, player);
 	} else {
-		update_msg(buf, (int)sizeof(buf), player, i);
+		update_player(buf, (int)sizeof(buf), player, i);
 	}
-	update_player(player, i);
 	save_player_to_file(&players[i]);
 #ifndef DEVEL
 	if (event->guild_id == ROLE_GUILD_ID)
