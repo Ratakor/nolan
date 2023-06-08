@@ -144,7 +144,7 @@ info_from_txt(char *buf, size_t siz, char *txt)
 		return;
 	}
 
-	while (i < nplayers && strcmp(players[i].name, txt) != 0)
+	while (i < nplayers && strcasecmp(players[i].name, txt) != 0)
 		i++;
 	if (i == nplayers)
 		write_invalid(buf, siz);

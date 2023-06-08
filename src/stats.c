@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -316,7 +317,8 @@ update_players(Player *player, struct discord *client,
 	char buf[MAX_MESSAGE_LEN];
 
 	/* while (i < nplayers && players[i].userid != player->userid) */
-	while (i < nplayers && strcmp(players[i].name, player->name) != 0)
+	/* while (i < nplayers && strcmp(players[i].name, player->name) != 0) */
+	while (i < nplayers && strcasecmp(players[i].name, player->name) != 0)
 		i++;
 
 	if (i == nplayers) { /* new player */
@@ -349,7 +351,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 {
 	unsigned int i;
 	int ham = event->author->id == HAM && strlen(event->content) > 0;
-	char *txt, fname[128];
+	char *txt, fname[128], username[MAX_USERNAME_LEN];
 	Player player;
 
 	/* not always a jpg but idc */
@@ -373,11 +375,24 @@ on_stats(struct discord *client, const struct discord_message *event)
 
 	memset(&player, 0, sizeof(player));
 	if (ham) {
-		player.name = event->content;
+		if (strlen(event->content) >= MAX_USERNAME_LEN) {
+			struct discord_create_message msg = {
+				.content = "Error: Username too long"
+			};
+			discord_create_message(client, event->channel_id, &msg,
+			                       NULL);
+			free(txt);
+			return;
+		}
+		for (i = 0; i < strlen(event->content); i++)
+			username[i] = tolower(event->content[i]);
 	} else {
-		player.name = event->author->username;
+		for (i = 0; i < strlen(event->author->username); i++)
+			username[i] = tolower(event->author->username[i]);
 		player.userid = event->author->id;
 	}
+	username[i] = '\0';
+	player.name = username;
 	player.update = time(NULL);
 	for_line(&player, txt);
 	free(txt);
