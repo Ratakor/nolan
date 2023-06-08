@@ -397,6 +397,12 @@ on_stats(struct discord *client, const struct discord_message *event)
 	for_line(&player, txt);
 	free(txt);
 
+	/* detect wrong images */
+	i = 2;
+	while (((long *)&player)[i] == 0 && i++ < LENGTH(fields) - 2);
+	if (i == LENGTH(fields) - 2)
+		return;
+
 	if (player.kingdom == NULL)
 		player.kingdom = "(null)";
 
