@@ -95,26 +95,25 @@ void
 write_info(char *buf, size_t siz, const Player *player)
 {
 	unsigned int i;
-	char *p;
+	char *p = buf, *plt;
 
-	*buf = '\0';
 	/* -2 to not include upadte and userid */
 	for (i = 0; i < LENGTH(fields) - 2; i++) {
-		strlcat(buf, fields[i], siz);
-		strlcat(buf, ": ", siz);
 		if (i <= 1) { /* name and kingdom */
-			strlcat(buf, ((char **)player)[i], siz);
+			snprintf(p, siz, "%s: %s\n", fields[i],
+			         ((char **)player)[i]);
 		} else if (i == 7) { /* playtime */
-			p = playtime_to_str(((long *)player)[i]);
-			strlcat(buf, p, siz);
-			free(p);
-		} else {
-			p = strchr(buf, '\0');
-			snprintf(p, siz, "%'ld", ((long *)player)[i]);
+			plt = playtime_to_str(((long *)player)[i]);
+			snprintf(p, siz, "%s: %s\n", fields[i], plt);
+			free(plt);
+		} else if (((long *)player)[i]) {
+			snprintf(p, siz, "%s: %'ld", fields[i],
+			         ((long *)player)[i]);
 			if (i == 18) /* distance */
 				strlcat(buf, "m", siz);
+			strlcat(buf, "\n", siz);
 		}
-		strlcat(buf, "\n", siz);
+		p = strchr(buf, '\0');
 	}
 }
 
