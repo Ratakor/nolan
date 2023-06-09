@@ -8,7 +8,7 @@
 #define LEN(X)        (sizeof X - 1)
 
 static long playtime_to_long(char *playtime, char *str);
-static char *trim_all(char *str);
+static long trim_stat(char *str);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
 static void create_player(Player *player, unsigned int i);
@@ -16,6 +16,36 @@ static char *update_player(char *buf, int siz, Player *player, unsigned int i);
 static void save_player_to_file(Player *player);
 static void update_players(Player *player, struct discord *client,
                            const struct discord_message *event);
+static void stats(struct discord *client, const struct discord_message *event);
+
+void
+create_slash_stats(struct discord *client)
+{
+	struct discord_application_command_option options[] = {
+		{
+			.type = DISCORD_APPLICATION_OPTION_ATTACHMENT,
+			.name = "stats",
+			.description = "stats screenshot",
+			.required = true
+		},
+		{
+			.type = DISCORD_APPLICATION_OPTION_STRING,
+			.name = "userid",
+			.description = "ONLY FOR HAM, discord @",
+			.required = false
+		}
+	};
+	struct discord_create_global_application_command cmd = {
+		.name = "stats",
+		.description = "Update your Orna stats",
+		.options = &(struct discord_application_command_options)
+		{
+			.size = LENGTH(options),
+			.array = options
+		}
+	};
+	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
+}
 
 long
 playtime_to_long(char *playtime, char str[])
@@ -68,20 +98,21 @@ playtime_to_str(long playtime)
 	return buf;
 }
 
-/* trim everything that is not a number or a left parenthesis */
-char *
-trim_all(char *str)
+/* trim everything that is not a number and replace | with 1 */
+long
+trim_stat(char *str)
 {
-	const char *r = str;
-	char *w = str;
+	const char *p = str;
+	long stat = 0;
 
 	do {
-		if ((*r >= 48 && *r <= 57) || *r == '(')
-			*w++ = *r;
-	} while (*r++);
-	*w = '\0';
+		if (*p >= '0' && *p <= '9')
+			stat = (stat * 10) + (*p - '0');
+		else if (*p == '|')
+			stat = (stat * 10) + 1;
+	} while (*p++ && *p != '(');
 
-	return str;
+	return stat;
 }
 
 void
@@ -117,62 +148,62 @@ parse_line(Player *player, char *line)
 
 	if (strncmp(line, "ASCENSION LEVEL", LEN("ASCENSION LEVEL")) == 0 ||
 	                strncmp(line, "NIVEAU D'ELEVATION", LEN("NIVEAU D'ELEVATION")) == 0) {
-		player->ascension = atol(trim_all(line));
+		player->ascension = trim_stat(line);
 	} else if (strncmp(line, "LEVEL", LEN("LEVEL")) == 0 ||
 	                strncmp(line, "NIVEAU", LEN("NIVEAU")) == 0) {
-		player->level = atol(trim_all(line));
+		player->level = trim_stat(line);
 	} else if (strncmp(line, "GLOBAL RANK", LEN("GLOBAL RANK")) == 0 ||
 	                strncmp(line, "RANG GLOBAL", LEN("RANG GLOBAL")) == 0) {
-		player->global = atol(trim_all(line));
+		player->global = trim_stat(line);
 	} else if (strncmp(line, "REGIONAL RANK", LEN("REGIONAL RANK")) == 0 ||
 	                strncmp(line, "RANG REGIONAL", LEN("RANG REGIONAL")) == 0) {
-		player->regional = atol(trim_all(line));
+		player->regional = trim_stat(line);
 	} else if (strncmp(line, "COMPETITIVE RANK", LEN("COMPETITIVE RANK")) == 0 ||
 	                strncmp(line, "RANG COMPETITIF", LEN("RANG COMPETITIF")) == 0) {
-		player->competitive = atol(trim_all(line));
+		player->competitive = trim_stat(line);
 	} else if (strncmp(line, "MONSTERS SLAIN", LEN("MONSTERS SLAIN")) == 0 ||
 	                strncmp(line, "MONSTRES TUES", LEN("MONSTRES TUES")) == 0) {
-		player->monsters = atol(trim_all(line));
+		player->monsters = trim_stat(line);
 	} else if (strncmp(line, "BOSSES SLAIN", LEN("BOSSES SLAIN")) == 0 ||
 	                strncmp(line, "BOSS TUES", LEN("BOSS TUES")) == 0) {
-		player->bosses = atol(trim_all(line));
+		player->bosses = trim_stat(line);
 	} else if (strncmp(line, "PLAYERS DEFEATED", LEN("PLAYERS DEFEATED")) == 0 ||
 	                strncmp(line, "JOUEURS VAINCUS", LEN("JOUEURS VAINCUS")) == 0) {
-		player->players = atol(trim_all(line));
+		player->players = trim_stat(line);
 	} else if (strncmp(line, "QUESTS COMPLETED", LEN("QUESTS COMPLETED")) == 0 ||
 	                strncmp(line, "QUETES TERMINEES", LEN("QUETES TERMINEES")) == 0) {
-		player->quests = atol(trim_all(line));
+		player->quests = trim_stat(line);
 	} else if (strncmp(line, "AREAS EXPLORED", LEN("AREAS EXPLORED")) == 0 ||
 	                strncmp(line, "TERRES EXPLOREES", LEN("TERRES EXPLOREES")) == 0) {
-		player->explored = atol(trim_all(line));
+		player->explored = trim_stat(line);
 	} else if (strncmp(line, "AREAS TAKEN", LEN("AREAS TAKEN")) == 0 ||
 	                strncmp(line, "TERRES PRISES", LEN("TERRES PRISES")) == 0) {
-		player->taken = atol(trim_all(line));
+		player->taken = trim_stat(line);
 	} else if (strncmp(line, "DUNGEONS CLEARED", LEN("DUNGEONS CLEARED")) == 0 ||
 	                strncmp(line, "DONJONS TERMINES", LEN("DONJONS TERMINES")) == 0) {
-		player->dungeons = atol(trim_all(line));
+		player->dungeons = trim_stat(line);
 	} else if (strncmp(line, "COLISEUM WINS", LEN("COLISEUM WINS")) == 0 ||
 	                strncmp(line, "VICROIRE DANS LE", LEN("VICTOIRES DANS LE")) == 0 ||
 	                strncmp(line, "VICTOIRES DANS LE COLISEE", LEN("VICTOIRES DANS LE COLISEE")) == 0) {
-		player->coliseum = atol(trim_all(line));
+		player->coliseum = trim_stat(line);
 	} else if (strncmp(line, "ITEMS UPGRADED", LEN("ITEMS UPGRADED")) == 0 ||
 	                strncmp(line, "OBJETS AMELIORES", LEN("OBJETS AMELIORES")) == 0) {
-		player->items = atol(trim_all(line));
+		player->items = trim_stat(line);
 	} else if (strncmp(line, "FISH CAUGHT", LEN("FISH CAUGHT")) == 0 ||
 	                strncmp(line, "POISSONS ATTRAPES", LEN("POISSONS ATTRAPES")) == 0) {
-		player->fish = atol(trim_all(line));
+		player->fish = trim_stat(line);
 	} else if (strncmp(line, "DISTANCE TRAVELLED", LEN("DISTANCE TRAVELLED")) == 0 ||
 	                strncmp(line, "DISTANCE VOYAGEE", LEN("DISTANCE VOYAGEE")) == 0) {
-		player->distance = atol(trim_all(line));
+		player->distance = trim_stat(line);
 	} else if (strncmp(line, "REPUTATION", LEN("REPUTATION")) == 0) {
-		player->reputation = atol(trim_all(line));
+		player->reputation = trim_stat(line);
 	} else if (strncmp(line, "ENDLESS RECORD", LEN("ENDLESS RECORD")) == 0 ||
 	                strncmp(line, "RECORD DU MODE", LEN("RECORD DU MODE")) == 0 ||
 	                strncmp(line, "RECORD DU MODE SANS-FIN", LEN("RECORD DU MODE SANS-FIN")) == 0) {
-		player->endless = atol(trim_all(line));
+		player->endless = trim_stat(line);
 	} else if (strncmp(line, "ENTRIES COMPLETED", LEN("ENTRIES COMPLETED")) == 0 ||
 	                strncmp(line, "RECHERCHES TERMINEES", LEN("RECHERCHES TERMINEES")) == 0) {
-		player->codex = atol(trim_all(line));
+		player->codex = trim_stat(line);
 	}
 }
 
@@ -234,8 +265,14 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 		old = ((long *)&players[i])[j];
 		new = ((long *)player)[j];
 		diff = new - old;
+		/*
+		 * this is to prevent random tesseract error but block the user
+		 * from correcting the error by sending a new screenshot
+		 */
+		if (new == 0 || diff == 0)
+			continue;
 		/* don't update if stat decreases except for ranks */
-		if (diff <= 0 && j != 4 && j != 5 && j != 6)
+		if (diff < 0 && j != 4 && j != 5 && j != 6)
 			continue;
 
 		if (j == 7) { /* playtime */
@@ -259,8 +296,9 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 
 	if (!strftime(p, siz, "\nLast update was on %d %b %Y at %R UTC\n", tm))
 		warn("nolan: strftime: truncation in updatemsg\n");
-
 	players[i].update = player->update;
+
+	/* useless */
 	if (player->userid)
 		players[i].userid = player->userid;
 
@@ -320,6 +358,7 @@ save_player_to_file(Player *player)
 }
 
 /* update players, source file, roles if Orna FR and post an update msg */
+/* TODO: rework to not need client/event */
 void
 update_players(Player *player, struct discord *client,
                const struct discord_message *event)
@@ -332,9 +371,8 @@ update_players(Player *player, struct discord *client,
 		while (i < nplayers && players[i].userid != player->userid)
 			i++;
 	} else {
-		/* should use strcmp instead */
 		while (i < nplayers &&
-		                strcasecmp(players[i].name, player->name) != 0)
+		                strcmp(players[i].name, player->name) != 0)
 			i++;
 	}
 
@@ -364,21 +402,15 @@ update_players(Player *player, struct discord *client,
 }
 
 void
-on_stats(struct discord *client, const struct discord_message *event)
+stats(struct discord *client, const struct discord_message *event)
 {
 	unsigned int i;
-	int ham = event->author->id == HAM && strlen(event->content) > 0;
 	char *txt, fname[128], username[MAX_USERNAME_LEN];
 	Player player;
 
 	/* not always a jpg but idc */
-	if (ham) {
-		snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGES_FOLDER,
-		         event->content);
-	} else {
-		snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGES_FOLDER,
-		         event->author->username);
-	}
+	snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGES_FOLDER,
+	         event->author->username);
 	curl(event->attachments->array->url, fname);
 	txt = ocr(fname, "eng");
 	if (txt == NULL) {
@@ -391,24 +423,12 @@ on_stats(struct discord *client, const struct discord_message *event)
 	}
 
 	memset(&player, 0, sizeof(player));
-	if (ham) {
-		if (strlen(event->content) >= MAX_USERNAME_LEN) {
-			struct discord_create_message msg = {
-				.content = "Error: Username too long"
-			};
-			discord_create_message(client, event->channel_id, &msg,
-			                       NULL);
-			free(txt);
-			return;
-		}
-		for (i = 0; i < strlen(event->content); i++)
-			username[i] = tolower(event->content[i]);
-	} else {
-		for (i = 0; i < strlen(event->author->username); i++)
-			username[i] = tolower(event->author->username[i]);
-		player.userid = event->author->id;
-	}
+
+	for (i = 0; i < strlen(event->author->username); i++)
+		username[i] = tolower(event->author->username[i]);
 	username[i] = '\0';
+
+	player.userid = event->author->id;
 	player.name = username;
 	player.update = time(NULL);
 	for_line(&player, txt);
@@ -439,4 +459,33 @@ on_stats(struct discord *client, const struct discord_message *event)
 	}
 
 	update_players(&player, client, event);
+}
+
+void
+on_stats(struct discord *client, const struct discord_message *event)
+{
+	stats(client, event);
+}
+
+void
+on_stats_interaction(struct discord *client,
+                     const struct discord_interaction *event)
+{
+	char buf[MAX_MESSAGE_LEN];
+
+	if (!event->data || !event->data->options)
+		return;
+
+	fprintf(stderr, "%s\n", event->data->options->array[0].value);
+
+	/* struct discord_interaction_response params = { */
+	/* 	.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE, */
+	/* 	.data = &(struct discord_interaction_callback_data) */
+	/* 	{ */
+	/* 		.content = buf, */
+	/* 		.flags = DISCORD_MESSAGE_EPHEMERAL */
+	/* 	} */
+	/* }; */
+	/* discord_create_interaction_response(client, event->id, event->token, */
+	/*                                     &params, NULL); */
 }

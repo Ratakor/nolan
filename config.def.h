@@ -3,7 +3,6 @@
 #define LB_MAX        10                  /* Max players to be shown with ?lb */
 #define APP_ID        1109604402102273245 /* The bot's application ID */
 #define ADMIN         277534384175841280  /* Admin user ID for bug reports */
-#define HAM           245010787817488384  /* user ID to add players by name */
 #define RAID_GUILD_ID 0                   /* Server ID for raids */
 #define TOKEN         "YOUR-BOT-TOKEN"
 #define PREFIX        "?"

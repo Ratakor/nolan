@@ -77,8 +77,11 @@ int crop(char *fname, int type);
 char *ocr(char *fname, char *lang);
 
 /* stats.c */
+void create_slash_stats(struct discord *client);
 char *playtime_to_str(long playtime);
 void on_stats(struct discord *client, const struct discord_message *event);
+void on_stats_interaction(struct discord *client,
+		const struct discord_interaction *event);
 
 /* raids.c */
 void on_raids(struct discord *client, const struct discord_message *event);

@@ -55,9 +55,7 @@ main(void)
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT |
 	                    DISCORD_GATEWAY_GUILD_MEMBERS);
 	discord_set_prefix(client, PREFIX);
-#ifndef DEVEL
 	create_slash_commands(client);
-#endif /* DEVEL */
 	discord_set_on_ready(client, on_ready);
 	discord_set_on_interaction_create(client, &on_interaction);
 	discord_set_on_message_create(client, on_message);
