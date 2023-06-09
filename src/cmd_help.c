@@ -34,6 +34,7 @@ probably way too much channels for stats\n");
 	}
 	strlcat(buf, "to enter the database.\n", siz);
 	strlcat(buf, "Commands:\n", siz);
+	strlcat(buf, "\t/stats *screenshot*\n", siz);
 	strlcat(buf, "\t/info *[[@]user]*\n", siz);
 	strlcat(buf, "\t/leaderboard *category*\n", siz);
 	/* catstr(buf, "\t/correct [category] [corrected value]\n", siz); */

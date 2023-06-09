@@ -14,9 +14,9 @@ static void for_line(Player *player, char *txt);
 static void create_player(Player *player, unsigned int i);
 static char *update_player(char *buf, int siz, Player *player, unsigned int i);
 static void save_player_to_file(Player *player);
-static void update_players(Player *player, struct discord *client,
-                           const struct discord_message *event);
-static void stats(struct discord *client, const struct discord_message *event);
+static void update_players(char *buf, size_t siz, Player *player);
+static void stats(char *buf, size_t siz, char *url, char *username,
+                  u64snowflake userid);
 
 void
 create_slash_stats(struct discord *client)
@@ -28,12 +28,14 @@ create_slash_stats(struct discord *client)
 			.description = "stats screenshot",
 			.required = true
 		},
+		/*
 		{
 			.type = DISCORD_APPLICATION_OPTION_STRING,
 			.name = "userid",
 			.description = "ONLY FOR HAM, discord @",
 			.required = false
 		}
+		*/
 	};
 	struct discord_create_global_application_command cmd = {
 		.name = "stats",
@@ -128,6 +130,12 @@ parse_line(Player *player, char *line)
 	}
 	if (strncmp(line, "ROYAUME", LEN("ROYAUME")) == 0) {
 		str = "ROYAUME ";
+		while (*str && (*line++ == *str++));
+		player->kingdom = line;
+		return;
+	}
+	if (strncmp(line, "\\ele]]", LEN("\\ele]]")) == 0) { /* tess madness */
+		str = "\\ele]] ";
 		while (*str && (*line++ == *str++));
 		player->kingdom = line;
 		return;
@@ -357,15 +365,13 @@ save_player_to_file(Player *player)
 	rename(tmpfname, STATS_FILE);
 }
 
-/* update players, source file, roles if Orna FR and post an update msg */
-/* TODO: rework to not need client/event */
+/* update players, source file, roles if Orna FR and write the update msg */
+/* TODO: rework the while loop */
 void
-update_players(Player *player, struct discord *client,
-               const struct discord_message *event)
+update_players(char *buf, size_t siz, Player *player)
 {
 	unsigned int i = 0;
 	int r;
-	char buf[MAX_MESSAGE_LEN];
 
 	if (player->userid) {
 		while (i < nplayers && players[i].userid != player->userid)
@@ -382,54 +388,45 @@ update_players(Player *player, struct discord *client,
 			die("nolan: There is too much players (max:%d)\n",
 			    MAX_PLAYERS);
 		create_player(player, i);
-		r = snprintf(buf, sizeof(buf),
+		r = snprintf(buf, siz,
 		             "**%s** has been registrated in the database.\n\n",
 		             player->name);
-		write_info(buf + r, sizeof(buf) - r, player);
+		write_info(buf + r, siz - r, player);
 	} else {
-		update_player(buf, (int)sizeof(buf), player, i);
+		update_player(buf, siz, player, i);
 	}
 	save_player_to_file(&players[i]);
 #ifndef DEVEL
 	if (event->guild_id == ROLE_GUILD_ID)
 		update_roles(client, event->author->id, &players[i]);
 #endif /* DEVEL */
-
-	struct discord_create_message msg = {
-		.content = buf
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
 }
 
 void
-stats(struct discord *client, const struct discord_message *event)
+stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid)
 {
 	unsigned int i;
-	char *txt, fname[128], username[MAX_USERNAME_LEN];
+	char *txt, fname[128], lower_username[MAX_USERNAME_LEN];
 	Player player;
 
 	/* not always a jpg but idc */
-	snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGES_FOLDER,
-	         event->author->username);
-	curl(event->attachments->array->url, fname);
+	snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGES_FOLDER, username);
+	curl(url, fname);
 	txt = ocr(fname, "eng");
 	if (txt == NULL) {
 		warn("nolan: Failed to read stats image\n");
-		struct discord_create_message msg = {
-			.content = "Error: Failed to read image"
-		};
-		discord_create_message(client, event->channel_id, &msg, NULL);
+		strlcpy(buf, "Error: Failed to read image", siz);
 		return;
 	}
 
 	memset(&player, 0, sizeof(player));
 
-	for (i = 0; i < strlen(event->author->username); i++)
-		username[i] = tolower(event->author->username[i]);
-	username[i] = '\0';
+	for (i = 0; i < strlen(username); i++)
+		lower_username[i] = tolower(username[i]);
+	lower_username[i] = '\0';
 
-	player.userid = event->author->id;
-	player.name = username;
+	player.name = lower_username;
+	player.userid = userid;
 	player.update = time(NULL);
 	for_line(&player, txt);
 	free(txt);
@@ -449,43 +446,56 @@ stats(struct discord *client, const struct discord_message *event)
 		while (i > 0 && strcmp(player.kingdom, kingdoms[i++]) != 0);
 
 		if (i == 0) {
-			struct discord_create_message msg = {
-				.content = "Sorry you're not part of the kingdom :/"
-			};
-			discord_create_message(client, event->channel_id, &msg,
-			                       NULL);
+			strlcpy(buf, "Sorry you're not part of the kingdom :/",
+			        siz);
 			return;
 		}
 	}
 
-	update_players(&player, client, event);
+	update_players(buf, siz, &player);
 }
 
 void
 on_stats(struct discord *client, const struct discord_message *event)
 {
-	stats(client, event);
+	char buf[MAX_MESSAGE_LEN] = "";
+
+	stats(buf,
+	      sizeof(buf),
+	      event->attachments->array[0].url,
+	      event->author->username,
+	      event->author->id);
+
+	struct discord_create_message msg = {
+		.content = buf
+	};
+	discord_create_message(client, event->channel_id, &msg, NULL);
 }
 
 void
 on_stats_interaction(struct discord *client,
                      const struct discord_interaction *event)
 {
-	char buf[MAX_MESSAGE_LEN];
+	char buf[MAX_MESSAGE_LEN] = "";
 
 	if (!event->data || !event->data->options)
 		return;
 
-	fprintf(stderr, "%s\n", event->data->options->array[0].value);
+	stats(buf,
+	      sizeof(buf),
+	      event->data->resolved->attachments->array[0].url,
+	      event->member->user->username,
+	      event->member->user->id);
 
-	/* struct discord_interaction_response params = { */
-	/* 	.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE, */
-	/* 	.data = &(struct discord_interaction_callback_data) */
-	/* 	{ */
-	/* 		.content = buf, */
-	/* 		.flags = DISCORD_MESSAGE_EPHEMERAL */
-	/* 	} */
-	/* }; */
-	/* discord_create_interaction_response(client, event->id, event->token, */
-	/*                                     &params, NULL); */
+
+	struct discord_interaction_response params = {
+		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
+		.data = &(struct discord_interaction_callback_data)
+		{
+			.content = buf,
+			.flags = DISCORD_MESSAGE_EPHEMERAL
+		}
+	};
+	discord_create_interaction_response(client, event->id, event->token,
+	                                    &params, NULL);
 }
