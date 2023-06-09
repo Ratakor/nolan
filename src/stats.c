@@ -15,9 +15,10 @@ static void create_player(Player *player, unsigned int i);
 static char *update_player(char *buf, int siz, Player *player, unsigned int i);
 static void save_player_to_file(Player *player);
 static void update_players(char *buf, size_t siz, Player *player,
-                           u64snowflake guild_id);
+                           u64snowflake guild_id, struct discord *client);
 static void stats(char *buf, size_t siz, char *url, char *username,
-                  u64snowflake userid, u64snowflake guild_id);
+                  u64snowflake userid, u64snowflake guild_id,
+                  struct discord *client);
 
 void
 create_slash_stats(struct discord *client)
@@ -367,9 +368,10 @@ save_player_to_file(Player *player)
 }
 
 /* update players, source file, roles if Orna FR and write the update msg */
-/* TODO: rework the while loop */
+/* TODO: rework the while loop and args used */
 void
-update_players(char *buf, size_t siz, Player *player, u64snowflake guild_id)
+update_players(char *buf, size_t siz, Player *player, u64snowflake guild_id,
+               struct discord *client)
 {
 	unsigned int i = 0;
 	int r;
@@ -399,13 +401,13 @@ update_players(char *buf, size_t siz, Player *player, u64snowflake guild_id)
 	save_player_to_file(&players[i]);
 #ifndef DEVEL
 	if (guild_id == ROLE_GUILD_ID)
-		update_roles(client, event->author->id, &players[i]);
+		update_roles(client, players[i].userid, &players[i]);
 #endif /* DEVEL */
 }
 
 void
 stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
-      u64snowflake guild_id)
+      u64snowflake guild_id, struct discord *client)
 {
 	unsigned int i;
 	char *txt, fname[128], lower_username[MAX_USERNAME_LEN];
@@ -454,7 +456,7 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 		}
 	}
 
-	update_players(buf, siz, &player, guild_id);
+	update_players(buf, siz, &player, guild_id, client);
 }
 
 void
@@ -467,7 +469,8 @@ on_stats(struct discord *client, const struct discord_message *event)
 	      event->attachments->array[0].url,
 	      event->author->username,
 	      event->author->id,
-	      event->guild_id);
+	      event->guild_id,
+	      client);
 
 	struct discord_create_message msg = {
 		.content = buf
@@ -489,7 +492,8 @@ on_stats_interaction(struct discord *client,
 	      event->data->resolved->attachments->array[0].url,
 	      event->member->user->username,
 	      event->member->user->id,
-	      event->guild_id);
+	      event->guild_id,
+	      client);
 
 
 	struct discord_interaction_response params = {
