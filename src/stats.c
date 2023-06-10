@@ -280,7 +280,7 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 	if (player->name)
 		strlcpy(players[i].name, player->name, MAX_USERNAME_LEN);
 
-	siz -= snprintf(buf, siz, "%s's profile has been updated.\n\n",
+	siz -= snprintf(buf, siz, "**%s**'s profile has been updated.\n\n",
 	                players[i].name);
 	p = strchr(buf, '\0');
 

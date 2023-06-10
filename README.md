@@ -13,7 +13,6 @@ A discord bot for Orna.
 - ascensions (track mats)
 
 ### chore
-- rework source to not malloc (and playtime str)
 - add documentation
 - rework DIFF in ocr.c
 - rework roles

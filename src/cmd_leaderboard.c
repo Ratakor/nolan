@@ -201,10 +201,11 @@ leaderboard.\nThis is probably because LB_MAX is too big.\n");
 	}
 
 	if (!in_lb) {
-		strlcat(buf, "...\n", siz);
-		i = lb_max;
 		while (i < nplayers && players[i].userid != userid)
 			i++;
+		if (i == nplayers) /* not a player */
+			return;
+		strlcat(buf, "...\n", siz);
 		write_player(player, psiz, i, 1);
 		rsiz = strlcat(buf, player, siz);
 		if (rsiz >= siz) {
