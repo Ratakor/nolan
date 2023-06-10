@@ -13,9 +13,8 @@ static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
 static void create_player(Player *player, unsigned int i);
 static char *update_player(char *buf, int siz, Player *player, unsigned int i);
-static void save_player_to_file(Player *player);
-static void update_players(char *buf, size_t siz, Player *player,
-                           u64snowflake guild_id, struct discord *client);
+static void update_file(Player *player);
+static unsigned int update_players(char *buf, size_t siz, Player *player);
 static void stats(char *buf, size_t siz, char *url, char *username,
                   u64snowflake userid, u64snowflake guild_id,
                   struct discord *client);
@@ -30,14 +29,6 @@ create_slash_stats(struct discord *client)
 			.description = "stats screenshot",
 			.required = true
 		},
-		/*
-		{
-			.type = DISCORD_APPLICATION_OPTION_STRING,
-			.name = "userid",
-			.description = "ONLY FOR HAM, discord @",
-			.required = false
-		}
-		*/
 	};
 	struct discord_create_global_application_command cmd = {
 		.name = "stats",
@@ -49,6 +40,37 @@ create_slash_stats(struct discord *client)
 		}
 	};
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
+}
+
+void
+create_slash_stats_admin(struct discord *client)
+{
+	struct discord_application_command_option options[] = {
+		{
+			.type = DISCORD_APPLICATION_OPTION_ATTACHMENT,
+			.name = "stats",
+			.description = "stats screenshot",
+			.required = true
+		},
+		{
+			.type = DISCORD_APPLICATION_OPTION_STRING,
+			.name = "userid",
+			.description = "discord @",
+			.required = true
+		}
+	};
+	struct discord_create_guild_application_command cmd = {
+		.name = "stats_admin",
+		.description = "Update other player's stats (admin only)",
+		.options = &(struct discord_application_command_options)
+		{
+			.size = LENGTH(options),
+			.array = options
+		},
+		/* yea it's not really admin I know */
+		.default_member_permissions = DISCORD_PERM_MANAGE_ROLES
+	};
+	discord_create_guild_application_command(client, APP_ID, ROLE_GUILD_ID, &cmd, NULL);
 }
 
 long
@@ -237,7 +259,10 @@ create_player(Player *player, unsigned int i)
 {
 	unsigned int j;
 
-	players[i].name = strndup(player->name, MAX_USERNAME_LEN);
+	if (player->name)
+		players[i].name = strndup(player->name, MAX_USERNAME_LEN);
+	else
+		players[i].name = strdup("placeholder");
 	players[i].kingdom = strndup(player->kingdom, MAX_KINGDOM_LEN);
 	for (j = 2; j < LENGTH(fields); j++)
 		((long *)&players[i])[j] = ((long *)player)[j];
@@ -251,13 +276,13 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 	long old, new, diff;
 	struct tm *tm = gmtime(&players[i].update);
 
-	siz -= snprintf(buf, siz, "%s's profile has been updated.\n\n",
-	                player->name);
-	p = strchr(buf, '\0');
-
 	/* update player */
 	if (player->name)
 		strlcpy(players[i].name, player->name, MAX_USERNAME_LEN);
+
+	siz -= snprintf(buf, siz, "%s's profile has been updated.\n\n",
+	                players[i].name);
+	p = strchr(buf, '\0');
 
 	if (strcmp(players[i].kingdom, player->kingdom) != 0) {
 		siz -= snprintf(p, siz, "%s: %s -> %s\n", fields[1],
@@ -271,7 +296,7 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 	/* -2 to not include update and userid */
 	for (j = 2; j < LENGTH(fields) - 2; j++) {
 		if (siz <= 0)
-			warn("nolan: truncation in updatemsg\n");
+			warn("nolan: string truncation in %s\n", __func__);
 		old = ((long *)&players[i])[j];
 		new = ((long *)player)[j];
 		diff = new - old;
@@ -305,12 +330,8 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 	}
 
 	if (!strftime(p, siz, "\nLast update was on %d %b %Y at %R UTC\n", tm))
-		warn("nolan: strftime: truncation in updatemsg\n");
+		warn("nolan: strftime: string truncation in %s\n", __func__);
 	players[i].update = player->update;
-
-	/* useless */
-	if (player->userid)
-		players[i].userid = player->userid;
 
 	/*
 	 * TODO
@@ -320,9 +341,8 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 	return buf;
 }
 
-/* Save player to file and return player's index in file if it was found */
 void
-save_player_to_file(Player *player)
+update_file(Player *player)
 {
 	FILE *w, *r;
 	char line[LINE_SIZE], *endname, tmpfname[128];
@@ -367,23 +387,15 @@ save_player_to_file(Player *player)
 	rename(tmpfname, STATS_FILE);
 }
 
-/* update players, source file, roles if Orna FR and write the update msg */
-/* TODO: rework the while loop and args used */
-void
-update_players(char *buf, size_t siz, Player *player, u64snowflake guild_id,
-               struct discord *client)
+/* update players, write the update msg and update file, returns player's index */
+unsigned int
+update_players(char *buf, size_t siz, Player *player)
 {
 	unsigned int i = 0;
 	int r;
 
-	if (player->userid) {
-		while (i < nplayers && players[i].userid != player->userid)
-			i++;
-	} else {
-		while (i < nplayers &&
-		                strcmp(players[i].name, player->name) != 0)
-			i++;
-	}
+	while (i < nplayers && players[i].userid != player->userid)
+		i++;
 
 	if (i == nplayers) { /* new player */
 		nplayers++;
@@ -394,15 +406,14 @@ update_players(char *buf, size_t siz, Player *player, u64snowflake guild_id,
 		r = snprintf(buf, siz,
 		             "**%s** has been registrated in the database.\n\n",
 		             player->name);
-		write_info(buf + r, siz - r, player);
+		write_info(buf + r, siz - r, &players[i]);
 	} else {
 		update_player(buf, siz, player, i);
 	}
-	save_player_to_file(&players[i]);
-#ifndef DEVEL
-	if (guild_id == ROLE_GUILD_ID)
-		update_roles(client, players[i].userid, &players[i]);
-#endif /* DEVEL */
+
+	update_file(&players[i]);
+
+	return i;
 }
 
 void
@@ -414,7 +425,7 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 	Player player;
 
 	/* not always a jpg but idc */
-	snprintf(fname, sizeof(fname), "%s/%s.jpg", IMAGES_FOLDER, username);
+	snprintf(fname, sizeof(fname), "%s/%lu.jpg", IMAGES_FOLDER, userid);
 	curl(url, fname);
 	txt = ocr(fname, "eng");
 	if (txt == NULL) {
@@ -425,11 +436,12 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 
 	memset(&player, 0, sizeof(player));
 
-	for (i = 0; i < strlen(username); i++)
-		lower_username[i] = tolower(username[i]);
-	lower_username[i] = '\0';
-
-	player.name = lower_username;
+	if (username) {
+		for (i = 0; i < strlen(username); i++)
+			lower_username[i] = tolower(username[i]);
+		lower_username[i] = '\0';
+		player.name = lower_username;
+	}
 	player.userid = userid;
 	player.update = time(NULL);
 	for_line(&player, txt);
@@ -456,7 +468,12 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 		}
 	}
 
-	update_players(buf, siz, &player, guild_id, client);
+	i = update_players(buf, siz, &player);
+
+#ifndef DEVEL
+	if (guild_id == ROLE_GUILD_ID)
+		update_roles(client, &players[i]);
+#endif /* DEVEL */
 }
 
 void
@@ -484,17 +501,56 @@ on_stats_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN] = "";
 
-	if (!event->data || !event->data->options)
-		return;
+	if (!event->data->resolved->attachments->array[0].url) {
+		strlcpy(buf, "Error: For some reason the image was not loaded \
+correctly", sizeof(buf));
+	} else {
+		stats(buf,
+		      sizeof(buf),
+		      event->data->resolved->attachments->array[0].url,
+		      event->member->user->username,
+		      event->member->user->id,
+		      event->guild_id,
+		      client);
+	}
 
-	stats(buf,
-	      sizeof(buf),
-	      event->data->resolved->attachments->array[0].url,
-	      event->member->user->username,
-	      event->member->user->id,
-	      event->guild_id,
-	      client);
+	struct discord_interaction_response params = {
+		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
+		.data = &(struct discord_interaction_callback_data)
+		{
+			.content = buf,
+			.flags = DISCORD_MESSAGE_EPHEMERAL
+		}
+	};
+	discord_create_interaction_response(client, event->id, event->token,
+	                                    &params, NULL);
+}
 
+void
+on_stats_admin_interaction(struct discord *client,
+                           const struct discord_interaction *event)
+{
+	char buf[MAX_MESSAGE_LEN] = "";
+	u64snowflake userid = str_to_uid(event->data->options->array[1].value);
+
+	fprintf(stderr, "%s\n", event->data->resolved->attachments->array[0].url);
+	fprintf(stderr, "%s\n", event->data->options->array[1].value);
+
+	if (!event->data->resolved->attachments->array[0].url) {
+		strlcpy(buf, "Error: For some reason the image was not loaded \
+correctly", sizeof(buf));
+	} else if (!userid) {
+		strlcpy(buf, "Error: This is probably not a correct user",
+		        sizeof(buf));
+	} else {
+		stats(buf,
+		      sizeof(buf),
+		      event->data->resolved->attachments->array[0].url,
+		      NULL,
+		      userid,
+		      event->guild_id,
+		      client);
+	}
 
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,

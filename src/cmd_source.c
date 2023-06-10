@@ -135,7 +135,7 @@ on_source_interaction(struct discord *client,
 	size_t fsiz = 0;
 	char *fbuf = NULL;
 
-	if (!event->data || !event->data->options)
+	if (!event->data->options)
 		fbuf = load_source(&fsiz);
 	else
 		fbuf = load_sorted_source(&fsiz,

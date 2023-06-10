@@ -242,6 +242,7 @@ overcap_msg(char *name, unsigned long dmg, struct discord *client,
 	if (dmg < DAMAGE_CAP)
 		return;
 
+	/* TODO: match name with userid + use a weekly cap instead */
 	snprintf(buf, sizeof(buf), "%s has overcapped the limit by %'lu \
 damage he is now at %'lu damage.", name, dmg - DAMAGE_CAP, dmg);
 

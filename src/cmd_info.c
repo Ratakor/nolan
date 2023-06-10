@@ -5,7 +5,6 @@
 
 #define ICON_URL "https://orna.guide/static/orna/img/npcs/master_gnome.png"
 
-static u64snowflake str_to_uid(char *id);
 static void write_invalid(char *buf, size_t siz);
 /* static void write_info_embed(struct discord *client, char *buf, size_t siz, */
 /* 		int index); */
@@ -196,7 +195,7 @@ on_info_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
-	if (!event->data || !event->data->options)
+	if (!event->data->options)
 		info_from_uid(buf, sizeof(buf), event->member->user->id);
 	else
 		info_from_txt(buf, sizeof(buf),

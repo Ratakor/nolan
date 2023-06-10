@@ -78,16 +78,19 @@ char *ocr(char *fname, char *lang);
 
 /* stats.c */
 void create_slash_stats(struct discord *client);
+void create_slash_stats_admin(struct discord *client);
 char *playtime_to_str(long playtime);
 void on_stats(struct discord *client, const struct discord_message *event);
 void on_stats_interaction(struct discord *client,
+		const struct discord_interaction *event);
+void on_stats_admin_interaction(struct discord *client,
 		const struct discord_interaction *event);
 
 /* raids.c */
 void on_raids(struct discord *client, const struct discord_message *event);
 
 /* roles.c */
-void update_roles(struct discord *client, u64snowflake userid, Player *player);
+void update_roles(struct discord *client, Player *player);
 
 /* cmd_help.c */
 void create_slash_help(struct discord *client);
@@ -96,6 +99,7 @@ void on_help_interaction(struct discord *client,
 		const struct discord_interaction *event);
 
 /* cmd_info.c */
+u64snowflake str_to_uid(char *id);
 void create_slash_info(struct discord *client);
 void write_info(char *buf, size_t siz, const Player *player);
 void on_info(struct discord *client, const struct discord_message *event);

@@ -26,7 +26,7 @@ help(char *buf, size_t siz)
 		p = strchr(buf, '\0');;
 		rsiz = snprintf(p, siz, "<#%lu> ", stats_ids[i]);
 		if (rsiz >= siz) {
-			warn("nolan: truncation happened while writing help,\
+			warn("nolan: truncation happened while writing help, \
 probably way too much channels for stats\n");
 		}
 		if (i < len - 1)

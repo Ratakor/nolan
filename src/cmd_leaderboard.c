@@ -195,8 +195,8 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 		}
 		rsiz = strlcat(buf, player, siz);
 		if (rsiz >= siz) {
-			warn("nolan: truncation happened while writing\
-leaderboard, this is probably because LB_MAX is too big\n");
+			warn("nolan: string truncation happened while writing \
+leaderboard.\nThis is probably because LB_MAX is too big.\n");
 		}
 	}
 
@@ -208,8 +208,8 @@ leaderboard, this is probably because LB_MAX is too big\n");
 		write_player(player, psiz, i, 1);
 		rsiz = strlcat(buf, player, siz);
 		if (rsiz >= siz) {
-			warn("nolan: truncation happened while writing\
-leaderboard, this is probably because LB_MAX is too big\n");
+			warn("nolan: string truncation happened while writing \
+leaderboard.\nThis is probably because LB_MAX is too big.\n");
 		}
 	}
 }
@@ -265,7 +265,7 @@ on_leaderboard_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
-	if (!event->data || !event->data->options) {
+	if (!event->data->options) {
 		write_invalid(buf, sizeof(buf));
 	} else {
 		leaderboard(buf, sizeof(buf),

@@ -6,9 +6,9 @@
 
 static void write_invalid(char *buf, size_t siz);
 static unsigned long parse_file(char *fname, char *username);
+static unsigned long *load_files(char *username, unsigned long *dmgs);
 static void write_uraid(char *buf, int siz, char *username,
                         unsigned long *dmgs);
-static unsigned long *load_files(char *username);
 static void uraid(char *buf, size_t siz, char *username);
 
 void
@@ -68,10 +68,9 @@ parse_file(char *fname, char *username)
 }
 
 unsigned long *
-load_files(char *username)
+load_files(char *username, unsigned long *dmgs)
 {
 	unsigned int i;
-	unsigned long *dmgs = ecalloc(7, sizeof(unsigned long));
 	long day = time(NULL) / 86400;
 	char fname[128];
 
@@ -91,29 +90,41 @@ write_uraid(char *buf, int siz, char *username, unsigned long *dmgs)
 {
 	char *p;
 	unsigned long total = 0;
-	unsigned int n = 1;
-	int i;
+	time_t t = time(NULL);
+	struct tm *tm = gmtime(&t);
+	int i = 0, d = tm->tm_wday;
+	const char *week[] = {
+		"Sun",
+		"Mon",
+		"Tue",
+		"Wed",
+		"Thu",
+		"Fri",
+		"Sat"
+	};
 
-	siz -= snprintf(buf, siz, "%s raids stats for last 7 days\n", username);
+	siz -= snprintf(buf, siz, "%s's raids stats for the last 7 days:\n",
+	                username);
 	p = strchr(buf, '\0');
-	for (i = 6; i >= 0; i--) {
-		siz -= snprintf(p, siz, "day %d: %'lu damage\n", n++, dmgs[i]);
-		if (siz <= 0)
-			warn("nolan: truncation in write_uraid\n");
+	for (; i < 7; i++, d--) {
+		if (d < 0) d = 6;
+		siz -= snprintf(p, siz, "%s: %'lu damage\n", week[d], dmgs[i]);
 		total += dmgs[i];
 		p = strchr(buf, '\0');
 	}
-	snprintf(p, siz, "\ntotal: %'lu damage\n", total);
+	siz -= snprintf(p, siz, "\nTotal: %'lu damage\n", total);
+	if (siz <= 0)
+		warn("nolan: string truncation in %s\n", __func__);
 }
 
 void
 uraid(char *buf, size_t siz, char *username)
 {
-	unsigned long *dmgs;
+	unsigned long dmgs[7];
 
-	dmgs = load_files(username);
+	memset(dmgs, 0, sizeof(dmgs));
+	load_files(username, dmgs);
 	write_uraid(buf, (int)siz, username, dmgs);
-	free(dmgs);
 }
 
 void
@@ -149,7 +160,7 @@ on_uraid_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
-	if (!event->data || !event->data->options)
+	if (!event->data->options)
 		write_invalid(buf, sizeof(buf));
 	else
 		uraid(buf, sizeof(buf), event->data->options->array[0].value);

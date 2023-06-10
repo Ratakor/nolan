@@ -217,8 +217,10 @@ codex(struct discord *client, u64snowflake userid, Player *player)
 
 /* this is really specific to Orna FR */
 void
-update_roles(struct discord *client, u64snowflake userid, Player *player)
+update_roles(struct discord *client, Player *player)
 {
+	u64snowflake userid = player->userid;
+
 	level(client, userid, player);
 	/* ascension */
 	/* global */
