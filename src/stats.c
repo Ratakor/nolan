@@ -346,7 +346,8 @@ void
 update_file(Player *player)
 {
 	FILE *w, *r;
-	char line[LINE_SIZE], *endname, tmpfname[128];
+	char line[LINE_SIZE], *startuid, tmpfname[128];
+	u64snowflake userid;
 	unsigned int i;
 	int found = 0;
 
@@ -356,10 +357,10 @@ update_file(Player *player)
 	w = efopen(tmpfname, "w");
 
 	while (fgets(line, LINE_SIZE, r)) {
-		endname = strchr(line, DELIM);
-		if (endname)
-			*endname = 0;
-		if (strcmp(player->name, line) == 0) {
+		if ((startuid = strrchr(line, DELIM)) == NULL)
+			DIE("line \"%s\" in %s is wrong", line, STATS_FILE);
+		userid = strtoul(startuid + 1, NULL, 10);
+		if (userid == player->userid) {
 			found = 1;
 			fprintf(w, "%s%c", player->name, DELIM);
 			fprintf(w, "%s%c", player->kingdom, DELIM);
@@ -367,8 +368,6 @@ update_file(Player *player)
 				fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
 			fprintf(w, "%lu\n", player->userid);
 		} else {
-			if (endname)
-				*endname = DELIM;
 			fprintf(w, "%s", line);
 		}
 	}
