@@ -55,7 +55,7 @@ create_slash_commands(struct discord *client)
 #ifndef DEVEL
 	create_slash_help(client);
 	create_slash_stats(client);
-	create_slash_stats_admin(client);
+	/* create_slash_stats_admin(client); */ /* too unsafe atm */
 	create_slash_info(client);
 	create_slash_leaderboard(client);
 	create_slash_source(client);
