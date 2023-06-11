@@ -34,7 +34,7 @@ const char *fields[] = {
 };
 
 int
-main(void)
+main(int argc, char *argv[])
 {
 	char *src[] = { "src", "source" };
 	char *lb[] = { "lb", "leaderboard" };
@@ -42,7 +42,7 @@ main(void)
 
 #ifndef DEVEL
 	if (getuid() != 0)
-		die("Please run nolan as root\n");
+		DIE("please run %s as root", argv[0]);
 #endif /* DEVEL */
 
 	setlocale(LC_NUMERIC, "");

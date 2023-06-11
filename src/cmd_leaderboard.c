@@ -195,8 +195,8 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 		}
 		rsiz = strlcat(buf, player, siz);
 		if (rsiz >= siz) {
-			warn("nolan: string truncation happened while writing \
-leaderboard.\nThis is probably because LB_MAX is too big.\n");
+			WARN("string truncation\n\
+\033[33mhint:\033[39m this is probably because LB_MAX is too big");
 		}
 	}
 
@@ -209,8 +209,8 @@ leaderboard.\nThis is probably because LB_MAX is too big.\n");
 		write_player(player, psiz, i, 1);
 		rsiz = strlcat(buf, player, siz);
 		if (rsiz >= siz) {
-			warn("nolan: string truncation happened while writing \
-leaderboard.\nThis is probably because LB_MAX is too big.\n");
+			WARN("string truncation\n\
+\033[33mhint:\033[39m this is probably because LB_MAX is too big");
 		}
 	}
 }

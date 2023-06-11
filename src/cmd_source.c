@@ -35,9 +35,7 @@ load_source(size_t *fszp)
 	char *res, line[LINE_SIZE], *end;
 	size_t mfsz = LINE_SIZE + nplayers * LINE_SIZE;
 
-	if ((fp = fopen(STATS_FILE, "r")) == NULL)
-		die("nolan: Failed to open %s (read)\n", STATS_FILE);
-
+	fp = efopen(STATS_FILE, "r");
 	res = emalloc(mfsz);
 	*res = '\0';
 	while (fgets(line, LINE_SIZE, fp) != NULL) {
@@ -61,9 +59,7 @@ load_sorted_source(size_t *fszp, char *kingdom)
 	char *res, line[LINE_SIZE], *kd, *endkd, *end;
 	size_t mfsz = LINE_SIZE + nplayers * LINE_SIZE;
 
-	if ((fp = fopen(STATS_FILE, "r")) == NULL)
-		die("nolan: Failed to open %s (read)\n", STATS_FILE);
-
+	fp = efopen(STATS_FILE, "r");
 	res = emalloc(mfsz);
 	fgets(line, LINE_SIZE, fp); /* fields name */
 	/* skip everything after codex */

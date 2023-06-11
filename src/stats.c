@@ -1,11 +1,10 @@
-#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
+#include <cjson/cJSON.h>
 
 #include "nolan.h"
 
-#define LEN(X)        (sizeof X - 1)
+#define STRLEN(STR) (sizeof STR - 1)
 
 static long playtime_to_long(char *playtime, char *str);
 static long trim_stat(char *str);
@@ -93,7 +92,7 @@ playtime_to_str(long playtime)
 {
 	long days = playtime / 24;
 	long hours = playtime % 24;
-	size_t siz = 32;
+	size_t siz = 36;
 	char *buf = emalloc(siz);
 
 	switch (hours) {
@@ -145,96 +144,99 @@ void
 parse_line(Player *player, char *line)
 {
 	char *str;
+	long stat;
 
-	if (strncmp(line, "KINGDOM", LEN("KINGDOM")) == 0) {
+	if (strncmp(line, "KINGDOM", STRLEN("KINGDOM")) == 0) {
 		str = "KINGDOM ";
 		while (*str && (*line++ == *str++));
 		player->kingdom = line;
 		return;
 	}
-	if (strncmp(line, "ROYAUME", LEN("ROYAUME")) == 0) {
+	if (strncmp(line, "ROYAUME", STRLEN("ROYAUME")) == 0) {
 		str = "ROYAUME ";
 		while (*str && (*line++ == *str++));
 		player->kingdom = line;
 		return;
 	}
-	if (strncmp(line, "\\ele]]", LEN("\\ele]]")) == 0) { /* tess madness */
+	/* tesseract madness */
+	if (strncmp(line, "\\ele]]", STRLEN("\\ele]]")) == 0) {
 		str = "\\ele]] ";
 		while (*str && (*line++ == *str++));
 		player->kingdom = line;
 		return;
 	}
 
-	if (strncmp(line, "PLAYTIME", LEN("PLAYTIME")) == 0) {
+	if (strncmp(line, "PLAYTIME", STRLEN("PLAYTIME")) == 0) {
 		str = "PLAYTIME ";
 		while (*str && (*line++ == *str++));
 		player->playtime = playtime_to_long(line, "days, ");
 		return;
 	}
-	if (strncmp(line, "TEMPS DE JEU", LEN("TEMPS DE JEU")) == 0) {
+	if (strncmp(line, "TEMPS DE JEU", STRLEN("TEMPS DE JEU")) == 0) {
 		str = "TEMPS DE JEU ";
 		while (*str && (*line++ == *str++));
 		player->playtime = playtime_to_long(line, "jours, ");
 		return;
 	}
 
-	if (strncmp(line, "ASCENSION LEVEL", LEN("ASCENSION LEVEL")) == 0 ||
-	                strncmp(line, "NIVEAU D'ELEVATION", LEN("NIVEAU D'ELEVATION")) == 0) {
+	if (strncmp(line, "ASCENSION LEVEL", STRLEN("ASCENSION LEVEL")) == 0 ||
+	                strncmp(line, "NIVEAU D'ELEVATION", STRLEN("NIVEAU D'ELEVATION")) == 0) {
 		player->ascension = trim_stat(line);
-	} else if (strncmp(line, "LEVEL", LEN("LEVEL")) == 0 ||
-	                strncmp(line, "NIVEAU", LEN("NIVEAU")) == 0) {
-		player->level = trim_stat(line);
-	} else if (strncmp(line, "GLOBAL RANK", LEN("GLOBAL RANK")) == 0 ||
-	                strncmp(line, "RANG GLOBAL", LEN("RANG GLOBAL")) == 0) {
+	} else if (strncmp(line, "LEVEL", STRLEN("LEVEL")) == 0 ||
+	                strncmp(line, "NIVEAU", STRLEN("NIVEAU")) == 0) {
+		if ((stat = trim_stat(line)) <= 250)
+			player->level = stat;
+	} else if (strncmp(line, "GLOBAL RANK", STRLEN("GLOBAL RANK")) == 0 ||
+	                strncmp(line, "RANG GLOBAL", STRLEN("RANG GLOBAL")) == 0) {
 		player->global = trim_stat(line);
-	} else if (strncmp(line, "REGIONAL RANK", LEN("REGIONAL RANK")) == 0 ||
-	                strncmp(line, "RANG REGIONAL", LEN("RANG REGIONAL")) == 0) {
+	} else if (strncmp(line, "REGIONAL RANK", STRLEN("REGIONAL RANK")) == 0 ||
+	                strncmp(line, "RANG REGIONAL", STRLEN("RANG REGIONAL")) == 0) {
 		player->regional = trim_stat(line);
-	} else if (strncmp(line, "COMPETITIVE RANK", LEN("COMPETITIVE RANK")) == 0 ||
-	                strncmp(line, "RANG COMPETITIF", LEN("RANG COMPETITIF")) == 0) {
+	} else if (strncmp(line, "COMPETITIVE RANK", STRLEN("COMPETITIVE RANK")) == 0 ||
+	                strncmp(line, "RANG COMPETITIF", STRLEN("RANG COMPETITIF")) == 0) {
 		player->competitive = trim_stat(line);
-	} else if (strncmp(line, "MONSTERS SLAIN", LEN("MONSTERS SLAIN")) == 0 ||
-	                strncmp(line, "MONSTRES TUES", LEN("MONSTRES TUES")) == 0) {
+	} else if (strncmp(line, "MONSTERS SLAIN", STRLEN("MONSTERS SLAIN")) == 0 ||
+	                strncmp(line, "MONSTRES TUES", STRLEN("MONSTRES TUES")) == 0) {
 		player->monsters = trim_stat(line);
-	} else if (strncmp(line, "BOSSES SLAIN", LEN("BOSSES SLAIN")) == 0 ||
-	                strncmp(line, "BOSS TUES", LEN("BOSS TUES")) == 0) {
+	} else if (strncmp(line, "BOSSES SLAIN", STRLEN("BOSSES SLAIN")) == 0 ||
+	                strncmp(line, "BOSS TUES", STRLEN("BOSS TUES")) == 0) {
 		player->bosses = trim_stat(line);
-	} else if (strncmp(line, "PLAYERS DEFEATED", LEN("PLAYERS DEFEATED")) == 0 ||
-	                strncmp(line, "JOUEURS VAINCUS", LEN("JOUEURS VAINCUS")) == 0) {
+	} else if (strncmp(line, "PLAYERS DEFEATED", STRLEN("PLAYERS DEFEATED")) == 0 ||
+	                strncmp(line, "JOUEURS VAINCUS", STRLEN("JOUEURS VAINCUS")) == 0) {
 		player->players = trim_stat(line);
-	} else if (strncmp(line, "QUESTS COMPLETED", LEN("QUESTS COMPLETED")) == 0 ||
-	                strncmp(line, "QUETES TERMINEES", LEN("QUETES TERMINEES")) == 0) {
+	} else if (strncmp(line, "QUESTS COMPLETED", STRLEN("QUESTS COMPLETED")) == 0 ||
+	                strncmp(line, "QUETES TERMINEES", STRLEN("QUETES TERMINEES")) == 0) {
 		player->quests = trim_stat(line);
-	} else if (strncmp(line, "AREAS EXPLORED", LEN("AREAS EXPLORED")) == 0 ||
-	                strncmp(line, "TERRES EXPLOREES", LEN("TERRES EXPLOREES")) == 0) {
+	} else if (strncmp(line, "AREAS EXPLORED", STRLEN("AREAS EXPLORED")) == 0 ||
+	                strncmp(line, "TERRES EXPLOREES", STRLEN("TERRES EXPLOREES")) == 0) {
 		player->explored = trim_stat(line);
-	} else if (strncmp(line, "AREAS TAKEN", LEN("AREAS TAKEN")) == 0 ||
-	                strncmp(line, "TERRES PRISES", LEN("TERRES PRISES")) == 0) {
+	} else if (strncmp(line, "AREAS TAKEN", STRLEN("AREAS TAKEN")) == 0 ||
+	                strncmp(line, "TERRES PRISES", STRLEN("TERRES PRISES")) == 0) {
 		player->taken = trim_stat(line);
-	} else if (strncmp(line, "DUNGEONS CLEARED", LEN("DUNGEONS CLEARED")) == 0 ||
-	                strncmp(line, "DONJONS TERMINES", LEN("DONJONS TERMINES")) == 0) {
+	} else if (strncmp(line, "DUNGEONS CLEARED", STRLEN("DUNGEONS CLEARED")) == 0 ||
+	                strncmp(line, "DONJONS TERMINES", STRLEN("DONJONS TERMINES")) == 0) {
 		player->dungeons = trim_stat(line);
-	} else if (strncmp(line, "COLISEUM WINS", LEN("COLISEUM WINS")) == 0 ||
-	                strncmp(line, "VICROIRE DANS LE", LEN("VICTOIRES DANS LE")) == 0 ||
-	                strncmp(line, "VICTOIRES DANS LE COLISEE", LEN("VICTOIRES DANS LE COLISEE")) == 0) {
+	} else if (strncmp(line, "COLISEUM WINS", STRLEN("COLISEUM WINS")) == 0 ||
+	                strncmp(line, "VICTOIRES DANS LE", STRLEN("VICTOIRES DANS LE")) == 0 ||
+	                strncmp(line, "VICTOIRES DANS LE COLISEE", STRLEN("VICTOIRES DANS LE COLISEE")) == 0) {
 		player->coliseum = trim_stat(line);
-	} else if (strncmp(line, "ITEMS UPGRADED", LEN("ITEMS UPGRADED")) == 0 ||
-	                strncmp(line, "OBJETS AMELIORES", LEN("OBJETS AMELIORES")) == 0) {
+	} else if (strncmp(line, "ITEMS UPGRADED", STRLEN("ITEMS UPGRADED")) == 0 ||
+	                strncmp(line, "OBJETS AMELIORES", STRLEN("OBJETS AMELIORES")) == 0) {
 		player->items = trim_stat(line);
-	} else if (strncmp(line, "FISH CAUGHT", LEN("FISH CAUGHT")) == 0 ||
-	                strncmp(line, "POISSONS ATTRAPES", LEN("POISSONS ATTRAPES")) == 0) {
+	} else if (strncmp(line, "FISH CAUGHT", STRLEN("FISH CAUGHT")) == 0 ||
+	                strncmp(line, "POISSONS ATTRAPES", STRLEN("POISSONS ATTRAPES")) == 0) {
 		player->fish = trim_stat(line);
-	} else if (strncmp(line, "DISTANCE TRAVELLED", LEN("DISTANCE TRAVELLED")) == 0 ||
-	                strncmp(line, "DISTANCE VOYAGEE", LEN("DISTANCE VOYAGEE")) == 0) {
+	} else if (strncmp(line, "DISTANCE TRAVELLED", STRLEN("DISTANCE TRAVELLED")) == 0 ||
+	                strncmp(line, "DISTANCE VOYAGEE", STRLEN("DISTANCE VOYAGEE")) == 0) {
 		player->distance = trim_stat(line);
-	} else if (strncmp(line, "REPUTATION", LEN("REPUTATION")) == 0) {
+	} else if (strncmp(line, "REPUTATION", STRLEN("REPUTATION")) == 0) {
 		player->reputation = trim_stat(line);
-	} else if (strncmp(line, "ENDLESS RECORD", LEN("ENDLESS RECORD")) == 0 ||
-	                strncmp(line, "RECORD DU MODE", LEN("RECORD DU MODE")) == 0 ||
-	                strncmp(line, "RECORD DU MODE SANS-FIN", LEN("RECORD DU MODE SANS-FIN")) == 0) {
+	} else if (strncmp(line, "ENDLESS RECORD", STRLEN("ENDLESS RECORD")) == 0 ||
+	                strncmp(line, "RECORD DU MODE", STRLEN("RECORD DU MODE")) == 0 ||
+	                strncmp(line, "RECORD DU MODE SANS-FIN", STRLEN("RECORD DU MODE SANS-FIN")) == 0) {
 		player->endless = trim_stat(line);
-	} else if (strncmp(line, "ENTRIES COMPLETED", LEN("ENTRIES COMPLETED")) == 0 ||
-	                strncmp(line, "RECHERCHES TERMINEES", LEN("RECHERCHES TERMINEES")) == 0) {
+	} else if (strncmp(line, "ENTRIES COMPLETED", STRLEN("ENTRIES COMPLETED")) == 0 ||
+	                strncmp(line, "RECHERCHES TERMINEES", STRLEN("RECHERCHES TERMINEES")) == 0) {
 		player->codex = trim_stat(line);
 	}
 }
@@ -262,7 +264,7 @@ create_player(Player *player, unsigned int i)
 	if (player->name)
 		players[i].name = strndup(player->name, MAX_USERNAME_LEN);
 	else
-		players[i].name = strdup("placeholder");
+		players[i].name = strdup("placeholder"); /* FIXME */
 	players[i].kingdom = strndup(player->kingdom, MAX_KINGDOM_LEN);
 	for (j = 2; j < LENGTH(fields); j++)
 		((long *)&players[i])[j] = ((long *)player)[j];
@@ -295,8 +297,6 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 
 	/* -2 to not include update and userid */
 	for (j = 2; j < LENGTH(fields) - 2; j++) {
-		if (siz <= 0)
-			warn("nolan: string truncation in %s\n", __func__);
 		old = ((long *)&players[i])[j];
 		new = ((long *)player)[j];
 		diff = new - old;
@@ -328,9 +328,10 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 		/* update player */
 		((long *)&players[i])[j] = new;
 	}
-
+	if (siz <= 0)
+		WARN("string truncation");
 	if (!strftime(p, siz, "\nLast update was on %d %b %Y at %R UTC\n", tm))
-		warn("nolan: strftime: string truncation in %s\n", __func__);
+		WARN("strftime: string truncation");
 	players[i].update = player->update;
 
 	/*
@@ -351,10 +352,8 @@ update_file(Player *player)
 
 	strlcpy(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
 	strlcat(tmpfname, "tmpfile", sizeof(tmpfname));
-	if ((r = fopen(STATS_FILE, "r")) == NULL)
-		die("nolan: Failed to open %s\n", STATS_FILE);
-	if ((w = fopen(tmpfname, "w")) == NULL)
-		die("nolan: Failed to open %s\n", tmpfname);
+	r = efopen(STATS_FILE, "r");
+	w = efopen(tmpfname, "w");
 
 	while (fgets(line, LINE_SIZE, r)) {
 		endname = strchr(line, DELIM);
@@ -400,8 +399,7 @@ update_players(char *buf, size_t siz, Player *player)
 	if (i == nplayers) { /* new player */
 		nplayers++;
 		if (nplayers > MAX_PLAYERS)
-			die("nolan: There is too much players (max:%d)\n",
-			    MAX_PLAYERS);
+			DIE("there is too much players (max:%lu)", MAX_PLAYERS);
 		create_player(player, i);
 		r = snprintf(buf, siz,
 		             "**%s** has been registrated in the database.\n\n",
@@ -420,28 +418,27 @@ void
 stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
       u64snowflake guild_id, struct discord *client)
 {
-	unsigned int i;
-	char *txt, fname[128], lower_username[MAX_USERNAME_LEN];
+	unsigned int i, ret;
+	char *txt, fname[128];
 	Player player;
 
 	/* not always a jpg but idc */
 	snprintf(fname, sizeof(fname), "%s/%lu.jpg", IMAGES_FOLDER, userid);
-	curl(url, fname);
-	txt = ocr(fname, "eng");
-	if (txt == NULL) {
-		warn("nolan: Failed to read stats image\n");
+	if ((ret = curl(url, fname)) != 0) {
+		WARN("curl failed CURLcode:%u", ret);
+		strlcpy(buf, "Error: Failed to download image", siz);
+		return;
+	}
+	if ((txt = ocr(fname, "eng")) == NULL) {
+		WARN("failed to read image");
 		strlcpy(buf, "Error: Failed to read image", siz);
 		return;
 	}
 
 	memset(&player, 0, sizeof(player));
 
-	if (username) {
-		for (i = 0; i < strlen(username); i++)
-			lower_username[i] = tolower(username[i]);
-		lower_username[i] = '\0';
-		player.name = lower_username;
-	}
+	if (username)
+		player.name = username;
 	player.userid = userid;
 	player.update = time(NULL);
 	for_line(&player, txt);
@@ -500,19 +497,21 @@ on_stats_interaction(struct discord *client,
                      const struct discord_interaction *event)
 {
 	char buf[MAX_MESSAGE_LEN] = "";
+	const cJSON *attachment = NULL, *url = NULL;
+	cJSON *attachments = cJSON_Parse(event->data->resolved->attachments);
 
-	if (!event->data->resolved->attachments->array[0].url) {
-		strlcpy(buf, "Error: For some reason the image was not loaded \
-correctly", sizeof(buf));
-	} else {
-		stats(buf,
-		      sizeof(buf),
-		      event->data->resolved->attachments->array[0].url,
-		      event->member->user->username,
-		      event->member->user->id,
-		      event->guild_id,
-		      client);
+	cJSON_ArrayForEach(attachment, attachments) {
+		url = cJSON_GetObjectItemCaseSensitive(attachment, "url");
 	}
+
+	stats(buf,
+	      sizeof(buf),
+	      url->valuestring,
+	      event->member->user->username,
+	      event->member->user->id,
+	      event->guild_id,
+	      client);
+	cJSON_Delete(attachments);
 
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
@@ -531,26 +530,27 @@ on_stats_admin_interaction(struct discord *client,
                            const struct discord_interaction *event)
 {
 	char buf[MAX_MESSAGE_LEN] = "";
+	const cJSON *attachment = NULL, *url = NULL;
+	cJSON *attachments = cJSON_Parse(event->data->resolved->attachments);
 	u64snowflake userid = str_to_uid(event->data->options->array[1].value);
 
-	fprintf(stderr, "%s\n", event->data->resolved->attachments->array[0].url);
-	fprintf(stderr, "%s\n", event->data->options->array[1].value);
+	cJSON_ArrayForEach(attachment, attachments) {
+		url = cJSON_GetObjectItemCaseSensitive(attachment, "url");
+	}
 
-	if (!event->data->resolved->attachments->array[0].url) {
-		strlcpy(buf, "Error: For some reason the image was not loaded \
-correctly", sizeof(buf));
-	} else if (!userid) {
+	if (!userid) {
 		strlcpy(buf, "Error: This is probably not a correct user",
 		        sizeof(buf));
 	} else {
 		stats(buf,
 		      sizeof(buf),
-		      event->data->resolved->attachments->array[0].url,
+		      url->valuestring,
 		      NULL,
 		      userid,
 		      event->guild_id,
 		      client);
 	}
+	cJSON_Delete(attachments);
 
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,

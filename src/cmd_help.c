@@ -24,20 +24,16 @@ help(char *buf, size_t siz)
 	strlcpy(buf, "Post a screenshot of your stats to ", siz);
 	for (i = 0; i < len; i++) {
 		p = strchr(buf, '\0');;
-		rsiz = snprintf(p, siz, "<#%lu> ", stats_ids[i]);
-		if (rsiz >= siz) {
-			warn("nolan: truncation happened while writing help, \
-probably way too much channels for stats\n");
-		}
+		snprintf(p, siz, "<#%lu> ", stats_ids[i]);
 		if (i < len - 1)
 			strlcat(buf, "or ", siz);
 	}
-	strlcat(buf, "to enter the database.\n", siz);
+	strlcat(buf, "so I can have a look at your stats 👀\n", siz);
 	strlcat(buf, "Commands:\n", siz);
 	strlcat(buf, "\t/stats *screenshot*\n", siz);
 	strlcat(buf, "\t/info *[[@]user]*\n", siz);
 	strlcat(buf, "\t/leaderboard *category*\n", siz);
-	/* catstr(buf, "\t/correct [category] [corrected value]\n", siz); */
+	/* strlcat(buf, "\t/correct *category* *corrected value*\n", siz); */
 	strlcat(buf, "\t/source *[kingdom]*\n", siz);
 	strlcat(buf, "\t/uraid *username* (only for Scream of Terra)\n", siz);
 	strlcat(buf, "\t/lbraid (only for Scream of Terra)\n", siz);
@@ -47,7 +43,8 @@ probably way too much channels for stats\n");
 	strlcat(buf, PREFIX, siz);
 	rsiz = strlcat(buf, " instead of /.", siz);
 	if (rsiz >= siz)
-		warn("nolan: truncation happened while writing help\n");
+		WARN("string truncation\n\
+\033[33mhint:\033[39m this is probably because stats_ids is too big");
 }
 
 void

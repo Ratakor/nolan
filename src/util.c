@@ -1,32 +1,7 @@
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
 #include "util.h"
-
-void
-warn(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	va_end(ap);
-}
-
-void
-die(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	va_end(ap);
-
-	exit(EXIT_FAILURE);
-}
 
 char *
 nstrchr(const char *s, int c, int n)
@@ -69,7 +44,7 @@ strlcat(char *dst, const char *src, size_t siz)
 }
 
 int
-file_exists(char *filename)
+file_exists(const char *filename)
 {
 	struct stat buf;
 	return (stat(filename, &buf) == 0);
@@ -81,16 +56,16 @@ emalloc(size_t size)
 	void *p;
 
 	if ((p = malloc(size)) == NULL)
-		die("malloc failed\n");
+		DIE("malloc failed");
 	return p;
 }
 
-void *
-ecalloc(size_t nmemb, size_t size)
+FILE *
+efopen(const char *filename, const char *modes)
 {
-	void *p;
+	FILE *fp;
 
-	if ((p = calloc(nmemb, size)) == NULL)
-		die("calloc failed\n");
-	return p;
+	if ((fp = fopen(filename, modes)) == NULL)
+		DIE("failed to open %s (%s)", filename, modes);
+	return fp;
 }

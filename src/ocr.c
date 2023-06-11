@@ -20,10 +20,11 @@ write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 	return written;
 }
 
-void
+unsigned int
 curl(char *url, char *fname)
 {
 	CURL *handle;
+	CURLcode ret;
 	FILE *fp;
 
 	curl_global_init(CURL_GLOBAL_ALL);
@@ -33,15 +34,15 @@ curl(char *url, char *fname)
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_data);
 
-	if ((fp = fopen(fname, "wb")) == NULL)
-		die("nolan: Failed to open %s\n", fname);
-
+	fp = efopen(fname, "wb");
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, fp);
-	curl_easy_perform(handle);
+	ret = curl_easy_perform(handle);
 
 	fclose(fp);
 	curl_easy_cleanup(handle);
 	curl_global_cleanup();
+
+	return ret;
 }
 
 int
@@ -72,31 +73,25 @@ crop(char *fname, int type)
 	gdImage *im, *cropped;
 	gdRect rect;
 
-	if ((fp = fopen(fname, "rb")) == NULL)
-		die("nolan: Failed to open %s\n", fname);
-
+	fp = efopen(fname, "rb");
 	if (type == 0)
 		im = gdImageCreateFromJpeg(fp);
 	else
 		im = gdImageCreateFromPng(fp);
 	fclose(fp);
+
 	if (im == NULL)
 		return 1;
-
 	if (write_rect(&rect, im) == 1)
 		return 1;
 
 	cropped = gdImageCrop(im, &rect);
-
-	if ((fp = fopen(fname, "wb")) == NULL)
-		die("nolan: Failed to open %s\n", fname);
-
+	fp = efopen(fname, "wb");
 	if (type == 0)
 		gdImageJpeg(cropped, fp, 100);
 	else
 		gdImagePng(cropped, fp);
 	fclose(fp);
-
 	gdImageDestroy(cropped);
 	gdImageDestroy(im);
 
@@ -110,16 +105,18 @@ ocr(char *fname, char *lang)
 	PIX *img;
 	char *txt_ocr, *txt_out;
 
-	if ((img = pixRead(fname)) == NULL)
-		die("nolan: Error reading image\n");
+	if ((img = pixRead(fname)) == NULL) {
+		WARN("failed to read image (%s)", fname);
+		return NULL;
+	}
 
 	handle = TessBaseAPICreate();
 	if (TessBaseAPIInit3(handle, NULL, lang) != 0)
-		die("nolan: Error initialising tesseract\n");
+		DIE("failed to init tesseract (lang:%s)", lang);
 
 	TessBaseAPISetImage2(handle, img);
 	if (TessBaseAPIRecognize(handle, NULL) != 0)
-		die("nolan: Error in tesseract recognition\n");
+		DIE("failed tesseract recognition");
 
 	txt_ocr = TessBaseAPIGetUTF8Text(handle);
 	txt_out = strdup(txt_ocr);

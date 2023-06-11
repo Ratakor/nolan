@@ -5,14 +5,16 @@ A discord bot for Orna.
 - [concord](https://github.com/Cogmasters/concord)
 - [tesseract](https://github.com/tesseract-ocr/tesseract)
 - [gd](https://github.com/libgd/libgd)
+- [cJSON](https://github.com/DaveGamble/cJSON)
 
 ## TODO
 
 ### features
-- add option to correct stats ?
+- add cmd_correct to correct stats
 - ascensions (track mats)
 
 ### chore
+- change players' stats to unsigned long
 - add documentation
 - rework DIFF in ocr.c
 - rework roles

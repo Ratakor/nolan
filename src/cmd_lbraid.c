@@ -30,9 +30,7 @@ parse_file(char *fname, Slayer slayers[], size_t *nslayers)
 	unsigned int i;
 	unsigned long dmg;
 
-	if ((fp = fopen(fname, "r")) == NULL)
-		return;
-
+	fp = efopen(fname, "r");
 	while (fgets(line, LINE_SIZE, fp)) {
 		endname = strchr(line, DELIM);
 		dmg = strtoul(endname + 1, NULL, 10);
@@ -64,9 +62,8 @@ load_files(Slayer slayers[], size_t *nslayers)
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - i);
-		if (file_exists(fname)) {
+		if (file_exists(fname))
 			parse_file(fname, slayers, nslayers);
-		}
 	}
 }
 
@@ -94,10 +91,10 @@ write_lbraid(char *buf, int siz, Slayer slayers[], size_t nslayers)
 	for (i = 0; i < lb_max; i++) {
 		siz -= snprintf(p, siz, "%d. %s: %'lu damage\n", i,
 		                slayers[i].name, slayers[i].damage);
-		if (siz <= 0)
-			warn("nolan: string truncation in %s\n", __func__);
 		p = strchr(buf, '\0');
 	}
+	if (siz <= 0)
+		WARN("string truncation");
 }
 
 void

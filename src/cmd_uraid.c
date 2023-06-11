@@ -49,9 +49,7 @@ parse_file(char *fname, char *username)
 	unsigned long dmg;
 	char line[LINE_SIZE], *endname;
 
-	if ((fp = fopen(fname, "r")) == NULL)
-		return 0;
-
+	fp = efopen(fname, "r");
 	while (fgets(line, LINE_SIZE, fp)) {
 		endname = strchr(line, DELIM);
 		dmg = strtoul(endname + 1, NULL, 10);
@@ -77,9 +75,8 @@ load_files(char *username, unsigned long *dmgs)
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - i);
-		if (file_exists(fname)) {
+		if (file_exists(fname))
 			dmgs[i] = parse_file(fname, username);
-		}
 	}
 
 	return dmgs;
@@ -114,7 +111,7 @@ write_uraid(char *buf, int siz, char *username, unsigned long *dmgs)
 	}
 	siz -= snprintf(p, siz, "\nTotal: %'lu damage\n", total);
 	if (siz <= 0)
-		warn("nolan: string truncation in %s\n", __func__);
+		WARN("string truncation");
 }
 
 void

@@ -12,14 +12,17 @@
 #define MAX_MESSAGE_LEN  2000 + 1
 #define MAX_USERNAME_LEN 32 + 1
 #define MAX_KINGDOM_LEN  32 + 1
+
 #ifdef DEVEL
 #define SAVE_FOLDER      "./"
 #else
 #define SAVE_FOLDER      "/var/lib/nolan/"
 #endif /* DEVEL */
+
 #define IMAGES_FOLDER    SAVE_FOLDER "images/"
 #define RAIDS_FOLDER     SAVE_FOLDER "raids/"
 #define STATS_FILE       SAVE_FOLDER FILENAME
+
 #define ROLE_GUILD_ID    999691133103919135 /* this is only for to Orna FR */
 
 /* ALL FIELDS MUST HAVE THE SAME SIZE */
@@ -72,7 +75,7 @@ void on_ready(struct discord *client, const struct discord_ready *event);
 void on_message(struct discord *client, const struct discord_message *event);
 
 /* ocr.c */
-void curl(char *url, char *fname);
+unsigned int curl(char *url, char *fname);
 int crop(char *fname, int type);
 char *ocr(char *fname, char *lang);
 

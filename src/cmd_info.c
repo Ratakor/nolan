@@ -98,9 +98,13 @@ write_info(char *buf, size_t siz, const Player *player)
 
 	/* -2 to not include upadte and userid */
 	for (i = 0; i < LENGTH(fields) - 2; i++) {
-		if (i <= 1) { /* name and kingdom */
-			snprintf(p, siz, "%s: %s\n", fields[i],
-			         ((char **)player)[i]);
+		if (i == 0) { /* name */
+			snprintf(p, siz, "%s: %s\n", fields[i], player->name);
+		} else if (i == 1) { /* kingdom */
+			if (strcmp(player->kingdom, "(null)") != 0) {
+				snprintf(p, siz, "%s: %s\n", fields[i],
+				         player->kingdom);
+			}
 		} else if (i == 7) { /* playtime */
 			plt = playtime_to_str(((long *)player)[i]);
 			snprintf(p, siz, "%s: %s\n", fields[i], plt);

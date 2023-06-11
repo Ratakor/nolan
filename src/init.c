@@ -10,17 +10,18 @@ static Player load_player(unsigned int line);
 void
 create_folders(void)
 {
-	if (!file_exists(SAVE_FOLDER)) {
-		if (mkdir(SAVE_FOLDER, 0755) == -1)
-			die("nolan: Failed to create %s\n", SAVE_FOLDER);
-	}
-	if (!file_exists(IMAGES_FOLDER)) {
-		if (mkdir(IMAGES_FOLDER, 0755) == -1)
-			die("nolan: Failed to create %s\n", IMAGES_FOLDER);
-	}
-	if (!file_exists(RAIDS_FOLDER)) {
-		if (mkdir(RAIDS_FOLDER, 0755) == -1)
-			die("nolan: Failed to create %s\n", RAIDS_FOLDER);
+	unsigned int i;
+	const char *folders[] = {
+		SAVE_FOLDER,
+		IMAGES_FOLDER,
+		RAIDS_FOLDER,
+	};
+
+	for (i = 0; i < LENGTH(folders); i++) {
+		if (file_exists(folders[i]))
+			continue;
+		if (mkdir(folders[i], 0755) == -1)
+			DIE("failed to create %s\n", folders[i]);
 	}
 }
 
@@ -38,7 +39,9 @@ create_stats_file(void)
 		size = ftell(fp);
 	}
 
-	if (size == 0 && (fp = fopen(STATS_FILE, "w")) != NULL) {
+	if (size == 0) {
+		if (fp) fclose(fp);
+		fp = efopen(STATS_FILE, "w");
 		for (i = 0; i < LENGTH(fields) - 1; i++)
 			fprintf(fp, "%s%c", fields[i], DELIM);
 		fprintf(fp, "%s\n", fields[LENGTH(fields) - 1]);
@@ -51,8 +54,8 @@ create_slash_commands(struct discord *client)
 {
 #ifndef DEVEL
 	create_slash_help(client);
-	/* create_slash_stats(client); */
-	/* create_slash_stats_admin(client); */
+	create_slash_stats(client);
+	create_slash_stats_admin(client);
 	create_slash_info(client);
 	create_slash_leaderboard(client);
 	create_slash_source(client);
@@ -70,14 +73,13 @@ load_player(unsigned int line)
 	unsigned int i = 0;
 
 	if (line <= 1)
-		die("nolan: Tried to load the description line as a player\n");
-	if ((fp = fopen(STATS_FILE, "r")) == NULL)
-		die("nolan: Failed to open %s (read)\n", STATS_FILE);
+		DIE("tried to load the description line as a player");
+	fp = efopen(STATS_FILE, "r");
 
 	while (i++ < line && (p = fgets(buf, LINE_SIZE, fp)) != NULL);
 	fclose(fp);
 	if (p == NULL)
-		die("nolan: Line %d is not present in %s\n", line, STATS_FILE);
+		DIE("line %d is not present in %s", line, STATS_FILE);
 
 	i = 0;
 	delim = p;
@@ -97,8 +99,10 @@ load_player(unsigned int line)
 		p = delim + 1;
 		i++;
 	}
-	if (i != LENGTH(fields) - 1)
-		die("nolan: Player on line %d is missing a field\n", line);
+	if (i != LENGTH(fields) - 1) {
+		DIE("player in %s on line %d is missing a field", STATS_FILE,
+		    line);
+	}
 	player.userid = strtoul(p, NULL, 10);
 
 	return player;
@@ -111,16 +115,13 @@ init_players(void)
 	char buf[LINE_SIZE];
 	unsigned int i;
 
-	if ((fp = fopen(STATS_FILE, "r")) == NULL)
-		die("nolan: Failed to open %s (read)\n", STATS_FILE);
-
+	fp = efopen(STATS_FILE, "r");
 	while (fgets(buf, LINE_SIZE, fp))
 		nplayers++;
 	nplayers--; /* first line is not a player */
 
 	if (nplayers > MAX_PLAYERS)
-		die("nolan: There is too much players to load (max:%d)\n",
-		    MAX_PLAYERS);
+		DIE("there is too much players to load (max:%lu)", MAX_PLAYERS);
 
 	for (i = 0; i < nplayers; i++)
 		players[i] = load_player(i + 2);
