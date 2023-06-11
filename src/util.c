@@ -61,11 +61,11 @@ emalloc(size_t size)
 }
 
 FILE *
-efopen(const char *filename, const char *modes)
+efopen(const char *filename, const char *mode)
 {
 	FILE *fp;
 
-	if ((fp = fopen(filename, modes)) == NULL)
-		DIE("failed to open %s (%s)", filename, modes);
+	if ((fp = fopen(filename, mode)) == NULL)
+		DIE("failed to open %s (%s)", filename, mode);
 	return fp;
 }

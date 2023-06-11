@@ -69,7 +69,7 @@ create_slash_stats_admin(struct discord *client)
 		/* yea it's not really admin I know */
 		.default_member_permissions = DISCORD_PERM_MANAGE_ROLES
 	};
-	discord_create_guild_application_command(client, APP_ID, ROLE_GUILD_ID, &cmd, NULL);
+	discord_create_guild_application_command(client, APP_ID, RAID_GUILD_ID, &cmd, NULL);
 }
 
 long
