@@ -28,7 +28,7 @@ help(char *buf, size_t siz)
 		if (i < len - 1)
 			strlcat(buf, "or ", siz);
 	}
-	strlcat(buf, "so I can have a look at your stats 👀\n", siz);
+	strlcat(buf, "to enter the database.\n", siz);
 	strlcat(buf, "Commands:\n", siz);
 	strlcat(buf, "\t/stats *screenshot*\n", siz);
 	strlcat(buf, "\t/info *[[@]user]*\n", siz);

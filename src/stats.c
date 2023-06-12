@@ -263,7 +263,7 @@ create_player(Player *player, unsigned int i)
 	if (player->name)
 		players[i].name = strndup(player->name, MAX_USERNAME_LEN);
 	else
-		players[i].name = strdup("placeholder"); /* FIXME */
+		players[i].name = strdup("(null)");
 	players[i].kingdom = strndup(player->kingdom, MAX_KINGDOM_LEN);
 	for (j = 2; j < LENGTH(fields); j++)
 		((long *)&players[i])[j] = ((long *)player)[j];
@@ -277,8 +277,8 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 	long old, new, diff;
 	struct tm *tm = gmtime(&players[i].update);
 
-	/* update player */
-	if (player->name)
+	/* update player only if it was added by and admin */
+	if (player->name && strcmp(players[i].name, "(null)") == 0)
 		strlcpy(players[i].name, player->name, MAX_USERNAME_LEN);
 
 	siz -= snprintf(buf, siz, "**%s**'s profile has been updated.\n\n",
