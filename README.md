@@ -10,7 +10,6 @@ A discord bot for Orna.
 ## TODO
 
 ### features
-- add cmd_correct to correct stats
 - ascensions (track mats)
 
 ### chore

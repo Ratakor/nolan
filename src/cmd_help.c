@@ -33,7 +33,7 @@ help(char *buf, size_t siz)
 	strlcat(buf, "\t/stats *screenshot*\n", siz);
 	strlcat(buf, "\t/info *[[@]user]*\n", siz);
 	strlcat(buf, "\t/leaderboard *category*\n", siz);
-	/* strlcat(buf, "\t/correct *category* *corrected value*\n", siz); */
+	strlcat(buf, "\t/correct *category* *value*\n", siz);
 	strlcat(buf, "\t/source *[kingdom]*\n", siz);
 	strlcat(buf, "\t/uraid *username* (only for Scream of Terra)\n", siz);
 	strlcat(buf, "\t/lbraid (only for Scream of Terra)\n", siz);

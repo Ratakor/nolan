@@ -83,6 +83,7 @@ char *ocr(char *fname, char *lang);
 void create_slash_stats(struct discord *client);
 void create_slash_stats_admin(struct discord *client);
 char *playtime_to_str(long playtime);
+void update_file(Player *player);
 void on_stats(struct discord *client, const struct discord_message *event);
 void on_stats_interaction(struct discord *client,
 		const struct discord_interaction *event);
@@ -132,6 +133,12 @@ void on_lbraid_interaction(struct discord *client,
 void create_slash_uraid(struct discord *client);
 void on_uraid(struct discord *client, const struct discord_message *event);
 void on_uraid_interaction(struct discord *client,
+		const struct discord_interaction *event);
+
+/* cmd_correct.c */
+void create_slash_correct(struct discord *client);
+void on_correct(struct discord *client, const struct discord_message *event);
+void on_correct_interaction(struct discord *client,
 		const struct discord_interaction *event);
 
 #endif /* NOLAN_H */

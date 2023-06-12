@@ -23,6 +23,6 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *src, size_t siz);
 int file_exists(const char *filename);
 void *emalloc(size_t size);
-FILE *efopen(const char *filename, const char *modes);
+FILE *efopen(const char *filename, const char *mode);
 
 #endif /* UTIL_H */

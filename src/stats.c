@@ -12,7 +12,6 @@ static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
 static void create_player(Player *player, unsigned int i);
 static char *update_player(char *buf, int siz, Player *player, unsigned int i);
-static void update_file(Player *player);
 static unsigned int update_players(char *buf, size_t siz, Player *player);
 static void stats(char *buf, size_t siz, char *url, char *username,
                   u64snowflake userid, u64snowflake guild_id,
@@ -517,7 +516,7 @@ on_stats_interaction(struct discord *client,
 		.data = &(struct discord_interaction_callback_data)
 		{
 			.content = buf,
-			.flags = DISCORD_MESSAGE_EPHEMERAL
+			/* .flags = DISCORD_MESSAGE_EPHEMERAL */
 		}
 	};
 	discord_create_interaction_response(client, event->id, event->token,

@@ -58,6 +58,7 @@ create_slash_commands(struct discord *client)
 	create_slash_stats_admin(client);
 	create_slash_info(client);
 	create_slash_leaderboard(client);
+	create_slash_correct(client);
 	create_slash_source(client);
 	create_slash_lbraid(client);
 	create_slash_uraid(client);
@@ -150,6 +151,8 @@ on_interaction(struct discord *client, const struct discord_interaction *event)
 		on_info_interaction(client, event);
 	else if (strcmp(event->data->name, "leaderboard") == 0)
 		on_leaderboard_interaction(client, event);
+	else if (strcmp(event->data->name, "correct") == 0)
+		on_correct_interaction(client, event);
 	else if (strcmp(event->data->name, "source") == 0)
 		on_source_interaction(client, event);
 	else if (strcmp(event->data->name, "lbraid") == 0)
