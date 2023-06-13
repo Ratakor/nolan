@@ -284,9 +284,7 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 	unsigned int j;
 	long old, new, diff;
 	size_t s = 0;
-	struct tm *tm = gmtime(&players[i].update);
 
-	players[i].update = player->update;
 	/* keep this commented to not update name and keep corrected change */
 	/* strlcpy(players[i].name, player->name, MAX_USERNAME_LEN); */
 
@@ -316,8 +314,9 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 		 */
 		if (new == 0 || diff == 0)
 			continue;
-		/* don't update if stat decreases except for ranks */
-		if (diff < 0 && j != 4 && j != 5 && j != 6)
+		/* don't update if stat decreases except for special cases */
+		if (diff < 0 && j != ASCENSION     && j != GLOBAL_RANK &&
+		                j != REGIONAL_RANK && j != COMPETITIVE_RANK)
 			continue;
 
 		if (j == PLAYTIME) {
@@ -339,9 +338,10 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 		((long *)&players[i])[j] = new;
 	}
 
-	/* FIXME: strftime returns 0 when truncation, which is bad */
-	s += strftime(buf + s, siz - s,
-	              "\nLast update was on %d %b %Y at %R UTC\n", tm);
+	s += snprintf(buf + s, siz - s,
+	              "\nLast update was <t:%ld:R> on <t:%ld:f>\n",
+	              players[i].update, players[i].update);
+	players[i].update = player->update;
 
 	s += strlcat(buf, "Correct your stats with /correct ;)", siz);
 	if (s >= siz)
