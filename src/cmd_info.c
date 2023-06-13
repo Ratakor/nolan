@@ -6,8 +6,6 @@
 #define ICON_URL "https://orna.guide/static/orna/img/npcs/master_gnome.png"
 
 static void write_invalid(char *buf, size_t siz);
-/* static void write_info_embed(struct discord *client, char *buf, size_t siz, */
-/* 		int index); */
 static void info_from_uid(char *buf, size_t siz, u64snowflake userid);
 static void info_from_txt(char *buf, size_t siz, char *txt);
 
@@ -51,44 +49,6 @@ write_invalid(char *buf, size_t siz)
 	strlcat(buf, "@username or /info username.\n", siz);
 	strlcat(buf, "To check your info just type /info.", siz);
 }
-
-/* TODO: embed */
-/* void */
-/* write_info_embed(struct discord *client, char *buf, size_t siz, int index) */
-/* { */
-/* 	unsigned long i; */
-/* 	char *p; */
-
-/* 	struct discord_embed embed = { */
-/* 		.color = 0x3498DB, */
-/* 		.timestamp = discord_timestamp(client), */
-/* 		.title = players[index].name */
-/* 	}; */
-/* 	discord_embed_set_footer(&embed, "Nolan", ICON_URL, NULL); */
-/* 	discord_embed_add_field( */
-/* 	        &embed, (char *)fields[1], players[index].kingdom, true); */
-/* 	for (i = 2; i < LENGTH(fields) - 1; i++) { */
-/* 		if (i == 7) { /1* playtime *1/ */
-/* 			p = playtime_to_str(((long *)&players[index])[i]); */
-/* 			discord_embed_add_field( */
-/* 			        &embed, (char *)fields[i], p, true); */
-/* 			free(p); */
-/* 		} else { */
-/* 			sprintf(buf, "%'ld", ((long *)&players[index])[i]); */
-/* 			if (i == 18) /1* distance *1/ */
-/* 				strcat(buf, "m"); */
-/* 			discord_embed_add_field( */
-/* 			        &embed, (char *)fields[index], buf, true); */
-/* 		} */
-/* 	} */
-/* 	struct discord_create_message msg = { */
-/* 		.embeds = &(struct discord_embeds) */
-/* 		{ */
-/* 			.size = 1, */
-/* 			.array = &embed, */
-/* 		} */
-/* 	}; */
-/* } */
 
 void
 write_info(char *buf, size_t siz, const Player *player)
@@ -171,21 +131,6 @@ on_info(struct discord *client, const struct discord_message *event)
 		info_from_uid(buf, sizeof(buf), event->author->id);
 	else
 		info_from_txt(buf, sizeof(buf), event->content);
-
-	/*
-	if (use_embed) {
-		write_info_embed(client, buf, siz, i);
-		struct discord_create_message msg = {
-			.embeds = &(struct discord_embeds)
-			{
-				.size = 1,
-				.array = &embed,
-			}
-		};
-		discord_create_message(client, event->channel_id, &msg, NULL);
-		discord_embed_cleanup(&embed);
-	}
-	*/
 
 	struct discord_create_message msg = {
 		.content = buf

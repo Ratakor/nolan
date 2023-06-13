@@ -406,7 +406,7 @@ update_players(char *buf, size_t siz, Player *player)
 	if (i == nplayers) { /* new player */
 		nplayers++;
 		if (nplayers > MAX_PLAYERS)
-			DIE("there is too much players (max:%lu)", MAX_PLAYERS);
+			DIE("there is too much players (max:%d)", MAX_PLAYERS);
 		create_player(player, i);
 		s += write_quote(buf + s, siz - s);
 		s += snprintf(buf + s, siz - s,

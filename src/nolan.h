@@ -6,7 +6,6 @@
 #include "../config.h"
 #include "util.h"
 
-#define MAX_PLAYERS      LENGTH(kingdoms) * 50 /* might need to update that */
 #define MAX_SLAYERS      50
 #define LINE_SIZE        300 + 1
 #define MAX_MESSAGE_LEN  2000 + 1
@@ -22,8 +21,6 @@
 #define IMAGES_FOLDER    SAVE_FOLDER "images/"
 #define RAIDS_FOLDER     SAVE_FOLDER "raids/"
 #define STATS_FILE       SAVE_FOLDER FILENAME
-
-#define ROLE_GUILD_ID    999691133103919135 /* this is only for to Orna FR */
 
 enum {
 	NAME,

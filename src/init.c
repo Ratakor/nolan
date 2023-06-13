@@ -121,7 +121,7 @@ init_players(void)
 	nplayers--; /* first line is not a player */
 
 	if (nplayers > MAX_PLAYERS)
-		DIE("there is too much players to load (max:%lu)", MAX_PLAYERS);
+		DIE("there is too much players to load (max:%d)", MAX_PLAYERS);
 
 	for (i = 0; i < nplayers; i++)
 		players[i] = load_player(i + 2);
