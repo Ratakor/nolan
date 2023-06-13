@@ -4,6 +4,7 @@
 #include "nolan.h"
 
 #define STRLEN(STR) (sizeof STR - 1)
+#define URL         "https://api.oss117quotes.xyz/v1/random"
 
 struct Field {
 	char *key;
@@ -20,8 +21,9 @@ static long playtime_to_long(char *playtime, int lang);
 static long trim_stat(char *str);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
+static size_t write_quote(char *buf, size_t siz);
 static void create_player(Player *player, unsigned int i);
-static char *update_player(char *buf, long siz, Player *player, unsigned int i);
+static void update_player(char *buf, size_t siz, Player *player, unsigned int i);
 static unsigned int update_players(char *buf, size_t siz, Player *player);
 static void stats(char *buf, size_t siz, char *url, char *username,
                   u64snowflake userid, u64snowflake guild_id,
@@ -241,6 +243,28 @@ for_line(Player *player, char *txt)
 	}
 }
 
+size_t
+write_quote(char *buf, size_t siz)
+{
+	char *quote = curl(URL), *start, *end;
+	size_t ret;
+
+	start = nstrchr(quote, '"', 3) + 1;
+	if (!start) {
+		free(quote);
+		return 0;
+	}
+	end = strchr(start, '"');
+	if (!end) {
+		free(quote);
+		return 0;
+	}
+	*end = '\0';
+
+	ret = snprintf(buf, siz, "%s\n\n", start);
+	free(quote);
+	return ret;
+}
 
 void
 create_player(Player *player, unsigned int i)
@@ -253,33 +277,36 @@ create_player(Player *player, unsigned int i)
 		((long *)&players[i])[j] = ((long *)player)[j];
 }
 
-char *
-update_player(char *buf, long siz, Player *player, unsigned int i)
+void
+update_player(char *buf, size_t siz, Player *player, unsigned int i)
 {
-	char *p, *plto, *pltn, *pltd;
+	char *plto, *pltn, *pltd;
 	unsigned int j;
 	long old, new, diff;
+	size_t s = 0;
 	struct tm *tm = gmtime(&players[i].update);
 
 	players[i].update = player->update;
 	/* keep this commented to not update name and keep corrected change */
 	/* strlcpy(players[i].name, player->name, MAX_USERNAME_LEN); */
 
-	siz -= snprintf(buf, siz, "**%s**'s profile has been updated.\n\n",
-	                players[i].name);
-	p = strchr(buf, '\0');
+	s += write_quote(buf + s, siz - s);
+	s += snprintf(buf + s, siz - s, "**%s**'s profile has been updated.\n",
+	              players[i].name);
 
 	if (strcmp(players[i].kingdom, player->kingdom) != 0) {
-		siz -= snprintf(p, siz, "%s: %s -> %s\n", fields[1],
-		                players[i].kingdom, player->kingdom);
-		p = strchr(buf, '\0');
-
-		/* update player */
+		s += snprintf(buf + s, siz - s, "%s: %s -> %s\n", fields[1],
+		              players[i].kingdom, player->kingdom);
 		strlcpy(players[i].kingdom, player->kingdom, MAX_KINGDOM_LEN);
 	}
 
 	/* -2 to not include update and userid */
 	for (j = 2; j < LENGTH(fields) - 2; j++) {
+		if (s >= siz) {
+			WARN("string truncation");
+			return;
+		}
+
 		old = ((long *)&players[i])[j];
 		new = ((long *)player)[j];
 		diff = new - old;
@@ -297,32 +324,30 @@ update_player(char *buf, long siz, Player *player, unsigned int i)
 			plto = playtime_to_str(old);
 			pltn = playtime_to_str(new);
 			pltd = playtime_to_str(diff);
-			siz -= snprintf(p, siz, "%s: %s -> %s (+ %s)\n",
-			                fields[7], plto, pltn, pltd);
+			s += snprintf(buf + s, siz - s, "%s: %s -> %s (+ %s)\n",
+			              fields[7], plto, pltn, pltd);
 			free(plto);
 			free(pltn);
 			free(pltd);
 		} else {
-			siz -= snprintf(p, siz, "%s: %'ld -> %'ld (%'+ld)\n",
-			                fields[j], old, new, diff);
+			s += snprintf(buf + s, siz - s,
+			              "%s: %'ld -> %'ld (%'+ld)\n",
+			              fields[j], old, new, diff);
 		}
-		p = strchr(buf, '\0');
 
 		/* update player */
 		((long *)&players[i])[j] = new;
-		if (siz <= 0) {
-			WARN("string truncation");
-			return buf;
-		}
 	}
-	if (!strftime(p, siz, "\nLast update was on %d %b %Y at %R UTC\n", tm))
-		WARN("strftime: string truncation");
 
-	/* TODO: hint with /correct */
+	/* FIXME: strftime returns 0 when truncation, which is bad */
+	s += strftime(buf + s, siz - s,
+	              "\nLast update was on %d %b %Y at %R UTC\n", tm);
+
+	s += strlcat(buf, "Correct your stats with /correct ;)", siz);
+	if (s >= siz)
+		WARN("string truncation");
 
 	/* TODO: New roles: ... */
-
-	return buf;
 }
 
 void
@@ -373,7 +398,7 @@ unsigned int
 update_players(char *buf, size_t siz, Player *player)
 {
 	unsigned int i = 0;
-	int r;
+	size_t s = 0;
 
 	while (i < nplayers && players[i].userid != player->userid)
 		i++;
@@ -383,10 +408,11 @@ update_players(char *buf, size_t siz, Player *player)
 		if (nplayers > MAX_PLAYERS)
 			DIE("there is too much players (max:%lu)", MAX_PLAYERS);
 		create_player(player, i);
-		r = snprintf(buf, siz,
-		             "**%s** has been registrated in the database.\n\n",
-		             player->name);
-		write_info(buf + r, siz - r, &players[i]);
+		s += write_quote(buf + s, siz - s);
+		s += snprintf(buf + s, siz - s,
+		              "**%s** has been registrated in the database.\n",
+		              player->name);
+		write_info(buf + s, siz - s, &players[i]);
 	} else {
 		update_player(buf, siz, player, i);
 	}
@@ -406,7 +432,7 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 
 	/* not always a jpg but idc */
 	snprintf(fname, sizeof(fname), "%s/%lu.jpg", IMAGES_FOLDER, userid);
-	if ((ret = curl(url, fname)) != 0) {
+	if ((ret = curl_file(url, fname)) != 0) {
 		WARN("curl failed CURLcode:%u", ret);
 		strlcpy(buf, "Error: Failed to download image", siz);
 		return;

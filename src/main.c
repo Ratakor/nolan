@@ -50,6 +50,7 @@ main(int argc, char *argv[])
 	create_stats_file();
 	init_players();
 
+	curl_global_init(CURL_GLOBAL_ALL);
 	ccord_global_init();
 	client = discord_init(TOKEN);
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT |
@@ -71,6 +72,7 @@ main(int argc, char *argv[])
 
 	discord_cleanup(client);
 	ccord_global_cleanup();
+	curl_global_cleanup();
 
 	return EXIT_SUCCESS;
 }

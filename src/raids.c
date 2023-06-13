@@ -443,7 +443,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 		snprintf(fname, sizeof(fname), "%s/raids.png", IMAGES_FOLDER);
 	else
 		snprintf(fname, sizeof(fname), "%s/raids.jpg", IMAGES_FOLDER);
-	if ((ret = curl(event->attachments->array->url, fname)) != 0) {
+	if ((ret = curl_file(event->attachments->array->url, fname)) != 0) {
 		WARN("curl failed CURLcode:%u", ret);
 		discord_send_message(client, event->channel_id, "Error: \
 Failed to download image <@%lu>.\nFix me <@%lu>", event->author->id, ADMIN);

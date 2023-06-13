@@ -150,14 +150,14 @@ void
 write_invalid_value(char *buf, size_t siz, char *fmt, ...)
 {
 	va_list ap;
-	char *p;
+	size_t s;
 
-	siz -= strlcpy(buf, "NO WRONG, this is not a correct value.\n", siz);
-	p = strchr(buf, '\0');
-
+	s = strlcpy(buf, "NO WRONG, this is not a correct value.\n", siz);
 	va_start(ap, fmt);
-	vsnprintf(p, siz, fmt, ap);
+	s += vsnprintf(buf + s, siz - s, fmt, ap);
 	va_end(ap);
+	if (s >= siz)
+		WARN("string truncation");
 }
 
 int

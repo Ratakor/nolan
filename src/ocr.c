@@ -13,37 +13,47 @@
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
 static int write_rect(gdRect *rect, gdImagePtr im);
 
-static size_t
+size_t
 write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 {
-	size_t written = fwrite(ptr, size, nmemb, (FILE *)stream);
-	return written;
+	if (size * nmemb > MAX_MESSAGE_LEN)
+		DIE("fix your code donkey");
+	return strlcpy(stream, ptr, MAX_MESSAGE_LEN);
 }
 
-unsigned int
-curl(char *url, char *fname)
+
+char *
+curl(char *url)
 {
-	CURL *handle;
-	CURLcode ret;
-	FILE *fp;
-
-	curl_global_init(CURL_GLOBAL_ALL);
-
-	handle = curl_easy_init();
+	CURL *handle = curl_easy_init();
+	char *buf = emalloc(MAX_MESSAGE_LEN);
 
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_data);
+	curl_easy_setopt(handle, CURLOPT_WRITEDATA, buf);
+	curl_easy_perform(handle);
+	curl_easy_cleanup(handle);
 
-	fp = efopen(fname, "wb");
+	return buf;
+}
+
+unsigned int
+curl_file(char *url, char *fname)
+{
+	CURL *handle = curl_easy_init();
+	CURLcode ret;
+	FILE *fp = efopen(fname, "wb");
+
+	curl_easy_setopt(handle, CURLOPT_URL, url);
+	/* curl uses fwrite by default */
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, fp);
 	ret = curl_easy_perform(handle);
-
 	fclose(fp);
 	curl_easy_cleanup(handle);
-	curl_global_cleanup();
 
 	return ret;
 }
+
 
 int
 write_rect(gdRect *rect, gdImage *im)

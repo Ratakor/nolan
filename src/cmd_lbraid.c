@@ -8,7 +8,7 @@ static void parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers);
 static void load_files(Slayer slayers[], size_t *nslayers);
 static void write_invalid(char *buf, size_t siz);
 static int compare(const void *s1, const void *s2);
-static void write_lbraid(char *buf, long siz, Slayer slayers[], size_t nslayers);
+static void write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers);
 static void lbraid(char *buf, size_t siz);
 
 void
@@ -83,19 +83,18 @@ compare(const void *s1, const void *s2)
 }
 
 void
-write_lbraid(char *buf, long siz, Slayer slayers[], size_t nslayers)
+write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers)
 {
 	unsigned int i, lb_max = MIN(nslayers, LB_MAX);
-	char *p = buf;
+	size_t s = 0;
 
 	for (i = 0; i < lb_max; i++) {
-		siz -= snprintf(p, siz, "%d. %s: %'lu damage\n", i,
-		                slayers[i].name, slayers[i].damage);
-		if (siz <= 0) {
+		s += snprintf(buf + s, siz - s, "%d. %s: %'lu damage\n", i,
+		              slayers[i].name, slayers[i].damage);
+		if (s >= siz) {
 			WARN("string truncation");
 			return;
 		}
-		p = strchr(buf, '\0');
 	}
 }
 
@@ -112,7 +111,7 @@ lbraid(char *buf, size_t siz)
 		return;
 	}
 	qsort(slayers, nslayers, sizeof(slayers[0]), compare);
-	write_lbraid(buf, (int)siz, slayers, nslayers);
+	write_lbraid(buf, siz, slayers, nslayers);
 	for (i = 0; i < nslayers; i++) {
 		free(slayers[i].name);
 	}

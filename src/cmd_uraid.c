@@ -6,7 +6,7 @@
 
 static void write_invalid(char *buf, size_t siz);
 static unsigned long *load_files(char *username, unsigned long *dmgs);
-static void write_uraid(char *buf, long siz, char *username,
+static void write_uraid(char *buf, size_t siz, char *username,
                         unsigned long *dmgs);
 static void uraid(char *buf, size_t siz, char *username);
 
@@ -60,10 +60,10 @@ load_files(char *username, unsigned long *dmgs)
 }
 
 void
-write_uraid(char *buf, long siz, char *username, unsigned long *dmgs)
+write_uraid(char *buf, size_t siz, char *username, unsigned long *dmgs)
 {
-	char *p;
 	unsigned long total = 0;
+	size_t s = 0;
 	time_t t = time(NULL);
 	struct tm *tm = gmtime(&t);
 	int i = 0, d = tm->tm_wday;
@@ -77,20 +77,21 @@ write_uraid(char *buf, long siz, char *username, unsigned long *dmgs)
 		"Sat"
 	};
 
-	siz -= snprintf(buf, siz, "%s's raids stats for the last 7 days:\n",
-	                username);
-	p = strchr(buf, '\0');
+	s += snprintf(buf + s, siz - s,
+	              "%s's raids stats for the last 7 days:\n", username);
 	for (; i < 7; i++, d--) {
 		if (d < 0) d = 6;
 		total += dmgs[i];
-		siz -= snprintf(p, siz, "%s: %'lu damage\n", week[d], dmgs[i]);
-		if (siz <= 0) {
+		s += snprintf(buf + s, siz - s,
+		              "%s: %'lu damage\n", week[d], dmgs[i]);
+		if (s >= siz) {
 			WARN("string truncation");
 			return;
 		}
-		p = strchr(buf, '\0');
 	}
-	siz -= snprintf(p, siz, "\nTotal: %'lu damage\n", total);
+	s += snprintf(buf + s, siz - s, "\nTotal: %'lu damage\n", total);
+	if (s >= siz)
+		WARN("string truncation");
 }
 
 void
@@ -100,7 +101,7 @@ uraid(char *buf, size_t siz, char *username)
 
 	memset(dmgs, 0, sizeof(dmgs));
 	load_files(username, dmgs);
-	write_uraid(buf, (int)siz, username, dmgs);
+	write_uraid(buf, siz, username, dmgs);
 }
 
 void

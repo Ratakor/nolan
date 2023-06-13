@@ -101,7 +101,8 @@ void on_ready(struct discord *client, const struct discord_ready *event);
 void on_message(struct discord *client, const struct discord_message *event);
 
 /* ocr.c */
-unsigned int curl(char *url, char *fname);
+char *curl(char *url);
+unsigned int curl_file(char *url, char *fname);
 int crop(char *fname, int type);
 char *ocr(char *fname, char *lang);
 
