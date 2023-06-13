@@ -5,6 +5,7 @@
 
 static void write_invalid_category(char *buf, size_t siz);
 static void write_invalid_value(char *buf, size_t siz, char *fmt, ...);
+int check_delim(const char *val);
 static void correct(char *buf, size_t siz, char *category, char *val,
                     u64snowflake userid);
 static char *get_value(char *category);
@@ -159,6 +160,16 @@ write_invalid_value(char *buf, size_t siz, char *fmt, ...)
 	va_end(ap);
 }
 
+int
+check_delim(const char *val)
+{
+	do {
+		if (*val == DELIM)
+			return 1;
+	} while (*val++);
+	return 0;
+}
+
 void
 correct(char *buf, size_t siz, char *category, char *val, u64snowflake userid)
 {
@@ -179,6 +190,11 @@ stats", siz);
 
 	if (f == LENGTH(fields) - 2 || f == 7) { /* playtime */
 		write_invalid_category(buf, siz);
+		return;
+	}
+
+	if (check_delim(val)) {
+		write_invalid_value(buf, siz, "%c is not a valid char", DELIM);
 		return;
 	}
 

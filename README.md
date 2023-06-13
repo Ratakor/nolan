@@ -20,7 +20,6 @@ A discord bot for Orna.
 - refactor parseline() in stats.c
 
 ### misc
-- DEINELENSY -> Damaquandey
 - use sql instead of csv
 - better wrong image input detection for raids
 - async ?

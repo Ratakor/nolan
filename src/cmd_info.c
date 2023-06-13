@@ -141,7 +141,7 @@ info_from_txt(char *buf, size_t siz, char *txt)
 	u64snowflake userid;
 
 	userid = str_to_uid(txt);
-	if (userid > 0) {
+	if (userid) {
 		info_from_uid(buf, siz, userid);
 		return;
 	}

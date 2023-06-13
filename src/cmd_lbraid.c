@@ -4,7 +4,7 @@
 
 #include "nolan.h"
 
-static void parse_file(char *fname, Slayer slayers[], size_t *nslayers);
+static void parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers);
 static void load_files(Slayer slayers[], size_t *nslayers);
 static void write_invalid(char *buf, size_t siz);
 static int compare(const void *s1, const void *s2);
@@ -23,7 +23,7 @@ create_slash_lbraid(struct discord *client)
 }
 
 void
-parse_file(char *fname, Slayer slayers[], size_t *nslayers)
+parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers)
 {
 	FILE *fp;
 	char line[LINE_SIZE], *endname;
@@ -63,7 +63,7 @@ load_files(Slayer slayers[], size_t *nslayers)
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - i);
 		if (file_exists(fname))
-			parse_file(fname, slayers, nslayers);
+			parse_file_lbraid(fname, slayers, nslayers);
 	}
 }
 

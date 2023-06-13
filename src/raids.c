@@ -5,7 +5,8 @@
 
 #include "nolan.h"
 
-#define DAMAGE_CAP  300000000 / 7 /* daily */
+#define DIFF        3 /* reduce n size in strncmp to reduce tesseract errors */
+#define DAMAGE_CAP  300000000 /* weekly */
 
 struct Slayers {
 	char *name;
@@ -23,6 +24,7 @@ static size_t parse(Slayer slayers[], char *txt);
 static unsigned long adjust(unsigned long dmg, char *raid);
 static void save_to_new_file(Slayer slayers[], size_t nslayers, char *fname,
                              char *raid);
+static unsigned long get_weekly_damage(char *username, size_t namelen);
 static void overcap_msg(char *name, unsigned long dmg, struct discord *client,
                         const u64snowflake channel_id);
 static void save_to_file(Slayer slayers[], size_t nslayers, char *raid,
@@ -164,8 +166,12 @@ trim_name(char *name)
 			*w++ = *r;
 	} while (*r++);
 	*w = '\0';
-	while (*name == ' ')
-		name++;
+	/* while (*name == ' ') */
+	/* 	name++; */
+
+	/* FIXME: this is really ugly, some tesseract madness again */
+	if (strncmp(name, "DEINELENSY", sizeof("DEINELENSY") - 1) == 0)
+		strcpy(name, "Damaquandey");
 
 	return name;
 }
@@ -273,7 +279,7 @@ adjust(unsigned long dmg, char *raid)
 	if (strcmp(raid, "maelor") == 0)
 		return dmg * 2;
 	/* if (strcmp(raid, "arisen-morrigan") == 0) */
-	/* 	return *dmg / 2; */
+	/* 	return dmg / 2; */
 	return dmg;
 }
 
@@ -292,29 +298,68 @@ save_to_new_file(Slayer slayers[], size_t nslayers, char *fname, char *raid)
 	fclose(fp);
 }
 
-/* TODO: use a weekly cap instead */
+/* also used in uraid.c */
+unsigned long
+parse_file(char *fname, char *username, size_t namelen)
+{
+	FILE *fp;
+	unsigned long dmg;
+	char line[LINE_SIZE];
+
+	fp = efopen(fname, "r");
+	while (fgets(line, LINE_SIZE, fp)) {
+		dmg = strtoul(strchr(line, DELIM) + 1, NULL, 10);
+		if (strncasecmp(username, line, namelen - DIFF) == 0) {
+			fclose(fp);
+			return dmg;
+		}
+	}
+
+	fclose(fp);
+	return 0;
+}
+
+unsigned long
+get_weekly_damage(char *username, size_t namelen)
+{
+	unsigned int i, dmgs = 0;
+	long day = (time(NULL) / 86400) - 1; /* today is already included */
+	char fname[128];
+
+	for (i = 0; i < 6; i++) {
+		snprintf(fname, sizeof(fname), "%s%ld.csv",
+		         RAIDS_FOLDER, day - i);
+		if (file_exists(fname))
+			dmgs += parse_file(fname, username, namelen);
+	}
+
+	return dmgs;
+}
+
 void
 overcap_msg(char *name, unsigned long dmg, struct discord *client,
             const u64snowflake channel_id)
 {
 	unsigned int i = 0;
-	size_t len;
+	size_t len = strlen(name);
+	unsigned long dmgs = dmg;
 
-	if (dmg < DAMAGE_CAP)
+	dmgs += get_weekly_damage(name, len);
+	if (dmgs < DAMAGE_CAP)
 		return;
 
-	len = strlen(name) - 3;
-	while (i < LENGTH(slayers) && strncasecmp(name, slayers[i].name, len) != 0)
+	while (i < LENGTH(slayers) &&
+	                strncasecmp(name, slayers[i].name, len - DIFF) != 0)
 		i++;
 
 	if (i == MAX_SLAYERS) {
 		discord_send_message(client, channel_id,
 		                     "%s has overcapped the limit by %'lu \
-damage, he is now at %'lu damage.", name, dmg - DAMAGE_CAP, dmg);
+damage, he is now at %'lu damage.", name, dmgs - DAMAGE_CAP, dmgs);
 	} else {
 		discord_send_message(client, channel_id,
 		                     "<@%lu> has overcapped the limit by %'lu \
-damage, he is now at %'lu damage.", slayers[i].userid, dmg - DAMAGE_CAP, dmg);
+damage, he is now at %'lu damage.", slayers[i].userid, dmgs - DAMAGE_CAP, dmgs);
 	}
 }
 
@@ -342,13 +387,13 @@ save_to_file(Slayer slayers[], size_t nslayers, char *raid,
 		if (endname)
 			*endname = '\0';
 		for (i = 0; i < nslayers; i++) {
-			if (!slayers[i].found_in_file) {
-				/* should be strcmp but for common mistakes */
-				if (strncasecmp(slayers[i].name, line,
-				                strlen(slayers[i].name) - 3) == 0) {
-					slayers[i].found_in_file = 1;
-					break;
-				}
+			if (slayers[i].found_in_file)
+				continue;
+			/* should be strcmp but for common mistakes */
+			if (strncasecmp(slayers[i].name, line,
+			                strlen(slayers[i].name) - DIFF) == 0) {
+				slayers[i].found_in_file = 1;
+				break;
 			}
 		}
 		if (i < nslayers) {

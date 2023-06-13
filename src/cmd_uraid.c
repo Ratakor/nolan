@@ -5,7 +5,6 @@
 #include "nolan.h"
 
 static void write_invalid(char *buf, size_t siz);
-static unsigned long parse_file(char *fname, char *username);
 static unsigned long *load_files(char *username, unsigned long *dmgs);
 static void write_uraid(char *buf, int siz, char *username,
                         unsigned long *dmgs);
@@ -42,41 +41,19 @@ write_invalid(char *buf, size_t siz)
 	strlcat(buf, "Valid argument is an Orna username.\n", siz);
 }
 
-unsigned long
-parse_file(char *fname, char *username)
-{
-	FILE *fp;
-	unsigned long dmg;
-	char line[LINE_SIZE], *endname;
-
-	fp = efopen(fname, "r");
-	while (fgets(line, LINE_SIZE, fp)) {
-		endname = strchr(line, DELIM);
-		dmg = strtoul(endname + 1, NULL, 10);
-		if (endname)
-			*endname = '\0';
-		if (strcmp(username, line) == 0) {
-			fclose(fp);
-			return dmg;
-		}
-	}
-
-	fclose(fp);
-	return 0;
-}
-
 unsigned long *
 load_files(char *username, unsigned long *dmgs)
 {
 	unsigned int i;
 	long day = time(NULL) / 86400;
 	char fname[128];
+	size_t namelen = strlen(username);
 
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - i);
 		if (file_exists(fname))
-			dmgs[i] = parse_file(fname, username);
+			dmgs[i] = parse_file(fname, username, namelen);
 	}
 
 	return dmgs;
