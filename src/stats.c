@@ -422,30 +422,21 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 	player.userid = userid;
 	player.update = time(NULL);
 	for_line(&player, txt);
-	free(txt);
+	/* txt contains player.kingdom */
 
 	/* detect wrong images */
 	i = 2;
 	while (((long *)&player)[i] == 0 && i++ < LENGTH(fields) - 2);
-	if (i == LENGTH(fields) - 2)
+	if (i == LENGTH(fields) - 2) {
+		free(txt);
 		return;
+	}
 
 	if (player.kingdom == NULL)
 		player.kingdom = "(null)";
 
-	if (kingdom_verification) {
-		i = LENGTH(kingdoms);
-
-		while (i > 0 && strcmp(player.kingdom, kingdoms[i++]) != 0);
-
-		if (i == 0) {
-			strlcpy(buf, "Sorry you're not part of the kingdom :/",
-			        siz);
-			return;
-		}
-	}
-
 	i = update_players(buf, siz, &player);
+	free(txt);
 
 #ifndef DEVEL
 	if (guild_id == ROLE_GUILD_ID)

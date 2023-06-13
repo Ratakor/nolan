@@ -7,7 +7,6 @@
 #define TOKEN         "YOUR-BOT-TOKEN"
 #define PREFIX        "?"
 
-static const int kingdom_verification = 0; /* 0 means no verification */
 static const int use_embed            = 0; /* 0 means no embed on info */
 
 /* list of channel ids to check for stats screenshots */
