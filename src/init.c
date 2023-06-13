@@ -55,7 +55,6 @@ create_slash_commands(struct discord *client)
 #ifndef DEVEL
 	create_slash_help(client);
 	create_slash_stats(client);
-	create_slash_stats_admin(client);
 	create_slash_info(client);
 	create_slash_leaderboard(client);
 	create_slash_correct(client);
@@ -145,8 +144,6 @@ on_interaction(struct discord *client, const struct discord_interaction *event)
 		on_help_interaction(client, event);
 	else if (strcmp(event->data->name, "stats") == 0)
 		on_stats_interaction(client, event);
-	else if (strcmp(event->data->name, "stats_admin") == 0)
-		on_stats_admin_interaction(client, event);
 	else if (strcmp(event->data->name, "info") == 0)
 		on_info_interaction(client, event);
 	else if (strcmp(event->data->name, "leaderboard") == 0)

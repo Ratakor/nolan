@@ -353,9 +353,11 @@ overcap_msg(char *name, unsigned long dmg, struct discord *client,
 		i++;
 
 	if (i == MAX_SLAYERS) {
+		WARN("%s is not added to slayers", name);
 		discord_send_message(client, channel_id,
 		                     "%s has overcapped the limit by %'lu \
-damage, he is now at %'lu damage.", name, dmgs - DAMAGE_CAP, dmgs);
+damage, he is now at %'lu damage. <@%lu> add this user to the list btw",
+		                     name, dmgs - DAMAGE_CAP, dmgs, ADMIN);
 	} else {
 		discord_send_message(client, channel_id,
 		                     "<@%lu> has overcapped the limit by %'lu \

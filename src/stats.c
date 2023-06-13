@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <cjson/cJSON.h>
 
 #include "nolan.h"
 
@@ -38,37 +37,6 @@ create_slash_stats(struct discord *client)
 		}
 	};
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
-}
-
-void
-create_slash_stats_admin(struct discord *client)
-{
-	struct discord_application_command_option options[] = {
-		{
-			.type = DISCORD_APPLICATION_OPTION_ATTACHMENT,
-			.name = "stats",
-			.description = "stats screenshot",
-			.required = true
-		},
-		{
-			.type = DISCORD_APPLICATION_OPTION_STRING,
-			.name = "userid",
-			.description = "discord @",
-			.required = true
-		}
-	};
-	struct discord_create_guild_application_command cmd = {
-		.name = "stats_admin",
-		.description = "Update other player's stats (admin only)",
-		.options = &(struct discord_application_command_options)
-		{
-			.size = LENGTH(options),
-			.array = options
-		},
-		/* yea it's not really admin I know */
-		.default_member_permissions = DISCORD_PERM_MANAGE_ROLES
-	};
-	discord_create_guild_application_command(client, APP_ID, RAID_GUILD_ID, &cmd, NULL);
 }
 
 long
@@ -260,10 +228,7 @@ create_player(Player *player, unsigned int i)
 {
 	unsigned int j;
 
-	if (player->name)
-		players[i].name = strndup(player->name, MAX_USERNAME_LEN);
-	else
-		players[i].name = strdup("(null)");
+	players[i].name = strndup(player->name, MAX_USERNAME_LEN);
 	players[i].kingdom = strndup(player->kingdom, MAX_KINGDOM_LEN);
 	for (j = 2; j < LENGTH(fields); j++)
 		((long *)&players[i])[j] = ((long *)player)[j];
@@ -277,9 +242,8 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 	long old, new, diff;
 	struct tm *tm = gmtime(&players[i].update);
 
-	/* update player only if it was added by and admin */
-	if (player->name && strcmp(players[i].name, "(null)") == 0)
-		strlcpy(players[i].name, player->name, MAX_USERNAME_LEN);
+	/* keep this commented to not update name and keep corrected change */
+	/* strlcpy(players[i].name, player->name, MAX_USERNAME_LEN); */
 
 	siz -= snprintf(buf, siz, "**%s**'s profile has been updated.\n\n",
 	                players[i].name);
@@ -434,9 +398,7 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 	}
 
 	memset(&player, 0, sizeof(player));
-
-	if (username)
-		player.name = username;
+	player.name = username;
 	player.userid = userid;
 	player.update = time(NULL);
 	for_line(&player, txt);
@@ -494,22 +456,30 @@ void
 on_stats_interaction(struct discord *client,
                      const struct discord_interaction *event)
 {
-	char buf[MAX_MESSAGE_LEN] = "";
-	const cJSON *attachment = NULL, *url = NULL;
-	cJSON *attachments = cJSON_Parse(event->data->resolved->attachments);
+	char buf[MAX_MESSAGE_LEN] = "", *url, *endurl;
+	json_char *attachment = strdup(event->data->resolved->attachments);
 
-	cJSON_ArrayForEach(attachment, attachments) {
-		url = cJSON_GetObjectItemCaseSensitive(attachment, "url");
+	url = strstr(attachment, "\"url\":");
+	if (!url) {
+		free(attachment);
+		return;
 	}
+	url += STRLEN("\"url\":\"");
+	endurl = strchr(url, '"');
+	if (!endurl) {
+		free(attachment);
+		return;
+	}
+	*endurl = '\0';
 
 	stats(buf,
 	      sizeof(buf),
-	      url->valuestring,
+	      url,
 	      event->member->user->username,
 	      event->member->user->id,
 	      event->guild_id,
 	      client);
-	cJSON_Delete(attachments);
+	free(attachment);
 
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
@@ -517,45 +487,6 @@ on_stats_interaction(struct discord *client,
 		{
 			.content = buf,
 			/* .flags = DISCORD_MESSAGE_EPHEMERAL */
-		}
-	};
-	discord_create_interaction_response(client, event->id, event->token,
-	                                    &params, NULL);
-}
-
-void
-on_stats_admin_interaction(struct discord *client,
-                           const struct discord_interaction *event)
-{
-	char buf[MAX_MESSAGE_LEN] = "";
-	const cJSON *attachment = NULL, *url = NULL;
-	cJSON *attachments = cJSON_Parse(event->data->resolved->attachments);
-	u64snowflake userid = str_to_uid(event->data->options->array[1].value);
-
-	cJSON_ArrayForEach(attachment, attachments) {
-		url = cJSON_GetObjectItemCaseSensitive(attachment, "url");
-	}
-
-	if (!userid) {
-		strlcpy(buf, "Error: This is probably not a correct user",
-		        sizeof(buf));
-	} else {
-		stats(buf,
-		      sizeof(buf),
-		      url->valuestring,
-		      NULL,
-		      userid,
-		      event->guild_id,
-		      client);
-	}
-	cJSON_Delete(attachments);
-
-	struct discord_interaction_response params = {
-		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
-		.data = &(struct discord_interaction_callback_data)
-		{
-			.content = buf,
-			.flags = DISCORD_MESSAGE_EPHEMERAL
 		}
 	};
 	discord_create_interaction_response(client, event->id, event->token,
