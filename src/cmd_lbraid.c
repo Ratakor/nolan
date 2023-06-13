@@ -8,7 +8,7 @@ static void parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers);
 static void load_files(Slayer slayers[], size_t *nslayers);
 static void write_invalid(char *buf, size_t siz);
 static int compare(const void *s1, const void *s2);
-static void write_lbraid(char *buf, int siz, Slayer slayers[], size_t nslayers);
+static void write_lbraid(char *buf, long siz, Slayer slayers[], size_t nslayers);
 static void lbraid(char *buf, size_t siz);
 
 void
@@ -83,7 +83,7 @@ compare(const void *s1, const void *s2)
 }
 
 void
-write_lbraid(char *buf, int siz, Slayer slayers[], size_t nslayers)
+write_lbraid(char *buf, long siz, Slayer slayers[], size_t nslayers)
 {
 	unsigned int i, lb_max = MIN(nslayers, LB_MAX);
 	char *p = buf;
@@ -91,10 +91,12 @@ write_lbraid(char *buf, int siz, Slayer slayers[], size_t nslayers)
 	for (i = 0; i < lb_max; i++) {
 		siz -= snprintf(p, siz, "%d. %s: %'lu damage\n", i,
 		                slayers[i].name, slayers[i].damage);
+		if (siz <= 0) {
+			WARN("string truncation");
+			return;
+		}
 		p = strchr(buf, '\0');
 	}
-	if (siz <= 0)
-		WARN("string truncation");
 }
 
 void

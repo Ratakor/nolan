@@ -12,11 +12,12 @@ A discord bot for Orna.
 - ascensions (track mats)
 
 ### chore
+- optimize raids.c and cmd_..raid with slayers
 - change players' stats to unsigned long
+- add logging
 - add documentation
-- rework DIFF in ocr.c
+- rework DIFF in ocr.c and raids.c
 - rework roles
-- refactor parseline() in stats.c
 
 ### misc
 - use sql instead of csv

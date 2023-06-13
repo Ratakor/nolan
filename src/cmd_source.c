@@ -40,7 +40,7 @@ load_source(size_t *fszp)
 	*res = '\0';
 	while (fgets(line, LINE_SIZE, fp) != NULL) {
 		/* skip everything after codex */
-		if ((end = nstrchr(line, DELIM, 22))) {
+		if ((end = nstrchr(line, DELIM, CODEX + 1))) {
 			*end = '\n';
 			*(end + 1) = '\0';
 		}
@@ -63,7 +63,7 @@ load_sorted_source(size_t *fszp, char *kingdom)
 	res = emalloc(mfsz);
 	fgets(line, LINE_SIZE, fp); /* fields name */
 	/* skip everything after codex */
-	if ((end = nstrchr(line, DELIM, 22))) {
+	if ((end = nstrchr(line, DELIM, CODEX + 1))) {
 		*end = '\n';
 		*(end + 1) = '\0';
 	}
@@ -76,7 +76,7 @@ load_sorted_source(size_t *fszp, char *kingdom)
 			if (endkd)
 				*endkd = DELIM;
 			/* skip everything after codex */
-			if ((end = nstrchr(line, DELIM, 22))) {
+			if ((end = nstrchr(line, DELIM, CODEX + 1))) {
 				*end = '\n';
 				*(end + 1) = '\0';
 			}

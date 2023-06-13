@@ -52,7 +52,7 @@ write_invalid(char *buf, size_t siz)
 	strlcat(buf, "To check your info just type /info.", siz);
 }
 
-/* TODO */
+/* TODO: embed */
 /* void */
 /* write_info_embed(struct discord *client, char *buf, size_t siz, int index) */
 /* { */
@@ -98,21 +98,21 @@ write_info(char *buf, size_t siz, const Player *player)
 
 	/* -2 to not include upadte and userid */
 	for (i = 0; i < LENGTH(fields) - 2; i++) {
-		if (i == 0) { /* name */
+		if (i == NAME) {
 			snprintf(p, siz, "%s: %s\n", fields[i], player->name);
-		} else if (i == 1) { /* kingdom */
+		} else if (i == KINGDOM) {
 			if (strcmp(player->kingdom, "(null)") != 0) {
 				snprintf(p, siz, "%s: %s\n", fields[i],
 				         player->kingdom);
 			}
-		} else if (i == 7) { /* playtime */
+		} else if (i == PLAYTIME) {
 			plt = playtime_to_str(((long *)player)[i]);
 			snprintf(p, siz, "%s: %s\n", fields[i], plt);
 			free(plt);
 		} else if (((long *)player)[i]) {
 			snprintf(p, siz, "%s: %'ld", fields[i],
 			         ((long *)player)[i]);
-			if (i == 18) /* distance */
+			if (i == DISTANCE)
 				strlcat(buf, "m", siz);
 			strlcat(buf, "\n", siz);
 		}

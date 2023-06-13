@@ -6,7 +6,7 @@
 
 static void write_invalid(char *buf, size_t siz);
 static unsigned long *load_files(char *username, unsigned long *dmgs);
-static void write_uraid(char *buf, int siz, char *username,
+static void write_uraid(char *buf, long siz, char *username,
                         unsigned long *dmgs);
 static void uraid(char *buf, size_t siz, char *username);
 
@@ -60,7 +60,7 @@ load_files(char *username, unsigned long *dmgs)
 }
 
 void
-write_uraid(char *buf, int siz, char *username, unsigned long *dmgs)
+write_uraid(char *buf, long siz, char *username, unsigned long *dmgs)
 {
 	char *p;
 	unsigned long total = 0;
@@ -82,13 +82,15 @@ write_uraid(char *buf, int siz, char *username, unsigned long *dmgs)
 	p = strchr(buf, '\0');
 	for (; i < 7; i++, d--) {
 		if (d < 0) d = 6;
-		siz -= snprintf(p, siz, "%s: %'lu damage\n", week[d], dmgs[i]);
 		total += dmgs[i];
+		siz -= snprintf(p, siz, "%s: %'lu damage\n", week[d], dmgs[i]);
+		if (siz <= 0) {
+			WARN("string truncation");
+			return;
+		}
 		p = strchr(buf, '\0');
 	}
 	siz -= snprintf(p, siz, "\nTotal: %'lu damage\n", total);
-	if (siz <= 0)
-		WARN("string truncation");
 }
 
 void

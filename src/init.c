@@ -90,9 +90,9 @@ load_player(unsigned int line)
 			continue;
 
 		*delim = '\0';
-		if (i == 0)
+		if (i == NAME)
 			player.name = strndup(p, MAX_USERNAME_LEN);
-		else if (i == 1)
+		else if (i == KINGDOM)
 			player.kingdom = strndup(p, MAX_KINGDOM_LEN);
 		else
 			((long *)&player)[i] = atol(p);

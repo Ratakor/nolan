@@ -5,16 +5,81 @@
 
 #define STRLEN(STR) (sizeof STR - 1)
 
-static long playtime_to_long(char *playtime, char *str);
+struct Field {
+	char *key;
+	unsigned int val;
+	size_t keylen;
+};
+
+enum lang {
+	ENGLISH,
+	FRENCH
+};
+
+static long playtime_to_long(char *playtime, int lang);
 static long trim_stat(char *str);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
 static void create_player(Player *player, unsigned int i);
-static char *update_player(char *buf, int siz, Player *player, unsigned int i);
+static char *update_player(char *buf, long siz, Player *player, unsigned int i);
 static unsigned int update_players(char *buf, size_t siz, Player *player);
 static void stats(char *buf, size_t siz, char *url, char *username,
                   u64snowflake userid, u64snowflake guild_id,
                   struct discord *client);
+
+const struct Field english[] = {
+	{ "KINGDOM",        KINGDOM,          STRLEN("KINGDOM")        },
+	{ "\\ele]]",        KINGDOM,          STRLEN("\\ele]]")        },
+	{ "PLAYTIME",       PLAYTIME,         STRLEN("PLAYTIME")       },
+	{ "ASCENSION",      ASCENSION,        STRLEN("ASCENSION")      },
+	{ "LEVEL",          LEVEL,            STRLEN("LEVEL")          },
+	{ "GLOBAL",         GLOBAL_RANK,      STRLEN("GLOBAL")         },
+	{ "REGIONAL",       REGIONAL_RANK,    STRLEN("REGIONAL")       },
+	{ "COMPETITIVE",    COMPETITIVE_RANK, STRLEN("COMPETITIVE")    },
+	{ "MONSTERS",       MONSTERS,         STRLEN("MONSTERS")       },
+	{ "BOSSES",         BOSSES,           STRLEN("BOSSES")         },
+	{ "PLAYERS",        PLAYERS_DEFEATED, STRLEN("PLAYERS")        },
+	{ "QUESTS",         QUESTS,           STRLEN("QUESTS")         },
+	{ "AREAS EXPLORED", AREAS_EXPLORED,   STRLEN("AREAS EXPLORED") },
+	{ "AREAS TAKEN",    AREAS_TAKEN,      STRLEN("AREAS TAKEN")    },
+	{ "DUNGEONS",       DUNGEONS,         STRLEN("DUNGEONS")       },
+	{ "COLISEUM",       COLISEUM,         STRLEN("COLISEUM")       },
+	{ "ITEMS",          ITEMS,            STRLEN("ITEMS")          },
+	{ "FISH",           FISH,             STRLEN("FISH")           },
+	{ "DISTANCE",       DISTANCE,         STRLEN("DISTANCE")       },
+	{ "REPUTATION",     REPUTATION,       STRLEN("REPUTATION")     },
+	{ "ENDLESS",        ENDLESS,          STRLEN("ENDLESS")        },
+	{ "ENTRIES",        CODEX,            STRLEN("ENTRIES")        },
+
+};
+
+const struct Field french[] = {
+	{ "ROYAUME",          KINGDOM,          STRLEN("ROYAUME")          },
+	{ "TEMPS DE JEU",     PLAYTIME,         STRLEN("TEMPS DE JEU")     },
+	{ "NIVEAU D'ELEVAT",  ASCENSION,        STRLEN("NIVEAU D'ELEVAT")  },
+	{ "NIVEAU",           LEVEL,            STRLEN("NIVEAU")           },
+	{ "RANG GLOBAL",      GLOBAL_RANK,      STRLEN("RANG GLOBAL")      },
+	{ "RANG REGIONAL",    REGIONAL_RANK,    STRLEN("RANG REGIONAL")    },
+	{ "RANG COMPETITIF",  COMPETITIVE_RANK, STRLEN("RANG COMPETITIF")  },
+	{ "MONSTRES",         MONSTERS,         STRLEN("MONSTRES")         },
+	{ "BOSS TUES",        BOSSES,           STRLEN("BOSS TUES")        },
+	{ "JOUEURS",          PLAYERS_DEFEATED, STRLEN("JOUEURS")          },
+	{ "QUETES",           QUESTS,           STRLEN("QUETES")           },
+	{ "TERRES EXPLOREES", AREAS_EXPLORED,   STRLEN("TERRES EXPLOREES") },
+	{ "TERRES PRISES",    AREAS_TAKEN,      STRLEN("TERRES PRISES")    },
+	{ "DONJONS",          DUNGEONS,         STRLEN("DONJONS")          },
+	{ "VICTOIRE DANS",    COLISEUM,         STRLEN("VICTOIRE DANS")    },
+	{ "OBJETS",           ITEMS,            STRLEN("OBJETS")           },
+	{ "POISSONS",         FISH,             STRLEN("POISSONS")         },
+	{ "RECORD DU MODE",   ENDLESS,          STRLEN("RECORD DU MODE")   },
+	{ "RECHERCHES",       CODEX,            STRLEN("RECHERCHES")       },
+
+};
+
+const struct Field *languages[] = {
+	english,
+	french,
+};
 
 void
 create_slash_stats(struct discord *client)
@@ -40,15 +105,22 @@ create_slash_stats(struct discord *client)
 }
 
 long
-playtime_to_long(char *playtime, char str[])
+playtime_to_long(char *playtime, int lang)
 {
-	char *p;
+	char *p, dayname[32], *pdn = dayname;
 	long days, hours;
 
+	if (lang == ENGLISH)
+		strlcpy(dayname, "days, ", sizeof(dayname));
+	else if (lang == FRENCH)
+		strlcpy(dayname, "jours, ", sizeof(dayname));
+	else
+		DIE("new language not correctly added");
+
 	days = atol(playtime);
-	if ((p = strchr(playtime, str[0])) == 0)
+	if ((p = strchr(playtime, dayname[0])) == 0)
 		return days; /* less than a day of playtime */
-	while (*str && (*p++ == *str++));
+	while (*pdn && (*p++ == *pdn++));
 	hours = atol(p);
 
 	return days * 24 + hours;
@@ -110,101 +182,48 @@ trim_stat(char *str)
 void
 parse_line(Player *player, char *line)
 {
-	char *str;
+	const struct Field *field;
+	unsigned int lang, i;
+	size_t langlen;
 	long stat;
 
-	if (strncmp(line, "KINGDOM", STRLEN("KINGDOM")) == 0) {
-		str = "KINGDOM ";
-		while (*str && (*line++ == *str++));
-		player->kingdom = line;
-		return;
-	}
-	if (strncmp(line, "ROYAUME", STRLEN("ROYAUME")) == 0) {
-		str = "ROYAUME ";
-		while (*str && (*line++ == *str++));
-		player->kingdom = line;
-		return;
-	}
-	/* tesseract madness */
-	if (strncmp(line, "\\ele]]", STRLEN("\\ele]]")) == 0) {
-		str = "\\ele]] ";
-		while (*str && (*line++ == *str++));
-		player->kingdom = line;
-		return;
+	for (lang = 0; lang < LENGTH(languages); lang++) {
+		if (lang == ENGLISH)
+			langlen = LENGTH(english);
+		else if (lang == FRENCH)
+			langlen = LENGTH(french);
+		else
+			DIE("new language not correctly added");
+
+		for (i = 0; i < langlen; i++) {
+			field = &languages[lang][i];
+			if (strncmp(line, field->key, field->keylen) == 0)
+				break;
+		}
+		if (i < langlen)
+			break;
 	}
 
-	if (strncmp(line, "PLAYTIME", STRLEN("PLAYTIME")) == 0) {
-		str = "PLAYTIME ";
-		while (*str && (*line++ == *str++));
-		player->playtime = playtime_to_long(line, "days, ");
+	if (lang == LENGTH(languages))
 		return;
-	}
-	if (strncmp(line, "TEMPS DE JEU", STRLEN("TEMPS DE JEU")) == 0) {
-		str = "TEMPS DE JEU ";
-		while (*str && (*line++ == *str++));
-		player->playtime = playtime_to_long(line, "jours, ");
-		return;
-	}
 
-	if (strncmp(line, "ASCENSION LEVEL", STRLEN("ASCENSION LEVEL")) == 0 ||
-	                strncmp(line, "NIVEAU D'ELEVATION", STRLEN("NIVEAU D'ELEVATION")) == 0) {
-		player->ascension = trim_stat(line);
-	} else if (strncmp(line, "LEVEL", STRLEN("LEVEL")) == 0 ||
-	                strncmp(line, "NIVEAU", STRLEN("NIVEAU")) == 0) {
-		if ((stat = trim_stat(line)) <= 250)
+	switch (field->val) {
+	case KINGDOM:
+		player->kingdom = line + field->keylen + 1;
+		break;
+	case PLAYTIME:
+		player->playtime = playtime_to_long(line + field->keylen, lang);
+		break;
+	case LEVEL:
+		stat = trim_stat(line);
+		if (stat && stat <= 250)
 			player->level = stat;
-	} else if (strncmp(line, "GLOBAL RANK", STRLEN("GLOBAL RANK")) == 0 ||
-	                strncmp(line, "RANG GLOBAL", STRLEN("RANG GLOBAL")) == 0) {
-		player->global = trim_stat(line);
-	} else if (strncmp(line, "REGIONAL RANK", STRLEN("REGIONAL RANK")) == 0 ||
-	                strncmp(line, "RANG REGIONAL", STRLEN("RANG REGIONAL")) == 0) {
-		player->regional = trim_stat(line);
-	} else if (strncmp(line, "COMPETITIVE RANK", STRLEN("COMPETITIVE RANK")) == 0 ||
-	                strncmp(line, "RANG COMPETITIF", STRLEN("RANG COMPETITIF")) == 0) {
-		player->competitive = trim_stat(line);
-	} else if (strncmp(line, "MONSTERS SLAIN", STRLEN("MONSTERS SLAIN")) == 0 ||
-	                strncmp(line, "MONSTRES TUES", STRLEN("MONSTRES TUES")) == 0) {
-		player->monsters = trim_stat(line);
-	} else if (strncmp(line, "BOSSES SLAIN", STRLEN("BOSSES SLAIN")) == 0 ||
-	                strncmp(line, "BOSS TUES", STRLEN("BOSS TUES")) == 0) {
-		player->bosses = trim_stat(line);
-	} else if (strncmp(line, "PLAYERS DEFEATED", STRLEN("PLAYERS DEFEATED")) == 0 ||
-	                strncmp(line, "JOUEURS VAINCUS", STRLEN("JOUEURS VAINCUS")) == 0) {
-		player->players = trim_stat(line);
-	} else if (strncmp(line, "QUESTS COMPLETED", STRLEN("QUESTS COMPLETED")) == 0 ||
-	                strncmp(line, "QUETES TERMINEES", STRLEN("QUETES TERMINEES")) == 0) {
-		player->quests = trim_stat(line);
-	} else if (strncmp(line, "AREAS EXPLORED", STRLEN("AREAS EXPLORED")) == 0 ||
-	                strncmp(line, "TERRES EXPLOREES", STRLEN("TERRES EXPLOREES")) == 0) {
-		player->explored = trim_stat(line);
-	} else if (strncmp(line, "AREAS TAKEN", STRLEN("AREAS TAKEN")) == 0 ||
-	                strncmp(line, "TERRES PRISES", STRLEN("TERRES PRISES")) == 0) {
-		player->taken = trim_stat(line);
-	} else if (strncmp(line, "DUNGEONS CLEARED", STRLEN("DUNGEONS CLEARED")) == 0 ||
-	                strncmp(line, "DONJONS TERMINES", STRLEN("DONJONS TERMINES")) == 0) {
-		player->dungeons = trim_stat(line);
-	} else if (strncmp(line, "COLISEUM WINS", STRLEN("COLISEUM WINS")) == 0 ||
-	                strncmp(line, "VICTOIRES DANS LE", STRLEN("VICTOIRES DANS LE")) == 0 ||
-	                strncmp(line, "VICTOIRES DANS LE COLISEE", STRLEN("VICTOIRES DANS LE COLISEE")) == 0) {
-		player->coliseum = trim_stat(line);
-	} else if (strncmp(line, "ITEMS UPGRADED", STRLEN("ITEMS UPGRADED")) == 0 ||
-	                strncmp(line, "OBJETS AMELIORES", STRLEN("OBJETS AMELIORES")) == 0) {
-		player->items = trim_stat(line);
-	} else if (strncmp(line, "FISH CAUGHT", STRLEN("FISH CAUGHT")) == 0 ||
-	                strncmp(line, "POISSONS ATTRAPES", STRLEN("POISSONS ATTRAPES")) == 0) {
-		player->fish = trim_stat(line);
-	} else if (strncmp(line, "DISTANCE TRAVELLED", STRLEN("DISTANCE TRAVELLED")) == 0 ||
-	                strncmp(line, "DISTANCE VOYAGEE", STRLEN("DISTANCE VOYAGEE")) == 0) {
-		player->distance = trim_stat(line);
-	} else if (strncmp(line, "REPUTATION", STRLEN("REPUTATION")) == 0) {
-		player->reputation = trim_stat(line);
-	} else if (strncmp(line, "ENDLESS RECORD", STRLEN("ENDLESS RECORD")) == 0 ||
-	                strncmp(line, "RECORD DU MODE", STRLEN("RECORD DU MODE")) == 0 ||
-	                strncmp(line, "RECORD DU MODE SANS-FIN", STRLEN("RECORD DU MODE SANS-FIN")) == 0) {
-		player->endless = trim_stat(line);
-	} else if (strncmp(line, "ENTRIES COMPLETED", STRLEN("ENTRIES COMPLETED")) == 0 ||
-	                strncmp(line, "RECHERCHES TERMINEES", STRLEN("RECHERCHES TERMINEES")) == 0) {
-		player->codex = trim_stat(line);
+		break;
+	default:
+		stat = trim_stat(line);
+		if (stat)
+			((long *)player)[field->val] = stat;
+		break;
 	}
 }
 
@@ -235,13 +254,14 @@ create_player(Player *player, unsigned int i)
 }
 
 char *
-update_player(char *buf, int siz, Player *player, unsigned int i)
+update_player(char *buf, long siz, Player *player, unsigned int i)
 {
 	char *p, *plto, *pltn, *pltd;
 	unsigned int j;
 	long old, new, diff;
 	struct tm *tm = gmtime(&players[i].update);
 
+	players[i].update = player->update;
 	/* keep this commented to not update name and keep corrected change */
 	/* strlcpy(players[i].name, player->name, MAX_USERNAME_LEN); */
 
@@ -273,7 +293,7 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 		if (diff < 0 && j != 4 && j != 5 && j != 6)
 			continue;
 
-		if (j == 7) { /* playtime */
+		if (j == PLAYTIME) {
 			plto = playtime_to_str(old);
 			pltn = playtime_to_str(new);
 			pltd = playtime_to_str(diff);
@@ -290,17 +310,17 @@ update_player(char *buf, int siz, Player *player, unsigned int i)
 
 		/* update player */
 		((long *)&players[i])[j] = new;
+		if (siz <= 0) {
+			WARN("string truncation");
+			return buf;
+		}
 	}
-	if (siz <= 0)
-		WARN("string truncation");
 	if (!strftime(p, siz, "\nLast update was on %d %b %Y at %R UTC\n", tm))
 		WARN("strftime: string truncation");
-	players[i].update = player->update;
 
-	/*
-	 * TODO
-	 * New roles: ...
-	 */
+	/* TODO: hint with /correct */
+
+	/* TODO: New roles: ... */
 
 	return buf;
 }

@@ -31,7 +31,7 @@ static void save_to_file(Slayer slayers[], size_t nslayers, char *raid,
                          struct discord *client,
                          const u64snowflake channel_id);
 
-static const char *delims[] = {
+const char *delims[] = {
 	"+ Raid options",
 	"4+ Raid options",
 	"4+ Opciones de Asalto",
@@ -39,7 +39,7 @@ static const char *delims[] = {
 	"十 “ 王 国 副 本 选 项",
 	"十 レ イ ド オ プ シ ョ ン"
 };
-static const char *garbageslayer[] = {
+const char *garbageslayer[] = {
 	"Slayer",
 	"NEVE",
 	"Asesino",

@@ -139,7 +139,7 @@ write_invalid_category(char *buf, size_t siz)
 	strlcpy(buf, "NO WRONG, this is not a valid category.\n", siz);
 	strlcat(buf, "Valid categories are:\n", siz);
 	for (i = 0; i < LENGTH(fields) - 2; i++) {
-		if (i == 7) /* playtime */
+		if (i == PLAYTIME)
 			continue;
 		strlcat(buf, fields[i], siz);
 		strlcat(buf, "\n", siz);
@@ -198,7 +198,7 @@ stats", siz);
 		return;
 	}
 
-	if (f == 0) { /* name */
+	if (f == NAME) {
 		if (strlen(val) > MAX_USERNAME_LEN) {
 			write_invalid_value(buf, siz, "Too big username.");
 			return;
@@ -206,7 +206,7 @@ stats", siz);
 		snprintf(buf, siz, "<@%lu>\n%s: %s -> %s", userid,
 		         fields[f], players[i].name, val);
 		strlcpy(players[i].name, val, MAX_USERNAME_LEN);
-	} else if (f == 1) { /* kingdom */
+	} else if (f == KINGDOM) {
 		if (strlen(val) > MAX_KINGDOM_LEN) {
 			write_invalid_value(buf, siz, "Too big kingdom name.");
 			return;
@@ -239,8 +239,8 @@ get_value(char *category)
 		return NULL;
 	*endcat = '\0';
 
-	if (strcasecmp(category, fields[0]) != 0 &&
-	                strcasecmp(category, fields[1]) != 0) {
+	if (strcasecmp(category, fields[NAME]) != 0 &&
+	                strcasecmp(category, fields[KINGDOM]) != 0) {
 		*endcat = ' ';
 		endcat = strrchr(category, ' ');
 		*endcat = '\0';

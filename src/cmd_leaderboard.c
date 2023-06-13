@@ -127,7 +127,7 @@ write_invalid(char *buf, size_t siz)
 	strlcat(buf, "Valid categories are:\n", siz);
 	/* 2 to not include name and kd, -2 to not include userid and update */
 	for (i = 2; i < LENGTH(fields) - 2; i++) {
-		if (i == 5) /* regional rank */
+		if (i == REGIONAL_RANK)
 			continue;
 		strlcat(buf, fields[i], siz);
 		strlcat(buf, "\n", siz);
@@ -140,8 +140,7 @@ compare(const void *p1, const void *p2)
 	const long l1 = ((long *)(Player *)p1)[category];
 	const long l2 = ((long *)(Player *)p2)[category];
 
-	/* ranks */
-	if (category == 4 || category == 6) {
+	if (category == GLOBAL_RANK || category == COMPETITIVE_RANK) {
 		if (l1 == 0)
 			return 1;
 		if (l2 == 0)
@@ -162,14 +161,14 @@ write_player(char *buf, size_t siz, unsigned int i, int author)
 		snprintf(buf, siz, "%d. **%s**: ", i + 1, players[i].name);
 	else
 		snprintf(buf, siz, "%d. %s: ", i + 1, players[i].name);
-	if (category == 7) { /* playtime */
+	if (category == PLAYTIME) {
 		plt = playtime_to_str(((long *)&players[i])[category]);
 		strlcat(buf, plt, siz);
 		free(plt);
 	} else {
 		snprintf(stat, ssiz, "%'ld", ((long *)&players[i])[category]);
 		strlcat(buf, stat, siz);
-		if (i == 18) /* distance */
+		if (i == DISTANCE)
 			strlcat(buf, "m", siz);
 	}
 	strlcat(buf, "\n", siz);
@@ -180,8 +179,7 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 {
 	int in_lb = 0;
 	unsigned int i, lb_max = MIN(nplayers, LB_MAX);
-	size_t psiz = 256, rsiz;
-	char player[psiz];
+	char player[LINE_SIZE];
 	/* siz = (lb_max + 2) * 64; */
 
 	strlcpy(buf, fields[category], siz);
@@ -189,14 +187,14 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 	for (i = 0; i < lb_max; i++) {
 		if (userid == players[i].userid) {
 			in_lb = 1;
-			write_player(player, psiz, i, 1);
+			write_player(player, sizeof(player), i, 1);
 		} else {
-			write_player(player, psiz, i, 0);
+			write_player(player, sizeof(player), i, 0);
 		}
-		rsiz = strlcat(buf, player, siz);
-		if (rsiz >= siz) {
+		if (strlcat(buf, player, siz) >= siz) {
 			WARN("string truncation\n\
 \033[33mhint:\033[39m this is probably because LB_MAX is too big");
+			return;
 		}
 	}
 
@@ -206,9 +204,8 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 		if (i == nplayers) /* not a player */
 			return;
 		strlcat(buf, "...\n", siz);
-		write_player(player, psiz, i, 1);
-		rsiz = strlcat(buf, player, siz);
-		if (rsiz >= siz) {
+		write_player(player, sizeof(player), i, 1);
+		if (strlcat(buf, player, siz) >= siz) {
 			WARN("string truncation\n\
 \033[33mhint:\033[39m this is probably because LB_MAX is too big");
 		}
@@ -225,7 +222,7 @@ leaderboard(char *buf, size_t siz, char *categ, u64snowflake userid)
 	                strcasecmp(fields[i], categ) != 0)
 		i++;
 
-	if (i == LENGTH(fields) - 2 || i == 5) { /* 5 = regional rank */
+	if (i == LENGTH(fields) - 2 || i == REGIONAL_RANK) {
 		write_invalid(buf, siz);
 		return;
 	}
