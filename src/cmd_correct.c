@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -121,7 +122,7 @@ create_slash_correct(struct discord *client)
 	};
 	struct discord_create_global_application_command cmd = {
 		.name = "correct",
-		.description = "Shows Orna information about a user",
+		.description = "Correct a stat",
 		.options = &(struct discord_application_command_options)
 		{
 			.size = LENGTH(options),
@@ -216,9 +217,10 @@ stats", siz);
 		strlcpy(players[i].kingdom, val, MAX_KINGDOM_LEN);
 	} else {
 		old = ((long *)&players[i])[f];
-		new = strtoul(val, NULL, 10);
+		new = strtol(val, NULL, 10);
 		if (new == 0) {
-			write_invalid_value(buf, siz, "Use numbers.");
+			write_invalid_value(buf, siz, "Use numbers ;)");
+			return;
 		}
 		snprintf(buf, siz, "<@%lu>\n%s: %'ld -> %'ld", userid,
 		         fields[f], old, new);
@@ -262,6 +264,7 @@ on_correct(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
+	LOG("start");
 	if (strlen(event->content) == 0) {
 		write_invalid_category(buf, sizeof(buf));
 	} else {
@@ -280,6 +283,7 @@ on_correct(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	LOG("end");
 }
 
 void
@@ -288,6 +292,7 @@ on_correct_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
+	LOG("start");
 	if (!event->data->options) {
 		snprintf(buf, sizeof(buf), "idk please ping <@%lu>", ADMIN);
 	} else {
@@ -306,4 +311,5 @@ on_correct_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
+	LOG("end");
 }

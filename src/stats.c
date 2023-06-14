@@ -119,11 +119,11 @@ playtime_to_long(char *playtime, int lang)
 	else
 		DIE("new language not correctly added");
 
-	days = atol(playtime);
+	days = strtol(playtime, NULL, 10);
 	if ((p = strchr(playtime, dayname[0])) == 0)
 		return days; /* less than a day of playtime */
 	while (*pdn && (*p++ == *pdn++));
-	hours = atol(p);
+	hours = strtol(p, NULL, 10);
 
 	return days * 24 + hours;
 }
@@ -464,7 +464,10 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 	i = update_players(buf, siz, &player);
 	free(txt);
 
-#ifndef DEVEL
+#ifdef DEVEL
+	UNUSED(guild_id);
+	UNUSED(client);
+#else
 	if (guild_id == ROLE_GUILD_ID)
 		update_roles(client, &players[i]);
 #endif /* DEVEL */
@@ -475,6 +478,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 {
 	char buf[MAX_MESSAGE_LEN] = "";
 
+	LOG("start");
 	stats(buf,
 	      sizeof(buf),
 	      event->attachments->array[0].url,
@@ -487,6 +491,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	LOG("end");
 }
 
 void
@@ -496,6 +501,7 @@ on_stats_interaction(struct discord *client,
 	char buf[MAX_MESSAGE_LEN] = "", *url, *endurl;
 	json_char *attachment = strdup(event->data->resolved->attachments);
 
+	LOG("start");
 	url = strstr(attachment, "\"url\":");
 	if (!url) {
 		free(attachment);
@@ -528,4 +534,5 @@ on_stats_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
+	LOG("end");
 }

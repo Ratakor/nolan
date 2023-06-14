@@ -12,12 +12,10 @@ DISCORDLIBS  = -ldiscord -lcurl -lpthread
 TESSLIBS     = -ltesseract -lleptonica
 GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
 
-INCS         = -I/usr/local/include -I/usr/include
-LIBS         = -L/usr/lib -L/usr/local/lib ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
-
-DEBUG_FLAGS  = -O0 -g -W -Wall -Wmissing-prototypes
-CFLAGS      += -std=c99 -pedantic -D_DEFAULT_SOURCE ${INCS}
-LDFLAGS     += ${LIBS}
+WARN_FLAGS   = -Werror -Wall -Wextra -Wno-format -Wmissing-prototypes\
+               -Waggregate-return -Wunused-macros -Wshadow -Wcast-align
+CFLAGS      += -std=c99 -pedantic -D_DEFAULT_SOURCE ${WARN_FLAGS}
+LDFLAGS     += ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
 
 all: options ${NAME}
 
@@ -39,9 +37,6 @@ config.h:
 ${NAME}: ${OBJS}
 	${CC} -o $@ ${OBJS} ${LDFLAGS}
 
-debug:
-	@CFLAGS="${DEBUG_FLAGS}" ${MAKE}
-
 clean:
 	rm -rf ${NAME} ${BUILD_DIR}
 
@@ -53,4 +48,4 @@ install: all
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/${NAME}
 
-.PHONY: all options debug clean install uninstall
+.PHONY: all options clean install uninstall

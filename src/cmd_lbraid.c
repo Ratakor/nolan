@@ -76,8 +76,8 @@ write_invalid(char *buf, size_t siz)
 int
 compare(const void *s1, const void *s2)
 {
-	const unsigned long dmg1 = ((Slayer *)s1)->damage;
-	const unsigned long dmg2 = ((Slayer *)s2)->damage;
+	const unsigned long dmg1 = ((const Slayer *)s1)->damage;
+	const unsigned long dmg2 = ((const Slayer *)s2)->damage;
 
 	return dmg2 - dmg1;
 }
@@ -133,11 +133,13 @@ on_lbraid(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
+	LOG("start");
 	lbraid(buf, sizeof(buf));
 	struct discord_create_message msg = {
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	LOG("end");
 }
 
 void
@@ -146,6 +148,7 @@ on_lbraid_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
+	LOG("start");
 	lbraid(buf, sizeof(buf));
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
@@ -156,4 +159,5 @@ on_lbraid_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
+	LOG("end");
 }

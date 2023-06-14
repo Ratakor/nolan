@@ -120,6 +120,7 @@ on_uraid(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
+	LOG("start");
 	if (strlen(event->content) == 0)
 		write_invalid(buf, sizeof(buf));
 	else
@@ -129,6 +130,7 @@ on_uraid(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	LOG("end");
 }
 
 void
@@ -137,6 +139,7 @@ on_uraid_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
+	LOG("start");
 	if (!event->data->options)
 		write_invalid(buf, sizeof(buf));
 	else
@@ -151,4 +154,5 @@ on_uraid_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
+	LOG("end");
 }

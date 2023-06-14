@@ -137,8 +137,8 @@ write_invalid(char *buf, size_t siz)
 int
 compare(const void *p1, const void *p2)
 {
-	const long l1 = ((long *)(Player *)p1)[category];
-	const long l2 = ((long *)(Player *)p2)[category];
+	const long l1 = ((const long *)(const Player *)p1)[category];
+	const long l2 = ((const long *)(const Player *)p2)[category];
 
 	if (category == GLOBAL_RANK || category == COMPETITIVE_RANK) {
 		if (l1 == 0)
@@ -245,6 +245,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
+	LOG("start");
 	if (strlen(event->content) == 0)
 		write_invalid(buf, sizeof(buf));
 	else
@@ -255,6 +256,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	LOG("end");
 }
 
 void
@@ -263,6 +265,7 @@ on_leaderboard_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
+	LOG("start");
 	if (!event->data->options) {
 		write_invalid(buf, sizeof(buf));
 	} else {
@@ -280,5 +283,6 @@ on_leaderboard_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
+	LOG("end");
 }
 

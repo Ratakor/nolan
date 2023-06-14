@@ -48,7 +48,7 @@ const char *garbageslayer[] = {
 	"討 伐 者"
 };
 
-const struct Slayers slayers[] = {
+const struct Slayers kingdom_slayers[] = {
 	{ "Davethegray",                618842282564648976 },
 	{ "SmittyWerbenJaeger",         372349296772907008 },
 	{ "Damaquandey",                237305375211257866 },
@@ -348,8 +348,9 @@ overcap_msg(char *name, unsigned long dmg, struct discord *client,
 	if (dmgs < DAMAGE_CAP)
 		return;
 
-	while (i < LENGTH(slayers) &&
-	                strncasecmp(name, slayers[i].name, len - DIFF) != 0)
+	while (i < LENGTH(kingdom_slayers) &&
+	                strncasecmp(name, kingdom_slayers[i].name,
+	                            len - DIFF) != 0)
 		i++;
 
 	if (i == MAX_SLAYERS) {
@@ -361,7 +362,8 @@ damage, he is now at %'lu damage. <@%lu> add this user to the list btw",
 	} else {
 		discord_send_message(client, channel_id,
 		                     "<@%lu> has overcapped the limit by %'lu \
-damage, he is now at %'lu damage.", slayers[i].userid, dmgs - DAMAGE_CAP, dmgs);
+damage, he is now at %'lu damage.", kingdom_slayers[i].userid,
+		                     dmgs - DAMAGE_CAP, dmgs);
 	}
 }
 
@@ -437,6 +439,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 		.sync = &chan,
 	};
 
+	LOG("start");
 	is_png = (strcmp(event->attachments->array->content_type,
 	                 "image/png") == 0) ? 1 : 0;
 	if (is_png)
@@ -486,4 +489,5 @@ a correct screenshot sir <@%lu>.", event->author->id);
 	discord_get_channel(client, event->channel_id, &rchan);
 	save_to_file(slayers, nslayers, chan.name, client, event->channel_id);
 	/* ^ will free slayers[].name */
+	LOG("end");
 }

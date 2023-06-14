@@ -57,11 +57,13 @@ on_help(struct discord * client, const struct discord_message * event)
 		return;
 #endif /* DEVEL */
 
+	LOG("start");
 	help(buf, sizeof(buf));
 	struct discord_create_message msg = {
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	LOG("end");
 }
 
 void
@@ -70,6 +72,7 @@ on_help_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
+	LOG("start");
 	help(buf, sizeof(buf));
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
@@ -81,4 +84,5 @@ on_help_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
+	LOG("end");
 }

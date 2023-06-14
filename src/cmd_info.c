@@ -3,8 +3,6 @@
 
 #include "nolan.h"
 
-#define ICON_URL "https://orna.guide/static/orna/img/npcs/master_gnome.png"
-
 static void write_invalid(char *buf, size_t siz);
 static void info_from_uid(char *buf, size_t siz, u64snowflake userid);
 static void info_from_txt(char *buf, size_t siz, char *txt);
@@ -66,12 +64,12 @@ write_info(char *buf, size_t siz, const Player *player)
 				         player->kingdom);
 			}
 		} else if (i == PLAYTIME) {
-			plt = playtime_to_str(((long *)player)[i]);
+			plt = playtime_to_str(((const long *)player)[i]);
 			snprintf(p, siz, "%s: %s\n", fields[i], plt);
 			free(plt);
-		} else if (((long *)player)[i]) {
+		} else if (((const long *)player)[i]) {
 			snprintf(p, siz, "%s: %'ld", fields[i],
-			         ((long *)player)[i]);
+			         ((const long *)player)[i]);
 			if (i == DISTANCE)
 				strlcat(buf, "m", siz);
 			strlcat(buf, "\n", siz);
@@ -127,6 +125,7 @@ on_info(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
+	LOG("start");
 	if (strlen(event->content) == 0)
 		info_from_uid(buf, sizeof(buf), event->author->id);
 	else
@@ -136,6 +135,7 @@ on_info(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
+	LOG("end");
 }
 
 void
@@ -144,6 +144,7 @@ on_info_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
+	LOG("start");
 	if (!event->data->options)
 		info_from_uid(buf, sizeof(buf), event->member->user->id);
 	else
@@ -159,4 +160,5 @@ on_info_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
+	LOG("end");
 }

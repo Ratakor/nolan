@@ -40,11 +40,14 @@ main(int argc, char *argv[])
 	char *lb[] = { "lb", "leaderboard" };
 	struct discord *client;
 
-#ifndef DEVEL
+#ifdef DEVEL
+	UNUSED(argv);
+#else
 	if (getuid() != 0)
 		DIE("please run %s as root", argv[0]);
 #endif /* DEVEL */
 
+	UNUSED(argc);
 	setlocale(LC_NUMERIC, "");
 	create_folders();
 	create_stats_file();

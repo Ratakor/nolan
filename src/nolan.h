@@ -92,9 +92,11 @@ void create_folders(void);
 void create_stats_file(void);
 void init_players(void);
 void create_slash_commands(struct discord *client);
+void on_ready(struct discord *client, const struct discord_ready *event);
+
+/* run.c */
 void on_interaction(struct discord *client,
 		const struct discord_interaction *event);
-void on_ready(struct discord *client, const struct discord_ready *event);
 void on_message(struct discord *client, const struct discord_message *event);
 
 /* ocr.c */
