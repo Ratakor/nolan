@@ -1,5 +1,6 @@
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #include "util.h"
 
@@ -68,4 +69,18 @@ efopen(const char *filename, const char *mode)
 	if ((fp = fopen(filename, mode)) == NULL)
 		DIE("failed to open %s (%s)", filename, mode);
 	return fp;
+}
+
+time_t
+ltime(void)
+{
+	static long tz;
+
+	if (!tz) {
+		const time_t t = time(NULL);
+		const struct tm *tm = localtime(&t);
+		tz = tm->tm_gmtoff;
+	}
+
+	return time(NULL) + tz;
 }

@@ -96,7 +96,7 @@ void on_ready(struct discord *client, const struct discord_ready *event);
 
 /* run.c */
 void on_interaction(struct discord *client,
-		const struct discord_interaction *event);
+                    const struct discord_interaction *event);
 void on_message(struct discord *client, const struct discord_message *event);
 
 /* ocr.c */
@@ -112,9 +112,9 @@ char *playtime_to_str(long playtime);
 void update_file(Player *player);
 void on_stats(struct discord *client, const struct discord_message *event);
 void on_stats_interaction(struct discord *client,
-		const struct discord_interaction *event);
+                          const struct discord_interaction *event);
 void on_stats_admin_interaction(struct discord *client,
-		const struct discord_interaction *event);
+                                const struct discord_interaction *event);
 
 /* raids.c */
 void on_raids(struct discord *client, const struct discord_message *event);
@@ -127,7 +127,7 @@ void update_roles(struct discord *client, Player *player);
 void create_slash_help(struct discord *client);
 void on_help(struct discord *client, const struct discord_message *event);
 void on_help_interaction(struct discord *client,
-		const struct discord_interaction *event);
+                         const struct discord_interaction *event);
 
 /* cmd_info.c */
 u64snowflake str_to_uid(char *id);
@@ -135,37 +135,37 @@ void create_slash_info(struct discord *client);
 void write_info(char *buf, size_t siz, const Player *player);
 void on_info(struct discord *client, const struct discord_message *event);
 void on_info_interaction(struct discord *client,
-		const struct discord_interaction *event);
+                         const struct discord_interaction *event);
 
 /* cmd_leaderboard.c */
 void create_slash_leaderboard(struct discord *client);
 void on_leaderboard(struct discord *client,
-		const struct discord_message *event);
+                    const struct discord_message *event);
 void on_leaderboard_interaction(struct discord *client,
-		const struct discord_interaction *event);
+                                const struct discord_interaction *event);
 
 /* cmd_source.c */
 void create_slash_source(struct discord *client);
 void on_source(struct discord *client, const struct discord_message *event);
 void on_source_interaction(struct discord *client,
-		const struct discord_interaction *event);
+                           const struct discord_interaction *event);
 
 /* cmd_lbraid.c */
 void create_slash_lbraid(struct discord *client);
 void on_lbraid(struct discord *client, const struct discord_message *event);
 void on_lbraid_interaction(struct discord *client,
-		const struct discord_interaction *event);
+                           const struct discord_interaction *event);
 
 /* cmd_uraid.c */
 void create_slash_uraid(struct discord *client);
 void on_uraid(struct discord *client, const struct discord_message *event);
 void on_uraid_interaction(struct discord *client,
-		const struct discord_interaction *event);
+                          const struct discord_interaction *event);
 
 /* cmd_correct.c */
 void create_slash_correct(struct discord *client);
 void on_correct(struct discord *client, const struct discord_message *event);
 void on_correct_interaction(struct discord *client,
-		const struct discord_interaction *event);
+                            const struct discord_interaction *event);
 
 #endif /* NOLAN_H */
