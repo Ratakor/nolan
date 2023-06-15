@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "nolan.h"
 
@@ -7,9 +8,9 @@
 #define URL         "https://api.oss117quotes.xyz/v1/random"
 
 struct Field {
-	char *key;
+	const char *key;
 	unsigned int val;
-	size_t keylen;
+	unsigned int keylen;
 };
 
 enum lang {
@@ -329,9 +330,16 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 			free(pltn);
 			free(pltd);
 		} else {
-			s += snprintf(buf + s, siz - s,
-			              "%s: %'ld -> %'ld (%'+ld)\n",
-			              fields[j], old, new, diff);
+			s += snprintf(buf + s, siz - s, "%s: ", fields[j]);
+			s += longfmt(buf + s, siz - s, "'", old);
+			if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+			s += strlcpy(buf + s, " -> ", siz - s);
+			s += longfmt(buf + s, siz - s, "'", new);
+			if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+			s += strlcpy(buf + s, " (", siz - s);
+			s += longfmt(buf + s, siz - s, "'+", diff);
+			if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+			s += strlcpy(buf + s, ")\n", siz - s);
 		}
 
 		/* update player */
@@ -342,8 +350,12 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 	              "\nLast update was <t:%ld:R> on <t:%ld:f>\n",
 	              players[i].update, players[i].update);
 	players[i].update = player->update;
+	if (s >= siz) {
+		WARN("string truncation");
+		return;
+	}
 
-	s += strlcat(buf, "Correct your stats with /correct ;)", siz);
+	s += strlcpy(buf + s, "Correct your stats with /correct ;)", siz - s);
 	if (s >= siz)
 		WARN("string truncation");
 

@@ -5,9 +5,9 @@
 #include "nolan.h"
 
 static void write_invalid(char *buf, size_t siz);
-static unsigned long *load_files(char *username, unsigned long *dmgs);
+static void load_files(char *username, unsigned int *dmgs);
 static void write_uraid(char *buf, size_t siz, char *username,
-                        unsigned long *dmgs);
+                        unsigned int *dmgs);
 static void uraid(char *buf, size_t siz, char *username);
 
 void
@@ -41,8 +41,8 @@ write_invalid(char *buf, size_t siz)
 	strlcat(buf, "Valid argument is an Orna username.\n", siz);
 }
 
-unsigned long *
-load_files(char *username, unsigned long *dmgs)
+void
+load_files(char *username, unsigned int *dmgs)
 {
 	unsigned int i;
 	long day = time(NULL) / 86400;
@@ -55,18 +55,16 @@ load_files(char *username, unsigned long *dmgs)
 		if (file_exists(fname))
 			dmgs[i] = parse_file(fname, username, namelen);
 	}
-
-	return dmgs;
 }
 
 void
-write_uraid(char *buf, size_t siz, char *username, unsigned long *dmgs)
+write_uraid(char *buf, size_t siz, char *username, unsigned int *dmgs)
 {
-	unsigned long total = 0;
+	unsigned int i = 0, total = 0;
 	size_t s = 0;
 	time_t t = time(NULL);
 	struct tm *tm = gmtime(&t);
-	int i = 0, d = tm->tm_wday;
+	int d = tm->tm_wday;
 	const char *week[] = {
 		"Sun",
 		"Mon",
@@ -82,14 +80,17 @@ write_uraid(char *buf, size_t siz, char *username, unsigned long *dmgs)
 	for (; i < 7; i++, d--) {
 		if (d < 0) d = 6;
 		total += dmgs[i];
-		s += snprintf(buf + s, siz - s,
-		              "%s: %'lu damage\n", week[d], dmgs[i]);
+		s += snprintf(buf + s, siz - s, "%s: ", week[d]);
+		s += uintfmt(buf + s, siz - s, dmgs[i]);
+		s += strlcpy(buf + s, " damage\n", siz - s);
 		if (s >= siz) {
 			WARN("string truncation");
 			return;
 		}
 	}
-	s += snprintf(buf + s, siz - s, "\nTotal: %'lu damage\n", total);
+	s += strlcpy(buf + s, "\nTotal: ", siz - s);
+	s += uintfmt(buf + s, siz - s, total);
+	s += strlcpy(buf + s, " damage", siz - s);
 	if (s >= siz)
 		WARN("string truncation");
 }
@@ -97,7 +98,7 @@ write_uraid(char *buf, size_t siz, char *username, unsigned long *dmgs)
 void
 uraid(char *buf, size_t siz, char *username)
 {
-	unsigned long dmgs[7];
+	unsigned int dmgs[7];
 
 	memset(dmgs, 0, sizeof(dmgs));
 	load_files(username, dmgs);

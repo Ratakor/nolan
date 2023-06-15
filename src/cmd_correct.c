@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -174,8 +175,9 @@ check_delim(const char *val)
 void
 correct(char *buf, size_t siz, char *category, char *val, u64snowflake userid)
 {
-	unsigned int i = 0, f = 0;
+	unsigned int i = 0, j = 0;
 	long old, new;
+	size_t s = 0;
 
 	while (i < nplayers && players[i].userid != userid)
 		i++;
@@ -186,10 +188,10 @@ stats", siz);
 		return;
 	}
 
-	while (f < LENGTH(fields) - 2 && strcasecmp(fields[f], category) != 0)
-		f++;
+	while (j < LENGTH(fields) - 2 && strcasecmp(fields[j], category) != 0)
+		j++;
 
-	if (f == LENGTH(fields) - 2 || f == 7) { /* playtime */
+	if (j == LENGTH(fields) - 2 || j == PLAYTIME) {
 		write_invalid_category(buf, siz);
 		return;
 	}
@@ -199,32 +201,37 @@ stats", siz);
 		return;
 	}
 
-	if (f == NAME) {
+	if (j == NAME) {
 		if (strlen(val) > MAX_USERNAME_LEN) {
 			write_invalid_value(buf, siz, "Too big username.");
 			return;
 		}
 		snprintf(buf, siz, "<@%lu>\n%s: %s -> %s", userid,
-		         fields[f], players[i].name, val);
+		         fields[j], players[i].name, val);
 		strlcpy(players[i].name, val, MAX_USERNAME_LEN);
-	} else if (f == KINGDOM) {
+	} else if (j == KINGDOM) {
 		if (strlen(val) > MAX_KINGDOM_LEN) {
 			write_invalid_value(buf, siz, "Too big kingdom name.");
 			return;
 		}
 		snprintf(buf, siz, "<@%lu>\n%s: %s -> %s", userid,
-		         fields[f], players[i].kingdom, val);
+		         fields[j], players[i].kingdom, val);
 		strlcpy(players[i].kingdom, val, MAX_KINGDOM_LEN);
 	} else {
-		old = ((long *)&players[i])[f];
+		old = ((unsigned int *)&players[i])[j];
 		new = strtol(val, NULL, 10);
-		if (new == 0) {
-			write_invalid_value(buf, siz, "Use numbers ;)");
+		if (new == 0 || new == UINT_MAX) {
+			write_invalid_value(buf, siz,
+			                    "I doubt you did that many steps.");
 			return;
 		}
-		snprintf(buf, siz, "<@%lu>\n%s: %'ld -> %'ld", userid,
-		         fields[f], old, new);
-		((long *)&players[i])[f] = new;
+		s += snprintf(buf, siz, "<@%lu>\n%s: ", userid, fields[j]);
+		s += longfmt(buf + s, siz - s, "'", old);
+		if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+		s += strlcpy(buf + s, " -> ", siz - s);
+		s += longfmt(buf + s, siz - s, "'", new);
+		if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+		((long *)&players[i])[j] = new;
 	}
 
 	/* TODO: update roles */

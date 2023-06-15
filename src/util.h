@@ -31,5 +31,7 @@ int file_exists(const char *filename);
 void *emalloc(size_t size);
 FILE *efopen(const char *filename, const char *mode);
 time_t ltime(void);
+size_t uintfmt(char *dst, size_t dsiz, unsigned int num);
+size_t longfmt(char *dst, size_t dsiz, const char *opt, long num);
 
 #endif /* UTIL_H */

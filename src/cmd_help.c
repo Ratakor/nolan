@@ -17,17 +17,18 @@ create_slash_help(struct discord *client)
 void
 help(char *buf, size_t siz)
 {
-	char *p;
-	size_t rsiz;
 	unsigned int i, len = LENGTH(stats_ids);
+	size_t s;
 
-	strlcpy(buf, "Post a screenshot of your stats to ", siz);
-	for (i = 0; i < len; i++) {
-		p = strchr(buf, '\0');;
-		snprintf(p, siz, "<#%lu> ", stats_ids[i]);
-		if (i < len - 1)
-			strlcat(buf, "or ", siz);
+	s = strlcpy(buf, "Post a screenshot of your stats to ", siz);
+	for (i = 0; i < len - 1; i++) {
+		s += snprintf(buf + s, siz - s, "<#%lu> or ", stats_ids[i]);
+		if (s >= siz) {
+			WARN("string truncation\n\
+\033[33mhint:\033[39m this is probably because stats_ids is too big");
+		}
 	}
+	snprintf(buf + s, siz - s, "<#%lu> ", stats_ids[i]);
 	strlcat(buf, "to enter the database.\n", siz);
 	strlcat(buf, "Commands:\n", siz);
 	strlcat(buf, "\t/stats *screenshot*\n", siz);
@@ -41,8 +42,8 @@ help(char *buf, size_t siz)
 	strlcat(buf, "\n[...] means optional.\n", siz);
 	strlcat(buf, "Also works with ", siz);
 	strlcat(buf, PREFIX, siz);
-	rsiz = strlcat(buf, " instead of /.", siz);
-	if (rsiz >= siz)
+	s = strlcat(buf, " instead of /.", siz);
+	if (s >= siz)
 		WARN("string truncation\n\
 \033[33mhint:\033[39m this is probably because stats_ids is too big");
 }

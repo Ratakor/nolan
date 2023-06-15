@@ -12,7 +12,7 @@ DISCORDLIBS  = -ldiscord -lcurl -lpthread
 TESSLIBS     = -ltesseract -lleptonica
 GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
 
-WARN_FLAGS   = -Werror -Wall -Wextra -Wno-format -Wmissing-prototypes\
+WARN_FLAGS   = -Werror -Wall -Wextra -Wmissing-prototypes -Wpadded\
                -Waggregate-return -Wunused-macros -Wshadow -Wcast-align
 CFLAGS      += -std=c99 -pedantic -D_DEFAULT_SOURCE ${WARN_FLAGS}
 LDFLAGS     += ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}

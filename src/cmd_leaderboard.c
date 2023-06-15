@@ -166,10 +166,9 @@ write_player(char *buf, size_t siz, unsigned int i, int author)
 		strlcat(buf, plt, siz);
 		free(plt);
 	} else {
-		snprintf(stat, ssiz, "%'ld", ((long *)&players[i])[category]);
+		longfmt(stat, ssiz, "'", ((long *)&players[i])[category]);
 		strlcat(buf, stat, siz);
-		if (i == DISTANCE)
-			strlcat(buf, "m", siz);
+		if (i == DISTANCE) strlcat(buf, "m", siz);
 	}
 	strlcat(buf, "\n", siz);
 }

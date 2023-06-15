@@ -27,8 +27,7 @@ parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers)
 {
 	FILE *fp;
 	char line[LINE_SIZE], *endname;
-	unsigned int i;
-	unsigned long dmg;
+	unsigned int i, dmg;
 
 	fp = efopen(fname, "r");
 	while (fgets(line, LINE_SIZE, fp)) {
@@ -76,8 +75,8 @@ write_invalid(char *buf, size_t siz)
 int
 compare(const void *s1, const void *s2)
 {
-	const unsigned long dmg1 = ((const Slayer *)s1)->damage;
-	const unsigned long dmg2 = ((const Slayer *)s2)->damage;
+	const unsigned int dmg1 = ((const Slayer *)s1)->damage;
+	const unsigned int dmg2 = ((const Slayer *)s2)->damage;
 
 	return dmg2 - dmg1;
 }
@@ -89,12 +88,14 @@ write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers)
 	size_t s = 0;
 
 	for (i = 0; i < lb_max; i++) {
-		s += snprintf(buf + s, siz - s, "%d. %s: %'lu damage\n", i,
-		              slayers[i].name, slayers[i].damage);
 		if (s >= siz) {
 			WARN("string truncation");
 			return;
 		}
+
+		s += snprintf(buf + s, siz - s, "%d. %s: ", i, slayers[i].name);
+		s += uintfmt(buf + s, siz - s, slayers[i].damage);
+		s += strlcpy(buf + s, " damage\n", siz - s);
 	}
 }
 

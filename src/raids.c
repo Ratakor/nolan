@@ -9,7 +9,7 @@
 #define DAMAGE_CAP  300000000 /* weekly */
 
 struct Slayers {
-	char *name;
+	const char *name;
 	u64snowflake userid;
 };
 
@@ -18,14 +18,14 @@ static void discord_send_message(struct discord *client,
                                  const char *fmt, ...);
 static char *skip_to_slayers(char *txt);
 static char *trim_name(char *name);
-static unsigned long trim_dmg(char *str);
+static unsigned int trim_dmg(char *str);
 static size_t get_slayers(Slayer slayers[], char *txt);
 static size_t parse(Slayer slayers[], char *txt);
-static unsigned long adjust(unsigned long dmg, char *raid);
+static unsigned int adjust(unsigned int dmg, char *raid);
 static void save_to_new_file(Slayer slayers[], size_t nslayers, char *fname,
                              char *raid);
-static unsigned long get_weekly_damage(char *username, size_t namelen);
-static void overcap_msg(char *name, unsigned long dmg, struct discord *client,
+static unsigned int get_weekly_damage(char *username, size_t namelen);
+static void overcap_msg(char *name, unsigned int dmg, struct discord *client,
                         const u64snowflake channel_id);
 static void save_to_file(Slayer slayers[], size_t nslayers, char *raid,
                          struct discord *client,
@@ -177,11 +177,11 @@ trim_name(char *name)
 }
 
 /* trim everything that is not a number, could segfault in very rare case */
-unsigned long
+unsigned int
 trim_dmg(char *str)
 {
 	const char *p = str;
-	unsigned long dmg = 0;
+	unsigned int dmg = 0;
 
 	do {
 		if (*p >= '0' && *p <= '9')
@@ -269,8 +269,8 @@ parse(Slayer slayers[], char *txt)
 	return get_slayers(slayers, skip_to_slayers(txt));
 }
 
-unsigned long
-adjust(unsigned long dmg, char *raid)
+unsigned int
+adjust(unsigned int dmg, char *raid)
 {
 	if (strcmp(raid, "starlord") == 0)
 		return dmg * 2;
@@ -291,7 +291,7 @@ save_to_new_file(Slayer slayers[], size_t nslayers, char *fname, char *raid)
 
 	fp = efopen(fname, "w");
 	for (i = 0; i < nslayers; i++) {
-		fprintf(fp, "%s%c%lu\n", slayers[i].name, DELIM,
+		fprintf(fp, "%s%c%u\n", slayers[i].name, DELIM,
 		        adjust(slayers[i].damage, raid));
 		free(slayers[i].name);
 	}
@@ -299,11 +299,11 @@ save_to_new_file(Slayer slayers[], size_t nslayers, char *fname, char *raid)
 }
 
 /* also used in uraid.c */
-unsigned long
+unsigned int
 parse_file(char *fname, char *username, size_t namelen)
 {
 	FILE *fp;
-	unsigned long dmg;
+	unsigned int dmg;
 	char line[LINE_SIZE];
 
 	fp = efopen(fname, "r");
@@ -319,7 +319,7 @@ parse_file(char *fname, char *username, size_t namelen)
 	return 0;
 }
 
-unsigned long
+unsigned int
 get_weekly_damage(char *username, size_t namelen)
 {
 	unsigned int i, dmgs = 0;
@@ -337,12 +337,11 @@ get_weekly_damage(char *username, size_t namelen)
 }
 
 void
-overcap_msg(char *name, unsigned long dmg, struct discord *client,
+overcap_msg(char *name, unsigned int dmg, struct discord *client,
             const u64snowflake channel_id)
 {
-	unsigned int i = 0;
+	unsigned int i = 0, dmgs = dmg;
 	size_t len = strlen(name);
-	unsigned long dmgs = dmg;
 
 	dmgs += get_weekly_damage(name, len);
 	if (dmgs < DAMAGE_CAP)
@@ -373,8 +372,7 @@ save_to_file(Slayer slayers[], size_t nslayers, char *raid,
 {
 	FILE *w, *r;
 	char line[LINE_SIZE], *endname, fname[128], tmpfname[128];
-	unsigned int i;
-	unsigned long olddmg, newdmg;
+	unsigned int i, olddmg, newdmg;
 	long day = time(NULL) / 86400;
 
 	snprintf(fname, sizeof(fname), "%s%ld.csv", RAIDS_FOLDER, day);
@@ -404,7 +402,7 @@ save_to_file(Slayer slayers[], size_t nslayers, char *raid,
 			olddmg = strtoul(endname + 1, NULL, 10);
 			newdmg = olddmg + adjust(slayers[i].damage, raid);
 			overcap_msg(slayers[i].name, newdmg, client, channel_id);
-			fprintf(w, "%s%c%lu\n", slayers[i].name, DELIM, newdmg);
+			fprintf(w, "%s%c%u\n", slayers[i].name, DELIM, newdmg);
 		} else {
 			if (endname)
 				*endname = DELIM;
@@ -413,7 +411,7 @@ save_to_file(Slayer slayers[], size_t nslayers, char *raid,
 	}
 	for (i = 0; i < nslayers; i++) {
 		if (!slayers[i].found_in_file) {
-			fprintf(w, "%s%c%lu\n", slayers[i].name, DELIM,
+			fprintf(w, "%s%c%u\n", slayers[i].name, DELIM,
 			        adjust(slayers[i].damage, raid));
 		}
 		free(slayers[i].name);

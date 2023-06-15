@@ -52,29 +52,36 @@ void
 write_info(char *buf, size_t siz, const Player *player)
 {
 	unsigned int i;
-	char *p = buf, *plt;
+	char *playtime;
+	size_t s = 0;
 
 	/* -2 to not include upadte and userid */
 	for (i = 0; i < LENGTH(fields) - 2; i++) {
+		if (s >= siz) {
+			WARN("string truncation");
+			return;
+		}
+
 		if (i == NAME) {
-			snprintf(p, siz, "%s: %s\n", fields[i], player->name);
+			s += snprintf(buf + s, siz - s, "%s: %s\n",
+			              fields[i], player->name);
 		} else if (i == KINGDOM) {
 			if (strcmp(player->kingdom, "(null)") != 0) {
-				snprintf(p, siz, "%s: %s\n", fields[i],
-				         player->kingdom);
+				s += snprintf(buf + s, siz - s, "%s: %s\n",
+				              fields[i], player->kingdom);
 			}
 		} else if (i == PLAYTIME) {
-			plt = playtime_to_str(((const long *)player)[i]);
-			snprintf(p, siz, "%s: %s\n", fields[i], plt);
-			free(plt);
+			playtime = playtime_to_str(((const long *)player)[i]);
+			s += snprintf(buf + s, siz - s, "%s: %s\n", fields[i],
+			              playtime);
+			free(playtime);
 		} else if (((const long *)player)[i]) {
-			snprintf(p, siz, "%s: %'ld", fields[i],
-			         ((const long *)player)[i]);
-			if (i == DISTANCE)
-				strlcat(buf, "m", siz);
-			strlcat(buf, "\n", siz);
+			s += snprintf(buf + s, siz - s, "%s: ", fields[i]);
+			s += longfmt(buf + s, siz - s, "'",
+			             ((const long *)player)[i]);
+			if (i == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+			s += strlcpy(buf + s, "\n", siz - s);
 		}
-		p = strchr(buf, '\0');
 	}
 }
 

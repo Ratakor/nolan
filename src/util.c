@@ -84,3 +84,64 @@ ltime(void)
 
 	return time(NULL) + tz;
 }
+
+size_t
+uintfmt(char *dst, size_t dsiz, unsigned int num)
+{
+	char buf[16], *p = buf + sizeof(buf) - 1;
+	size_t sizn = 1;
+
+	*p-- = '\0';
+	while (sizn < sizeof(buf)) {
+		*p-- = (num % 10) + '0';
+		if ((num /= 10) == 0)
+			break;
+		if ((sizn % 3) == 0)
+			*p-- = ',';
+		sizn++;
+	}
+
+	return strlcpy(dst, ++p, dsiz);
+}
+
+size_t
+longfmt(char *dst, size_t dsiz, const char *opt, long num)
+{
+	char buf[32], *p = buf + sizeof(buf) - 1;
+	size_t sizn = 1;
+	int sign = 0, fmt = 0;
+
+	do {
+		switch (*opt) {
+		case '\'':
+			fmt = 1;
+			break;
+		case '+':
+			sign = '+';
+			break;
+		case ' ':
+			sign = ' ';
+			break;
+		}
+	} while (*opt++);
+
+	*p-- = '\0';
+	if (num < 0) {
+		sign = '-';
+		num *= -1;
+	}
+
+	while (sizn < sizeof(buf)) {
+		*p-- = (num % 10) + '0';
+		if ((num /= 10) == 0)
+			break;
+		if (fmt && (sizn % 3) == 0)
+			*p-- = ',';
+		sizn++;
+	}
+
+	if (sign && p - buf > 0)
+		*p-- = sign;
+
+	return strlcpy(dst, ++p, dsiz);
+}

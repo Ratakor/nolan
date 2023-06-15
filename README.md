@@ -13,13 +13,13 @@ A discord bot for Orna.
 
 ### chore
 - optimize raids.c and cmd_..raid with slayers
-- change players' stats to unsigned long
-- add logging
 - add documentation
+- add logging to file
 - rework DIFF in ocr.c and raids.c
-- rework roles
+- rework roles and make it available to other servers
 
 ### misc
+- u64snowflake is an unsigned long long
 - use sql instead of csv
 - better wrong image input detection for raids
 - async ?
