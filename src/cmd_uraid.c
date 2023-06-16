@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -81,7 +83,7 @@ write_uraid(char *buf, size_t siz, char *username, unsigned int *dmgs)
 		if (d < 0) d = 6;
 		total += dmgs[i];
 		s += snprintf(buf + s, siz - s, "%s: ", week[d]);
-		s += uintfmt(buf + s, siz - s, dmgs[i]);
+		s += ufmt(buf + s, siz - s, dmgs[i]);
 		s += strlcpy(buf + s, " damage\n", siz - s);
 		if (s >= siz) {
 			WARN("string truncation");
@@ -89,7 +91,7 @@ write_uraid(char *buf, size_t siz, char *username, unsigned int *dmgs)
 		}
 	}
 	s += strlcpy(buf + s, "\nTotal: ", siz - s);
-	s += uintfmt(buf + s, siz - s, total);
+	s += ufmt(buf + s, siz - s, total);
 	s += strlcpy(buf + s, " damage", siz - s);
 	if (s >= siz)
 		WARN("string truncation");

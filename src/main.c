@@ -1,6 +1,7 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #include <locale.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include "concord/discord.h"
 #include "concord/discord-internal.h"
 
@@ -36,20 +37,12 @@ const char *fields[] = {
 };
 
 int
-main(int argc, char *argv[])
+main(void)
 {
 	char *src[] = { "src", "source" };
 	char *lb[] = { "lb", "leaderboard" };
 	struct discord *client;
 
-#ifdef DEVEL
-	UNUSED(argv);
-#else
-	if (getuid() != 0)
-		DIE("please run %s as root", argv[0]);
-#endif /* DEVEL */
-
-	UNUSED(argc);
 	setlocale(LC_NUMERIC, "");
 	create_folders();
 	create_stats_file();

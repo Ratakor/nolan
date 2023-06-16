@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #include "nolan.h"
 
 static void level(struct discord *client, u64snowflake userid, Player *player);

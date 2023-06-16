@@ -12,14 +12,14 @@ A discord bot for Orna.
 - ascensions (track mats)
 
 ### chore
+- change players to uint32_t
 - optimize raids.c and cmd_..raid with slayers
 - add documentation
+- rework roles and make it available to other servers
 - add logging to file
 - rework DIFF in ocr.c and raids.c
-- rework roles and make it available to other servers
 
 ### misc
-- u64snowflake is an unsigned long long
-- use sql instead of csv
+- use sql for raids and roles
 - better wrong image input detection for raids
 - async ?

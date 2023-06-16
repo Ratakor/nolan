@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #include <limits.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -214,10 +216,10 @@ stats", siz);
 			return;
 		}
 		s += snprintf(buf, siz, "<@%lu>\n%s: ", userid, fields[j]);
-		s += longfmt(buf + s, siz - s, "'", old);
+		s += ufmt(buf + s, siz - s, old);
 		if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 		s += strlcpy(buf + s, " -> ", siz - s);
-		s += longfmt(buf + s, siz - s, "'", new);
+		s += ufmt(buf + s, siz - s, new);
 		if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 		((long *)&players[i])[j] = new;
 	}

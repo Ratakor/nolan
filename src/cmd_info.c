@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -77,8 +79,7 @@ write_info(char *buf, size_t siz, const Player *player)
 			free(playtime);
 		} else if (((const long *)player)[i]) {
 			s += snprintf(buf + s, siz - s, "%s: ", fields[i]);
-			s += longfmt(buf + s, siz - s, "'",
-			             ((const long *)player)[i]);
+			s += ufmt(buf + s, siz - s, ((const long *)player)[i]);
 			if (i == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 			s += strlcpy(buf + s, "\n", siz - s);
 		}

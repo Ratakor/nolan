@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #include <string.h>
 
 #include "nolan.h"
@@ -26,6 +28,7 @@ help(char *buf, size_t siz, u64snowflake guild_id)
 		if (s >= siz) {
 			WARN("string truncation\n\
 \033[33mhint:\033[39m this is probably because stats_ids is too big");
+			return;
 		}
 	}
 	snprintf(buf + s, siz - s, "<#%lu> ", stats_ids[i]);

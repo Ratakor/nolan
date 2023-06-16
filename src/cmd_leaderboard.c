@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -166,7 +168,7 @@ write_player(char *buf, size_t siz, unsigned int i, int author)
 		strlcat(buf, plt, siz);
 		free(plt);
 	} else {
-		longfmt(stat, ssiz, "'", ((long *)&players[i])[category]);
+		ufmt(stat, ssiz, ((long *)&players[i])[category]);
 		strlcat(buf, stat, siz);
 		if (i == DISTANCE) strlcat(buf, "m", siz);
 	}

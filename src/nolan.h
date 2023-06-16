@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #ifndef NOLAN_H
 #define NOLAN_H
 
@@ -48,6 +50,7 @@ enum {
 	UPDATE,
 	USERID,
 };
+
 typedef struct {
 	char *name;
 	char *kingdom;

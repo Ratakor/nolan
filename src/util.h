@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #ifndef UTIL_H
 #define UTIL_H
 
@@ -15,15 +17,15 @@ enum { LOG__, WARN__, DIE__ };
 #define WARN(...)       (__LOG(WARN__, __VA_ARGS__))
 #define DIE(...)        (__LOG(DIE__, __VA_ARGS__), exit(EXIT_FAILURE))
 
-char *nstrchr(const char *s, int c, int n);
+char *nstrchr(const char *s, int c, size_t n);
 size_t strlcpy(char *dst, const char *src, size_t siz);
 size_t strlcat(char *dst, const char *src, size_t siz);
-int file_exists(const char *filename);
 time_t ltime(void);
 void __log(int lvl, char *file, int line, const char *func, char *fmt, ...);
 void *emalloc(size_t size);
 FILE *efopen(const char *filename, const char *mode);
-size_t uintfmt(char *dst, size_t dsiz, unsigned int num);
-size_t longfmt(char *dst, size_t dsiz, const char *opt, long num);
+size_t ufmt(char *dst, size_t dsiz, uint64_t n);
+size_t ifmt(char *dst, size_t dsiz, int64_t n);
+int file_exists(const char *filename);
 
 #endif /* UTIL_H */

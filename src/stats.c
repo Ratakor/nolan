@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -19,6 +21,7 @@ static long playtime_to_long(char *playtime, int lang);
 static long trim_stat(const char *str);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
+static char *get_quote(void);
 static size_t write_quote(char *buf, size_t siz);
 static void create_player(Player *player, unsigned int i);
 static void update_player(char *buf, size_t siz, Player *player, unsigned int i);
@@ -251,25 +254,53 @@ for_line(Player *player, char *txt)
 	}
 }
 
+char *
+get_quote(void)
+{
+	char *quote = curl(URL), *p, *sentence, *name;
+
+	if ((sentence = nstrchr(quote, '"', 3)) == NULL) {
+		free(quote);
+		return NULL;
+	}
+	sentence++;
+	if ((name = nstrchr(quote, '"', 8)) == NULL) {
+		free(quote);
+		return NULL;
+	}
+	*name++ = '\n';
+	*name++ = '>';
+	*name = ' ';
+	name -= 2;
+
+	if ((p = strchr(sentence, '"')) == NULL) {
+		free(quote);
+		return NULL;
+	}
+	*p = '\0';
+	if ((p = strchr(name, '"')) == NULL) {
+		free(quote);
+		return NULL;
+	}
+	*p = '\0';
+
+	p = quote;
+	while ((*p++ = *sentence++));
+	p--;
+	while ((*p++ = *name++));
+
+	return quote;
+}
+
 size_t
 write_quote(char *buf, size_t siz)
 {
-	char *quote = curl(URL), *start, *end;
+	char *quote = get_quote();
 	size_t ret;
 
-	start = nstrchr(quote, '"', 3) + 1;
-	if (!start) {
-		free(quote);
+	if (quote == NULL)
 		return 0;
-	}
-	end = strchr(start, '"');
-	if (!end) {
-		free(quote);
-		return 0;
-	}
-	*end = '\0';
-
-	ret = snprintf(buf, siz, "%s\n\n", start);
+	ret = snprintf(buf, siz, "%s\n\n", quote);
 	free(quote);
 	return ret;
 }
@@ -296,7 +327,6 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 	/* keep this commented to not update name and keep corrected change */
 	/* strlcpy(players[i].name, player->name, MAX_USERNAME_LEN); */
 
-	s += write_quote(buf + s, siz - s);
 	s += snprintf(buf + s, siz - s, "**%s**'s profile has been updated.\n",
 	              players[i].name);
 
@@ -338,13 +368,13 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 			free(pltd);
 		} else {
 			s += snprintf(buf + s, siz - s, "%s: ", fields[j]);
-			s += longfmt(buf + s, siz - s, "'", old);
+			s += ufmt(buf + s, siz - s, old);
 			if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 			s += strlcpy(buf + s, " -> ", siz - s);
-			s += longfmt(buf + s, siz - s, "'", new);
+			s += ufmt(buf + s, siz - s, new);
 			if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 			s += strlcpy(buf + s, " (", siz - s);
-			s += longfmt(buf + s, siz - s, "'+", diff);
+			s += ifmt(buf + s, siz - s, diff);
 			if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 			s += strlcpy(buf + s, ")\n", siz - s);
 		}
@@ -423,18 +453,18 @@ update_players(char *buf, size_t siz, Player *player)
 	while (i < nplayers && players[i].userid != player->userid)
 		i++;
 
+	s += write_quote(buf + s, siz - s);
 	if (i == nplayers) { /* new player */
 		nplayers++;
 		if (nplayers > MAX_PLAYERS)
 			DIE("there is too much players (max:%d)", MAX_PLAYERS);
 		create_player(player, i);
-		s += write_quote(buf + s, siz - s);
 		s += snprintf(buf + s, siz - s,
 		              "**%s** has been registrated in the database.\n",
 		              player->name);
 		write_info(buf + s, siz - s, &players[i]);
 	} else {
-		update_player(buf, siz, player, i);
+		update_player(buf + s, siz - s, player, i);
 	}
 
 	update_file(&players[i]);

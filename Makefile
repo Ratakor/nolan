@@ -1,3 +1,5 @@
+# Copywrong © 2023 Ratakor. See LICENSE file for license details.
+
 NAME         = nolan
 PREFIX      ?= /usr/local
 CC           = cc

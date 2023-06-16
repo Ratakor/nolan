@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #include <curl/curl.h>
 #include <gd.h>
 #include <leptonica/allheaders.h>
@@ -28,6 +30,7 @@ curl(char *url)
 	CURL *handle = curl_easy_init();
 	char *buf = emalloc(MAX_MESSAGE_LEN);
 
+	*buf = '\0';
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_data);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, buf);

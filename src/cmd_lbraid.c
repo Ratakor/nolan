@@ -1,3 +1,5 @@
+/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -94,7 +96,7 @@ write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers)
 		}
 
 		s += snprintf(buf + s, siz - s, "%d. %s: ", i, slayers[i].name);
-		s += uintfmt(buf + s, siz - s, slayers[i].damage);
+		s += ufmt(buf + s, siz - s, slayers[i].damage);
 		s += strlcpy(buf + s, " damage\n", siz - s);
 	}
 }
