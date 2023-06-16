@@ -7,7 +7,6 @@
 
 static void write_invalid_category(char *buf, size_t siz);
 static void write_invalid_value(char *buf, size_t siz, char *fmt, ...);
-int check_delim(const char *val);
 static void correct(char *buf, size_t siz, char *category, char *val,
                     u64snowflake userid);
 static char *get_value(char *category);
@@ -160,16 +159,6 @@ write_invalid_value(char *buf, size_t siz, char *fmt, ...)
 	va_end(ap);
 	if (s >= siz)
 		WARN("string truncation");
-}
-
-int
-check_delim(const char *val)
-{
-	do {
-		if (*val == DELIM)
-			return 1;
-	} while (*val++);
-	return 0;
 }
 
 void

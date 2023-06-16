@@ -16,7 +16,7 @@ struct Field {
 enum { ENGLISH, FRENCH };
 
 static long playtime_to_long(char *playtime, int lang);
-static long trim_stat(char *str);
+static long trim_stat(const char *str);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
 static size_t write_quote(char *buf, size_t siz);
@@ -104,6 +104,16 @@ create_slash_stats(struct discord *client)
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
 
+bool
+check_delim(const char *val)
+{
+	do {
+		if (*val == DELIM)
+			return true;
+	} while (*val++);
+	return false;
+}
+
 long
 playtime_to_long(char *playtime, int lang)
 {
@@ -164,17 +174,16 @@ playtime_to_str(long playtime)
 
 /* trim everything that is not a number and replace | with 1 */
 long
-trim_stat(char *str)
+trim_stat(const char *str)
 {
-	const char *p = str;
 	long stat = 0;
 
 	do {
-		if (*p >= '0' && *p <= '9')
-			stat = (stat * 10) + (*p - '0');
-		else if (*p == '|')
+		if (*str >= '0' && *str <= '9')
+			stat = (stat * 10) + (*str - '0');
+		else if (*str == '|')
 			stat = (stat * 10) + 1;
-	} while (*p++ && *p != '(');
+	} while (*str++ && *str != '(');
 
 	return stat;
 }
@@ -209,7 +218,8 @@ parse_line(Player *player, char *line)
 
 	switch (field->val) {
 	case KINGDOM:
-		player->kingdom = line + field->keylen + 1;
+		if (!check_delim(line + field->keylen + 1))
+			player->kingdom = line + field->keylen + 1;
 		break;
 	case PLAYTIME:
 		player->playtime = playtime_to_long(line + field->keylen, lang);

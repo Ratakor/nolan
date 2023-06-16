@@ -106,14 +106,12 @@ char *ocr(char *fname, char *lang);
 
 /* stats.c */
 void create_slash_stats(struct discord *client);
-void create_slash_stats_admin(struct discord *client);
+bool check_delim(const char *val);
 char *playtime_to_str(long playtime);
 void update_file(Player *player);
 void on_stats(struct discord *client, const struct discord_message *event);
 void on_stats_interaction(struct discord *client,
                           const struct discord_interaction *event);
-void on_stats_admin_interaction(struct discord *client,
-                                const struct discord_interaction *event);
 
 /* raids.c */
 void on_raids(struct discord *client, const struct discord_message *event);
