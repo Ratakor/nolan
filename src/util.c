@@ -162,7 +162,7 @@ ifmt(char *dst, size_t dsiz, int64_t n)
 		*dst = '+';
 	}
 
-	return ufmt(dst + 1, dsiz - 1, n);
+	return ufmt(dst + 1, dsiz - 1, n) + 1;
 
 }
 
