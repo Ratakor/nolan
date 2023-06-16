@@ -355,7 +355,8 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 		return;
 	}
 
-	s += strlcpy(buf + s, "Correct your stats with /correct ;)", siz - s);
+	s += snprintf(buf + s, siz - s, "Correct your stats with %scorrect ;)",
+	              PREFIX);
 	if (s >= siz)
 		WARN("string truncation");
 
@@ -445,12 +446,12 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 	/* not always a jpg but idc */
 	snprintf(fname, sizeof(fname), "%s/%lu.jpg", IMAGES_FOLDER, userid);
 	if ((ret = curl_file(url, fname)) != 0) {
-		WARN("curl failed CURLcode:%u", ret);
+		WARN("curl failed CURLcode: %u", ret);
 		strlcpy(buf, "Error: Failed to download image", siz);
 		return;
 	}
 	if ((txt = ocr(fname, "eng")) == NULL) {
-		WARN("failed to read image");
+		WARN("failed to read image from %s", username);
 		strlcpy(buf, "Error: Failed to read image", siz);
 		return;
 	}

@@ -445,7 +445,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 	else
 		snprintf(fname, sizeof(fname), "%s/raids.jpg", IMAGES_FOLDER);
 	if ((ret = curl_file(event->attachments->array->url, fname)) != 0) {
-		WARN("curl failed CURLcode:%u", ret);
+		WARN("curl failed CURLcode: %u", ret);
 		discord_send_message(client, event->channel_id, "Error: \
 Failed to download image <@%lu>.\nFix me <@%lu>", event->author->id, ADMIN);
 		return;
@@ -470,7 +470,7 @@ Failed to download image <@%lu>.\nFix me <@%lu>", event->author->id, ADMIN);
 		txt = ocr(fname, "eng");
 
 	if (txt == NULL) {
-		WARN("failed to read image");
+		WARN("failed to read image from %s", event->author->username);
 		discord_send_message(client, event->channel_id, "Error: \
 Failed to read image <@%lu>.\nFix me <@%lu>", event->author->id, ADMIN);
 		return;

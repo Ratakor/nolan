@@ -16,8 +16,11 @@ create_folders(void)
 	for (i = 0; i < LENGTH(folders); i++) {
 		if (file_exists(folders[i]))
 			continue;
+
 		if (mkdir(folders[i], 0755) == -1)
-			DIE("failed to create %s\n", folders[i]);
+			DIE("failed to create %s:", folders[i]);
+		else
+			LOG("create %s", folders[i]);
 	}
 }
 
@@ -36,6 +39,7 @@ create_stats_file(void)
 	}
 
 	if (size == 0) {
+		LOG("create %s", STATS_FILE);
 		if (fp) fclose(fp);
 		fp = efopen(STATS_FILE, "w");
 		for (i = 0; i < LENGTH(fields) - 1; i++)
@@ -105,14 +109,18 @@ init_players(void)
 void
 on_ready(struct discord *client, const struct discord_ready *event)
 {
-	UNUSED(event);
+	LOG("logged in as %s", event->user->username);
+	if (event->guilds->size <= 1)
+		LOG("connected to %d server", event->guilds->size);
+	else
+		LOG("connected to %d servers", event->guilds->size);
+
 	struct discord_activity activities[] = {
 		{
 			.name = "/help",
 			.type = DISCORD_ACTIVITY_LISTENING,
 		},
 	};
-
 	struct discord_presence_update status = {
 		.activities =
 		        &(struct discord_activities)
@@ -124,6 +132,5 @@ on_ready(struct discord *client, const struct discord_ready *event)
 		.afk = false,
 		.since = discord_timestamp(client),
 	};
-
 	discord_update_presence(client, &status);
 }

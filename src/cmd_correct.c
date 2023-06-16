@@ -221,8 +221,7 @@ stats", siz);
 		old = ((unsigned int *)&players[i])[j];
 		new = strtol(val, NULL, 10);
 		if (new == 0 || new == UINT_MAX) {
-			write_invalid_value(buf, siz,
-			                    "I doubt you did that many steps.");
+			write_invalid_value(buf, siz, "Too big or zero.");
 			return;
 		}
 		s += snprintf(buf, siz, "<@%lu>\n%s: ", userid, fields[j]);

@@ -1,6 +1,8 @@
 #include <locale.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include "concord/discord.h"
+#include "concord/discord-internal.h"
 
 #include "nolan.h"
 
@@ -33,6 +35,25 @@ const char *fields[] = {
 	"User ID",
 };
 
+/* bug in concord */
+#include <signal.h>
+struct discord *cp;
+static void
+sighandler(int signal)
+{
+	UNUSED(signal);
+	struct discord_create_message msg = {
+		.content = "I died"
+	};
+#ifdef DEVEL
+	discord_create_message(cp, DEVEL, &msg, NULL);
+#else
+	discord_create_message(cp, 1110767040890941590, &msg, NULL);
+#endif /* DEVEL */
+	DIE("segmentation fault");
+}
+/* bug in concord */
+
 int
 main(int argc, char *argv[])
 {
@@ -53,15 +74,21 @@ main(int argc, char *argv[])
 	create_stats_file();
 	init_players();
 
-	curl_global_init(CURL_GLOBAL_ALL);
-	ccord_global_init();
-	client = discord_init(TOKEN);
+	ccord_global_init(); /* init curl too */
+	client = discord_init(TOKEN); /* init ccord_global_init() too */
+
+	/* bug in concord */
+	cp = client;
+	signal(SIGSEGV, sighandler);
+	/* bug in concord */
+
+	logconf_set_quiet(&client->conf, 1); /* 0 to enable native ccord log */
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT |
 	                    DISCORD_GATEWAY_GUILD_MEMBERS);
 	discord_set_prefix(client, PREFIX);
 	create_slash_commands(client);
 	discord_set_on_ready(client, on_ready);
-	discord_set_on_interaction_create(client, &on_interaction);
+	discord_set_on_interaction_create(client, on_interaction);
 	discord_set_on_message_create(client, on_message);
 	discord_set_on_commands(client, lb, LENGTH(lb), on_leaderboard);
 	discord_set_on_command(client, "info", on_info);
@@ -75,7 +102,6 @@ main(int argc, char *argv[])
 
 	discord_cleanup(client);
 	ccord_global_cleanup();
-	curl_global_cleanup();
 
 	return EXIT_SUCCESS;
 }

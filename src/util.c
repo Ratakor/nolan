@@ -1,8 +1,25 @@
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <time.h>
 
 #include "util.h"
+
+enum {
+	BLACK    = 30,
+	RED      = 31,
+	GREEN    = 32,
+	YELLOW   = 33,
+	BLUE     = 34,
+	MAGENTA  = 35,
+	CYAN     = 36,
+	WHITE    = 37,
+	DEFAULT  = 39
+};
+
+const char *lvl_strings[] = { "log", "warning", "error" };
+const int lvl_colors[] = { CYAN, MAGENTA, RED };
 
 char *
 nstrchr(const char *s, int c, int n)
@@ -51,26 +68,6 @@ file_exists(const char *filename)
 	return (stat(filename, &buf) == 0);
 }
 
-void *
-emalloc(size_t size)
-{
-	void *p;
-
-	if ((p = malloc(size)) == NULL)
-		DIE("malloc failed");
-	return p;
-}
-
-FILE *
-efopen(const char *filename, const char *mode)
-{
-	FILE *fp;
-
-	if ((fp = fopen(filename, mode)) == NULL)
-		DIE("failed to open %s (%s)", filename, mode);
-	return fp;
-}
-
 time_t
 ltime(void)
 {
@@ -83,6 +80,58 @@ ltime(void)
 	}
 
 	return time(NULL) + tz;
+}
+
+void
+__log(int lvl, char *file, int line, const char *func, char *fmt, ...)
+{
+	va_list ap;
+	time_t t = ltime();
+
+	fprintf(stderr,
+	        "\033[1m%02ld:%02ld:%02ld \033[%dm%-7s\033[39m %s:%d: %s: ",
+	        (t / (60 * 60)) % 24,
+	        (t / 60) % 60,
+	        t % 60,
+	        lvl_colors[lvl],
+	        lvl_strings[lvl],
+	        file,
+	        line,
+	        func);
+
+	va_start(ap, fmt);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
+
+	if (fmt == NULL) {
+		perror(NULL);
+	} else if (fmt[0] && fmt[strlen(fmt) - 1] == ':') {
+		fputc(' ', stderr);
+		perror(NULL);
+	} else {
+		fputc('\n', stderr);
+	}
+	fprintf(stderr, "\033[m");
+}
+
+void *
+emalloc(size_t size)
+{
+	void *p;
+
+	if ((p = malloc(size)) == NULL)
+		DIE(NULL);
+	return p;
+}
+
+FILE *
+efopen(const char *filename, const char *mode)
+{
+	FILE *fp;
+
+	if ((fp = fopen(filename, mode)) == NULL)
+		DIE("failed to open %s (%s):", filename, mode);
+	return fp;
 }
 
 size_t

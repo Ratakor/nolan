@@ -2,7 +2,7 @@
 
 #include "nolan.h"
 
-static void help(char *buf, size_t siz);
+static void help(char *buf, size_t siz, u64snowflake guild_id);
 
 void
 create_slash_help(struct discord *client)
@@ -15,7 +15,7 @@ create_slash_help(struct discord *client)
 }
 
 void
-help(char *buf, size_t siz)
+help(char *buf, size_t siz, u64snowflake guild_id)
 {
 	unsigned int i, len = LENGTH(stats_ids);
 	size_t s;
@@ -36,8 +36,10 @@ help(char *buf, size_t siz)
 	strlcat(buf, "\t/leaderboard *category*\n", siz);
 	strlcat(buf, "\t/correct *category* *value*\n", siz);
 	strlcat(buf, "\t/source *[kingdom]*\n", siz);
-	strlcat(buf, "\t/uraid *username* (only for Scream of Terra)\n", siz);
-	strlcat(buf, "\t/lbraid (only for Scream of Terra)\n", siz);
+	if (guild_id == RAID_GUILD_ID) {
+		strlcat(buf, "\t/uraid *username*\n", siz);
+		strlcat(buf, "\t/lbraid\n", siz);
+	}
 	strlcat(buf, "\t/help\n", siz);
 	strlcat(buf, "\n[...] means optional.\n", siz);
 	strlcat(buf, "Also works with ", siz);
@@ -59,7 +61,7 @@ on_help(struct discord * client, const struct discord_message * event)
 #endif /* DEVEL */
 
 	LOG("start");
-	help(buf, sizeof(buf));
+	help(buf, sizeof(buf), event->guild_id);
 	struct discord_create_message msg = {
 		.content = buf
 	};
@@ -74,13 +76,12 @@ on_help_interaction(struct discord *client,
 	char buf[MAX_MESSAGE_LEN];
 
 	LOG("start");
-	help(buf, sizeof(buf));
+	help(buf, sizeof(buf), event->guild_id);
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
 		.data = &(struct discord_interaction_callback_data)
 		{
 			.content = buf,
-			/* .flags = DISCORD_MESSAGE_EPHEMERAL */
 		}
 	};
 	discord_create_interaction_response(client, event->id, event->token,
