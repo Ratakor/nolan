@@ -15,7 +15,6 @@ on_interaction(struct discord *client, const struct discord_interaction *event)
 		return;
 #endif /* DEVEL */
 
-	LOG("start");
 	if (strcmp(event->data->name, "help") == 0)
 		on_help_interaction(client, event);
 	else if (strcmp(event->data->name, "stats") == 0)
@@ -32,7 +31,6 @@ on_interaction(struct discord *client, const struct discord_interaction *event)
 		on_lbraid_interaction(client, event);
 	else if (strcmp(event->data->name, "uraid") == 0)
 		on_uraid_interaction(client, event);
-	LOG("end");
 }
 
 void

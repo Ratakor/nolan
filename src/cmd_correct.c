@@ -218,9 +218,9 @@ stats", siz);
 		         fields[j], players[i].kingdom, val);
 		strlcpy(players[i].kingdom, val, MAX_KINGDOM_LEN);
 	} else {
-		old = ((unsigned int *)&players[i])[j];
+		old = ((long *)&players[i])[j];
 		new = strtol(val, NULL, 10);
-		if (new == 0 || new == UINT_MAX) {
+		if (new == 0 || new == LONG_MAX) {
 			write_invalid_value(buf, siz, "Too big or zero.");
 			return;
 		}

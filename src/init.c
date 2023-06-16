@@ -122,14 +122,12 @@ on_ready(struct discord *client, const struct discord_ready *event)
 		},
 	};
 	struct discord_presence_update status = {
-		.activities =
-		        &(struct discord_activities)
+		.activities = &(struct discord_activities)
 		{
 			.size = LENGTH(activities),
 			.array = activities
 		},
 		.status = "online",
-		.afk = false,
 		.since = discord_timestamp(client),
 	};
 	discord_update_presence(client, &status);

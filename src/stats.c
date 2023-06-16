@@ -9,14 +9,11 @@
 
 struct Field {
 	const char *key;
-	unsigned int val;
-	unsigned int keylen;
+	const int val;
+	const unsigned int keylen;
 };
 
-enum lang {
-	ENGLISH,
-	FRENCH
-};
+enum { ENGLISH, FRENCH };
 
 static long playtime_to_long(char *playtime, int lang);
 static long trim_stat(char *str);
