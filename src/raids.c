@@ -33,24 +33,7 @@ static void save_to_file(Slayer slayers[], size_t nslayers, char *raid,
                          struct discord *client,
                          const u64snowflake channel_id);
 
-const char *delims[] = {
-	"+ Raid options",
-	"4+ Raid options",
-	"4+ Opciones de Asalto",
-	"4+ Opzioni Raid",
-	"十 “ 王 国 副 本 选 项",
-	"十 レ イ ド オ プ シ ョ ン"
-};
-const char *garbageslayer[] = {
-	"Slayer",
-	"NEVE",
-	"Asesino",
-	"Uccissore",
-	"击 杀 者",
-	"討 伐 者"
-};
-
-const struct Slayers kingdom_slayers[] = {
+static const struct Slayers kingdom_slayers[] = {
 	{ "Davethegray",                618842282564648976 },
 	{ "SmittyWerbenJaeger",         372349296772907008 },
 	{ "Damaquandey",                237305375211257866 },
@@ -94,6 +77,23 @@ const struct Slayers kingdom_slayers[] = {
 	{ "Demmo",                      807849505105248287 }, /* Demm974 */
 };
 
+static const char *delims[] = {
+	"+ Raid options",
+	"4+ Raid options",
+	"4+ Opciones de Asalto",
+	"4+ Opzioni Raid",
+	"十 “ 王 国 副 本 选 项",
+	"十 レ イ ド オ プ シ ョ ン"
+};
+static const char *garbageslayer[] = {
+	"Slayer",
+	"NEVE",
+	"Asesino",
+	"Uccissore",
+	"击 杀 者",
+	"討 伐 者"
+};
+
 /* this should be in util.c but it's only used here*/
 void
 discord_send_message(struct discord *client, const u64snowflake channel_id,
@@ -108,7 +108,7 @@ discord_send_message(struct discord *client, const u64snowflake channel_id,
 	va_end(ap);
 
 	if (rsiz >= sizeof(buf))
-		WARN("string truncation");
+		log_warn("%s: string truncation", __func__);
 
 	struct discord_create_message msg = {
 		.content = buf
@@ -233,7 +233,7 @@ get_slayers(Slayer slayers[], char *txt)
 			}
 
 		}
-		slayers[nslayers].name = strdup(trim_name(line));
+		slayers[nslayers].name = estrdup(trim_name(line));
 		line = endline + 1;
 
 		endline = strchr(line, '\n');
@@ -355,7 +355,7 @@ overcap_msg(char *name, unsigned int dmg, struct discord *client,
 		i++;
 
 	if (i == MAX_SLAYERS) {
-		WARN("%s is not added to slayers", name);
+		log_warn("%s: %s is not added to slayers", __func__, name);
 		discord_send_message(client, channel_id,
 		                     "%s has overcapped the limit by %'lu \
 damage, he is now at %'lu damage. <@%lu> add this user to the list btw",
@@ -439,7 +439,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 		.sync = &chan,
 	};
 
-	LOG("start");
+	log_info("%s", __func__);
 	is_png = (strcmp(event->attachments->array->content_type,
 	                 "image/png") == 0) ? 1 : 0;
 	if (is_png)
@@ -447,7 +447,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 	else
 		snprintf(fname, sizeof(fname), "%s/raids.jpg", IMAGES_FOLDER);
 	if ((ret = curl_file(event->attachments->array->url, fname)) != 0) {
-		WARN("curl failed CURLcode: %u", ret);
+		log_error("curl failed CURLcode: %u", ret);
 		discord_send_message(client, event->channel_id, "Error: \
 Failed to download image <@%lu>.\nFix me <@%lu>", event->author->id, ADMIN);
 		return;
@@ -472,7 +472,8 @@ Failed to download image <@%lu>.\nFix me <@%lu>", event->author->id, ADMIN);
 		txt = ocr(fname, "eng");
 
 	if (txt == NULL) {
-		WARN("failed to read image from %s", event->author->username);
+		log_error("failed to read raid image from %s",
+		          event->author->username);
 		discord_send_message(client, event->channel_id, "Error: \
 Failed to read image <@%lu>.\nFix me <@%lu>", event->author->id, ADMIN);
 		return;
@@ -489,5 +490,4 @@ a correct screenshot sir <@%lu>.", event->author->id);
 	discord_get_channel(client, event->channel_id, &rchan);
 	save_to_file(slayers, nslayers, chan.name, client, event->channel_id);
 	/* ^ will free slayers[].name */
-	LOG("end");
 }

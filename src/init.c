@@ -1,7 +1,9 @@
 /* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
 
-#include <string.h>
 #include <sys/stat.h>
+
+#include <stdlib.h>
+#include <string.h>
 
 #include "nolan.h"
 
@@ -20,9 +22,9 @@ create_folders(void)
 			continue;
 
 		if (mkdir(folders[i], 0755) == -1)
-			DIE("failed to create %s:", folders[i]);
+			die("mkdir %s:", folders[i]);
 		else
-			LOG("create %s", folders[i]);
+			log_info("create %s", folders[i]);
 	}
 }
 
@@ -41,9 +43,8 @@ create_stats_file(void)
 	}
 
 	if (size == 0) {
-		LOG("create %s", STATS_FILE);
-		if (fp) fclose(fp);
-		fp = efopen(STATS_FILE, "w");
+		log_info("create %s", STATS_FILE);
+		fp = efreopen(STATS_FILE, "w", fp);
 		for (i = 0; i < LENGTH(fields) - 1; i++)
 			fprintf(fp, "%s%c", fields[i], DELIM);
 		fprintf(fp, "%s\n", fields[LENGTH(fields) - 1]);
@@ -87,22 +88,22 @@ init_players(void)
 
 			*delim = '\0';
 			if (i == NAME)
-				players[nplayers].name = strndup(p, MAX_USERNAME_LEN);
+				players[nplayers].name = estrndup(p, MAX_USERNAME_LEN);
 			else if (i == KINGDOM)
-				players[nplayers].kingdom = strndup(p, MAX_KINGDOM_LEN);
+				players[nplayers].kingdom = estrndup(p, MAX_KINGDOM_LEN);
 			else
 				((long *)&players[nplayers])[i] = atol(p);
 			p = delim + 1;
 			i++;
 		}
 		if (i != LENGTH(fields) - 1) {
-			DIE("player in %s on line %lu is missing a field",
+			die("player in %s on line %lu is missing a field",
 			    STATS_FILE, nplayers + 1);
 		}
 		players[nplayers].userid = strtoul(p, NULL, 10);
 
 		if (++nplayers > MAX_PLAYERS)
-			DIE("there is too much players to load (max:%d)",
+			die("there is too much players to load (max:%d)",
 			    MAX_PLAYERS);
 	}
 	fclose(fp);
@@ -111,11 +112,11 @@ init_players(void)
 void
 on_ready(struct discord *client, const struct discord_ready *event)
 {
-	LOG("logged in as %s", event->user->username);
+	log_info("logged in as %s", event->user->username);
 	if (event->guilds->size <= 1)
-		LOG("connected to %d server", event->guilds->size);
+		log_info("connected to %d server", event->guilds->size);
 	else
-		LOG("connected to %d servers", event->guilds->size);
+		log_info("connected to %d servers", event->guilds->size);
 
 	struct discord_activity activities[] = {
 		{

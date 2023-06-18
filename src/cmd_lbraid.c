@@ -44,7 +44,7 @@ parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers)
 		if (i < *nslayers) {
 			slayers[i].damage += dmg;
 		} else {
-			slayers[i].name = strdup(line);
+			slayers[i].name = estrdup(line);
 			slayers[i].damage = dmg;
 			*nslayers += 1;
 		}
@@ -91,7 +91,7 @@ write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers)
 
 	for (i = 0; i < lb_max; i++) {
 		if (s >= siz) {
-			WARN("string truncation");
+			log_warn("%s: string truncation", __func__);
 			return;
 		}
 
@@ -136,13 +136,12 @@ on_lbraid(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
-	LOG("start");
+	log_info("%s", __func__);
 	lbraid(buf, sizeof(buf));
 	struct discord_create_message msg = {
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	LOG("end");
 }
 
 void
@@ -151,7 +150,7 @@ on_lbraid_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
-	LOG("start");
+	log_info("%s", __func__);
 	lbraid(buf, sizeof(buf));
 	struct discord_interaction_response params = {
 		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
@@ -162,5 +161,4 @@ on_lbraid_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
-	LOG("end");
 }

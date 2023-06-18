@@ -17,7 +17,7 @@ GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
 WARN_FLAGS   = -Werror -Wall -Wextra -Wmissing-prototypes -Wpadded\
                -Waggregate-return -Wunused-macros -Wshadow -Wcast-align
 CFLAGS      += -std=c99 -pedantic -D_DEFAULT_SOURCE ${WARN_FLAGS}
-LDFLAGS     += ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
+LDFLAGS     += -s ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
 
 all: options ${NAME}
 
@@ -28,7 +28,7 @@ options:
 	@echo "CC       = ${CC}"
 
 ${BUILD_DIR}/%.c.o: %.c
-	mkdir -p ${dir $@}
+	@mkdir -p ${dir $@}
 	${CC} -c ${CFLAGS} $< -o $@
 
 ${OBJS}: config.h

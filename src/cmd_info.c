@@ -60,7 +60,7 @@ write_info(char *buf, size_t siz, const Player *player)
 	/* -2 to not include upadte and userid */
 	for (i = 0; i < LENGTH(fields) - 2; i++) {
 		if (s >= siz) {
-			WARN("string truncation");
+			log_warn("%s: string truncation", __func__);
 			return;
 		}
 
@@ -133,7 +133,7 @@ on_info(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
-	LOG("start");
+	log_info("%s", __func__);
 	if (strlen(event->content) == 0)
 		info_from_uid(buf, sizeof(buf), event->author->id);
 	else
@@ -143,7 +143,6 @@ on_info(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	LOG("end");
 }
 
 void
@@ -152,7 +151,7 @@ on_info_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
-	LOG("start");
+	log_info("%s", __func__);
 	if (!event->data->options)
 		info_from_uid(buf, sizeof(buf), event->member->user->id);
 	else
@@ -168,5 +167,4 @@ on_info_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
-	LOG("end");
 }

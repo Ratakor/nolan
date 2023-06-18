@@ -12,7 +12,7 @@ A discord bot for Orna.
 - ascensions (track mats)
 
 ### chore
-- change players to uint32_t
+- use config.json instead of config.h
 - optimize raids.c and cmd_..raid with slayers
 - add documentation
 - rework roles and make it available to other servers

@@ -4,6 +4,7 @@
 #define NOLAN_H
 
 #include <concord/discord.h>
+#include <concord/log.h>
 
 #include "../config.h"
 #include "util.h"

@@ -6,7 +6,6 @@
 
 #include "nolan.h"
 
-#define STRLEN(STR) (sizeof STR - 1)
 #define URL         "https://api.oss117quotes.xyz/v1/random"
 
 struct Field {
@@ -30,7 +29,7 @@ static void stats(char *buf, size_t siz, char *url, char *username,
                   u64snowflake userid, u64snowflake guild_id,
                   struct discord *client);
 
-const struct Field english[] = {
+static const struct Field english[] = {
 	{ "KINGDOM",        KINGDOM,          STRLEN("KINGDOM")        },
 	{ "\\ele]]",        KINGDOM,          STRLEN("\\ele]]")        },
 	{ "PLAYTIME",       PLAYTIME,         STRLEN("PLAYTIME")       },
@@ -56,7 +55,7 @@ const struct Field english[] = {
 
 };
 
-const struct Field french[] = {
+static const struct Field french[] = {
 	{ "ROYAUME",          KINGDOM,          STRLEN("ROYAUME")          },
 	{ "TEMPS DE JEU",     PLAYTIME,         STRLEN("TEMPS DE JEU")     },
 	{ "NIVEAU D'ELEVAT",  ASCENSION,        STRLEN("NIVEAU D'ELEVAT")  },
@@ -79,7 +78,7 @@ const struct Field french[] = {
 
 };
 
-const struct Field *languages[] = {
+static const struct Field *languages[] = {
 	english,
 	french,
 };
@@ -128,7 +127,8 @@ playtime_to_long(char *playtime, int lang)
 	else if (lang == FRENCH)
 		strlcpy(dayname, "jours, ", sizeof(dayname));
 	else
-		DIE("new language not correctly added");
+		die("%s:%d %s: new language not correctly added",
+		    __FILE__, __LINE__, __func__);
 
 	days = strtol(playtime, NULL, 10);
 	if ((p = strchr(playtime, dayname[0])) == 0)
@@ -205,7 +205,8 @@ parse_line(Player *player, char *line)
 		else if (lang == FRENCH)
 			langlen = LENGTH(french);
 		else
-			DIE("new language not correctly added");
+			die("%s:%d %s: new language not correctly added",
+			    __FILE__, __LINE__, __func__);
 
 		for (i = 0; i < langlen; i++) {
 			field = &languages[lang][i];
@@ -310,8 +311,8 @@ create_player(Player *player, unsigned int i)
 {
 	unsigned int j;
 
-	players[i].name = strndup(player->name, MAX_USERNAME_LEN);
-	players[i].kingdom = strndup(player->kingdom, MAX_KINGDOM_LEN);
+	players[i].name = estrndup(player->name, MAX_USERNAME_LEN);
+	players[i].kingdom = estrndup(player->kingdom, MAX_KINGDOM_LEN);
 	for (j = 2; j < LENGTH(fields); j++)
 		((long *)&players[i])[j] = ((long *)player)[j];
 }
@@ -339,7 +340,7 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 	/* -2 to not include update and userid */
 	for (j = 2; j < LENGTH(fields) - 2; j++) {
 		if (s >= siz) {
-			WARN("string truncation");
+			log_warn("%s: string truncation", __func__);
 			return;
 		}
 
@@ -388,14 +389,16 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 	              players[i].update, players[i].update);
 	players[i].update = player->update;
 	if (s >= siz) {
-		WARN("string truncation");
+		log_warn("string truncation", __func__);
 		return;
 	}
 
 	s += snprintf(buf + s, siz - s, "Correct your stats with %scorrect ;)",
 	              PREFIX);
-	if (s >= siz)
-		WARN("string truncation");
+	if (s >= siz) {
+		log_warn("string truncation", __func__);
+		return;
+	}
 
 	/* TODO: New roles: ... */
 }
@@ -416,7 +419,7 @@ update_file(Player *player)
 
 	while (fgets(line, LINE_SIZE, r)) {
 		if ((startuid = strrchr(line, DELIM)) == NULL)
-			DIE("line \"%s\" in %s is wrong", line, STATS_FILE);
+			die("line \"%s\" in %s is wrong", line, STATS_FILE);
 		userid = strtoul(startuid + 1, NULL, 10);
 		if (userid == player->userid) {
 			found = 1;
@@ -457,7 +460,7 @@ update_players(char *buf, size_t siz, Player *player)
 	if (i == nplayers) { /* new player */
 		nplayers++;
 		if (nplayers > MAX_PLAYERS)
-			DIE("there is too much players (max:%d)", MAX_PLAYERS);
+			die("there is too much players (max:%d)", MAX_PLAYERS);
 		create_player(player, i);
 		s += snprintf(buf + s, siz - s,
 		              "**%s** has been registrated in the database.\n",
@@ -483,12 +486,12 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 	/* not always a jpg but idc */
 	snprintf(fname, sizeof(fname), "%s/%lu.jpg", IMAGES_FOLDER, userid);
 	if ((ret = curl_file(url, fname)) != 0) {
-		WARN("curl failed CURLcode: %u", ret);
+		log_error("curl failed CURLcode: %u", ret);
 		strlcpy(buf, "Error: Failed to download image", siz);
 		return;
 	}
 	if ((txt = ocr(fname, "eng")) == NULL) {
-		WARN("failed to read image from %s", username);
+		log_error("failed to read image from %s", username);
 		strlcpy(buf, "Error: Failed to read image", siz);
 		return;
 	}
@@ -528,7 +531,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 {
 	char buf[MAX_MESSAGE_LEN] = "";
 
-	LOG("start");
+	log_info("%s: start", __func__);
 	stats(buf,
 	      sizeof(buf),
 	      event->attachments->array[0].url,
@@ -541,7 +544,6 @@ on_stats(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	LOG("end");
 }
 
 void
@@ -549,9 +551,9 @@ on_stats_interaction(struct discord *client,
                      const struct discord_interaction *event)
 {
 	char buf[MAX_MESSAGE_LEN] = "", *url, *endurl;
-	json_char *attachment = strdup(event->data->resolved->attachments);
+	json_char *attachment = estrdup(event->data->resolved->attachments);
 
-	LOG("start");
+	log_info("%s: start", __func__);
 	url = strstr(attachment, "\"url\":");
 	if (!url) {
 		free(attachment);
@@ -584,5 +586,4 @@ on_stats_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
-	LOG("end");
 }

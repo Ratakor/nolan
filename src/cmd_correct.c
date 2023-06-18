@@ -160,7 +160,7 @@ write_invalid_value(char *buf, size_t siz, char *fmt, ...)
 	s += vsnprintf(buf + s, siz - s, fmt, ap);
 	va_end(ap);
 	if (s >= siz)
-		WARN("string truncation");
+		log_warn("%s: string truncation", __func__);
 }
 
 void
@@ -175,7 +175,7 @@ correct(char *buf, size_t siz, char *category, char *val, u64snowflake userid)
 
 	if (i == nplayers) {
 		strlcpy(buf, "Please register before trying to correct your \
-stats", siz);
+stats.", siz);
 		return;
 	}
 
@@ -188,7 +188,7 @@ stats", siz);
 	}
 
 	if (check_delim(val)) {
-		write_invalid_value(buf, siz, "%c is not a valid char", DELIM);
+		write_invalid_value(buf, siz, "%c is not a valid char.", DELIM);
 		return;
 	}
 
@@ -261,11 +261,11 @@ on_correct(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
-	LOG("start");
+	log_info("%s", __func__);
 	if (strlen(event->content) == 0) {
 		write_invalid_category(buf, sizeof(buf));
 	} else {
-		category = strdup(event->content);
+		category = estrdup(event->content);
 		if (!(val = get_value(category))) {
 			write_invalid_value(buf, sizeof(buf),
 			                    "Hint: No value 😜");
@@ -280,7 +280,6 @@ on_correct(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	LOG("end");
 }
 
 void
@@ -289,7 +288,7 @@ on_correct_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
-	LOG("start");
+	log_info("%s", __func__);
 	if (!event->data->options) {
 		snprintf(buf, sizeof(buf), "idk please ping <@%lu>", ADMIN);
 	} else {
@@ -308,5 +307,4 @@ on_correct_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
-	LOG("end");
 }

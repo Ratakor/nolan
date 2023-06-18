@@ -3,29 +3,47 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <stdlib.h>
+#include <sys/types.h>
+#include <stdio.h>
 
-enum { LOG__, WARN__, DIE__ };
+#define LENGTH(X)  (sizeof(X) / sizeof(X[0]))
+#define STRLEN(X)  (sizeof(X) - 1)
+#define MAX(X, Y)  ((X) > (Y) ? (X) : (Y))
+#define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
+#define UNUSED(X)  ((void)(X))
 
-#define LENGTH(X)       (sizeof(X) / sizeof(X[0]))
-#define MAX(X, Y)       ((X) > (Y) ? (X) : (Y))
-#define MIN(X, Y)       ((X) < (Y) ? (X) : (Y))
-#define UNUSED(X)       ((void)(X))
-#define __LOG(LVL, ...)                                                       \
-	(__log(LVL, __FILE_NAME__, __LINE__, __func__, __VA_ARGS__))
-#define LOG(...)        (__LOG(LOG__, __VA_ARGS__))
-#define WARN(...)       (__LOG(WARN__, __VA_ARGS__))
-#define DIE(...)        (__LOG(DIE__, __VA_ARGS__), exit(EXIT_FAILURE))
+extern char *argv0;
 
-char *nstrchr(const char *s, int c, size_t n);
+/* print errors */
+void warn(const char *fmt, ...);
+void die(const char *fmt, ...);
+
+/* copy string */
 size_t strlcpy(char *dst, const char *src, size_t siz);
+size_t wstrlcpy(char *dst, const char *src, size_t siz);
+size_t estrlcpy(char *dst, const char *src, size_t siz);
+
+/* concat string */
 size_t strlcat(char *dst, const char *src, size_t siz);
-time_t ltime(void);
-void __log(int lvl, char *file, int line, const char *func, char *fmt, ...);
+size_t wstrlcat(char *dst, const char *src, size_t siz);
+size_t estrlcat(char *dst, const char *src, size_t siz);
+
+/* error handling */
 void *emalloc(size_t size);
+void *ecalloc(size_t nmemb, size_t size);
+void *erealloc(void *ptr, size_t size);
+void *estrdup(const char *s);
+void *estrndup(const char *s, size_t n);
 FILE *efopen(const char *filename, const char *mode);
-size_t ufmt(char *dst, size_t dsiz, uint64_t n);
-size_t ifmt(char *dst, size_t dsiz, int64_t n);
+FILE *efreopen(const char *filename, const char *mode, FILE *stream);
+
+/* format number */
+size_t ufmt(char *dst, size_t dsiz, unsigned long long n);
+size_t ifmt(char *dst, size_t dsiz, long long n);
+
+/* misc */
+char *nstrchr(const char *s, int c, size_t n);
 int file_exists(const char *filename);
+time_t ltime(void);
 
 #endif /* UTIL_H */

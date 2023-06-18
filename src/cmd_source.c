@@ -105,7 +105,7 @@ on_source(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
-	LOG("start");
+	log_info("%s", __func__);
 	if (strlen(event->content) == 0)
 		fbuf = load_source(&fsiz);
 	else
@@ -125,7 +125,6 @@ on_source(struct discord *client, const struct discord_message *event)
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
 	free(fbuf);
-	LOG("end");
 }
 
 void
@@ -135,7 +134,7 @@ on_source_interaction(struct discord *client,
 	size_t fsiz = 0;
 	char *fbuf = NULL;
 
-	LOG("start");
+	log_info("%s", __func__);
 	if (!event->data->options)
 		fbuf = load_source(&fsiz);
 	else
@@ -161,5 +160,4 @@ on_source_interaction(struct discord *client,
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
 	free(fbuf);
-	LOG("end");
 }

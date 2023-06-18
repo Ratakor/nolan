@@ -3,8 +3,9 @@
 #include <curl/curl.h>
 #include <gd.h>
 #include <leptonica/allheaders.h>
-#include <string.h>
 #include <tesseract/capi.h>
+
+#include <string.h>
 
 #include "nolan.h"
 
@@ -19,7 +20,7 @@ size_t
 write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 {
 	if (size * nmemb > MAX_MESSAGE_LEN)
-		DIE("fix your code donkey");
+		die("%s:%d %s: fix your code", __FILE__, __LINE__, __func__);
 	return strlcpy(stream, ptr, MAX_MESSAGE_LEN);
 }
 
@@ -119,20 +120,20 @@ ocr(char *fname, char *lang)
 	char *txt_ocr, *txt_out;
 
 	if ((img = pixRead(fname)) == NULL) {
-		WARN("failed to read image (%s)", fname);
+		log_error("failed to read image (%s)", fname);
 		return NULL;
 	}
 
 	handle = TessBaseAPICreate();
 	if (TessBaseAPIInit3(handle, NULL, lang) != 0)
-		DIE("failed to init tesseract (lang:%s)", lang);
+		die("failed to init tesseract (lang:%s)", lang);
 
 	TessBaseAPISetImage2(handle, img);
 	if (TessBaseAPIRecognize(handle, NULL) != 0)
-		DIE("failed tesseract recognition");
+		die("failed tesseract recognition");
 
 	txt_ocr = TessBaseAPIGetUTF8Text(handle);
-	txt_out = strdup(txt_ocr);
+	txt_out = estrdup(txt_ocr);
 
 	TessDeleteText(txt_ocr);
 	TessBaseAPIEnd(handle);

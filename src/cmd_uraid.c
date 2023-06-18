@@ -86,7 +86,7 @@ write_uraid(char *buf, size_t siz, char *username, unsigned int *dmgs)
 		s += ufmt(buf + s, siz - s, dmgs[i]);
 		s += strlcpy(buf + s, " damage\n", siz - s);
 		if (s >= siz) {
-			WARN("string truncation");
+			log_warn("%s: string truncation", __func__);
 			return;
 		}
 	}
@@ -94,7 +94,7 @@ write_uraid(char *buf, size_t siz, char *username, unsigned int *dmgs)
 	s += ufmt(buf + s, siz - s, total);
 	s += strlcpy(buf + s, " damage", siz - s);
 	if (s >= siz)
-		WARN("string truncation");
+		log_warn("%s: string truncation", __func__);
 }
 
 void
@@ -123,7 +123,7 @@ on_uraid(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
-	LOG("start");
+	log_info("%s", __func__);
 	if (strlen(event->content) == 0)
 		write_invalid(buf, sizeof(buf));
 	else
@@ -133,7 +133,6 @@ on_uraid(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	LOG("end");
 }
 
 void
@@ -142,7 +141,7 @@ on_uraid_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
-	LOG("start");
+	log_info("%s", __func__);
 	if (!event->data->options)
 		write_invalid(buf, sizeof(buf));
 	else
@@ -157,5 +156,4 @@ on_uraid_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
-	LOG("end");
 }

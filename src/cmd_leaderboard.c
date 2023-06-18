@@ -193,8 +193,8 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 			write_player(player, sizeof(player), i, 0);
 		}
 		if (strlcat(buf, player, siz) >= siz) {
-			WARN("string truncation\n\
-\033[33mhint:\033[39m this is probably because LB_MAX is too big");
+			log_warn("%s: string truncation\n\
+\033[33mhint:\033[39m this is probably because LB_MAX is too big", __func__);
 			return;
 		}
 	}
@@ -207,8 +207,8 @@ write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 		strlcat(buf, "...\n", siz);
 		write_player(player, sizeof(player), i, 1);
 		if (strlcat(buf, player, siz) >= siz) {
-			WARN("string truncation\n\
-\033[33mhint:\033[39m this is probably because LB_MAX is too big");
+			log_warn("%s: string truncation\n\
+\033[33mhint:\033[39m this is probably because LB_MAX is too big", __func__);
 		}
 	}
 }
@@ -246,7 +246,7 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		return;
 #endif /* DEVEL */
 
-	LOG("start");
+	log_info("%s", __func__);
 	if (strlen(event->content) == 0)
 		write_invalid(buf, sizeof(buf));
 	else
@@ -257,7 +257,6 @@ on_leaderboard(struct discord *client, const struct discord_message *event)
 		.content = buf
 	};
 	discord_create_message(client, event->channel_id, &msg, NULL);
-	LOG("end");
 }
 
 void
@@ -266,7 +265,7 @@ on_leaderboard_interaction(struct discord *client,
 {
 	char buf[MAX_MESSAGE_LEN];
 
-	LOG("start");
+	log_info("%s", __func__);
 	if (!event->data->options) {
 		write_invalid(buf, sizeof(buf));
 	} else {
@@ -284,6 +283,5 @@ on_leaderboard_interaction(struct discord *client,
 	};
 	discord_create_interaction_response(client, event->id, event->token,
 	                                    &params, NULL);
-	LOG("end");
 }
 
