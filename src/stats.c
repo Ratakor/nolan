@@ -1,5 +1,6 @@
 /* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
 
+#include <err.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -127,8 +128,8 @@ playtime_to_long(char *playtime, int lang)
 	else if (lang == FRENCH)
 		strlcpy(dayname, "jours, ", sizeof(dayname));
 	else
-		die("%s:%d %s: new language not correctly added",
-		    __FILE__, __LINE__, __func__);
+		errx(1, "%s:%d %s: New language not correctly added",
+		     __FILE__, __LINE__, __func__);
 
 	days = strtol(playtime, NULL, 10);
 	if ((p = strchr(playtime, dayname[0])) == 0)
@@ -205,8 +206,8 @@ parse_line(Player *player, char *line)
 		else if (lang == FRENCH)
 			langlen = LENGTH(french);
 		else
-			die("%s:%d %s: new language not correctly added",
-			    __FILE__, __LINE__, __func__);
+			errx(1, "%s:%d %s: New language not correctly added",
+			     __FILE__, __LINE__, __func__);
 
 		for (i = 0; i < langlen; i++) {
 			field = &languages[lang][i];
@@ -432,7 +433,7 @@ update_file(Player *player)
 
 	while (fgets(line, LINE_SIZE, r)) {
 		if ((startuid = strrchr(line, DELIM)) == NULL)
-			die("line \"%s\" in %s is wrong", line, STATS_FILE);
+			errx(1, "Line \"%s\" in %s is wrong", line, STATS_FILE);
 		userid = strtoul(startuid + 1, NULL, 10);
 		if (userid == player->userid) {
 			found = 1;
@@ -473,7 +474,7 @@ update_players(char *buf, size_t siz, Player *player)
 	if (i == nplayers) { /* new player */
 		nplayers++;
 		if (nplayers > MAX_PLAYERS)
-			die("there is too much players (max:%d)", MAX_PLAYERS);
+			errx(1, "There is too much players (max:%d)", MAX_PLAYERS);
 		create_player(player, i);
 		s += snprintf(buf + s, siz - s,
 		              "**%s** has been registrated in the database.\n",

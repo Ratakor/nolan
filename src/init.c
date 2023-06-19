@@ -2,6 +2,7 @@
 
 #include <sys/stat.h>
 
+#include <err.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -22,9 +23,9 @@ create_folders(void)
 			continue;
 
 		if (mkdir(folders[i], 0755) == -1)
-			die("mkdir %s:", folders[i]);
+			err(1, "mkdir: %s", folders[i]);
 		else
-			log_info("create %s", folders[i]);
+			log_info("Create %s", folders[i]);
 	}
 }
 
@@ -43,7 +44,7 @@ create_stats_file(void)
 	}
 
 	if (size == 0) {
-		log_info("create %s", STATS_FILE);
+		log_info("Create %s", STATS_FILE);
 		fp = efreopen(STATS_FILE, "w", fp);
 		for (i = 0; i < LENGTH(fields) - 1; i++)
 			fprintf(fp, "%s%c", fields[i], DELIM);
@@ -97,14 +98,14 @@ init_players(void)
 			i++;
 		}
 		if (i != LENGTH(fields) - 1) {
-			die("player in %s on line %lu is missing a field",
-			    STATS_FILE, nplayers + 1);
+			errx(1, "Player in %s on line %lu is missing a field",
+			     STATS_FILE, nplayers + 1);
 		}
 		players[nplayers].userid = strtoul(p, NULL, 10);
 
 		if (++nplayers > MAX_PLAYERS)
-			die("there is too much players to load (max:%d)",
-			    MAX_PLAYERS);
+			errx(1, "There is too much players to load (max:%d)",
+			     MAX_PLAYERS);
 	}
 	fclose(fp);
 }
@@ -112,11 +113,11 @@ init_players(void)
 void
 on_ready(struct discord *client, const struct discord_ready *event)
 {
-	log_info("logged in as %s", event->user->username);
+	log_info("Logged in as %s", event->user->username);
 	if (event->guilds->size <= 1)
-		log_info("connected to %d server", event->guilds->size);
+		log_info("Connected to %d server", event->guilds->size);
 	else
-		log_info("connected to %d servers", event->guilds->size);
+		log_info("Connected to %d servers", event->guilds->size);
 
 	struct discord_activity activities[] = {
 		{
