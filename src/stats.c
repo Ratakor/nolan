@@ -1,12 +1,13 @@
 /* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include "nolan.h"
 
-#define URL         "https://api.oss117quotes.xyz/v1/random"
+#define URL "https://api.oss117quotes.xyz/v1/random"
 
 struct Field {
 	const char *key;
@@ -17,7 +18,6 @@ struct Field {
 enum { ENGLISH, FRENCH };
 
 static long playtime_to_long(char *playtime, int lang);
-static long trim_stat(const char *str);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
 static char *get_quote(void);
@@ -258,8 +258,9 @@ for_line(Player *player, char *txt)
 char *
 get_quote(void)
 {
-	char *quote = curl(URL), *p, *sentence, *name;
+	char *quote, *p, *sentence, *name, *tmp, *op, *otmp;
 
+	quote = curl(URL);
 	if ((sentence = nstrchr(quote, '"', 3)) == NULL) {
 		free(quote);
 		return NULL;
@@ -289,6 +290,18 @@ get_quote(void)
 	while ((*p++ = *sentence++));
 	p--;
 	while ((*p++ = *name++));
+
+	/* change '*' to "\*", must need a large enough buffer */
+	p = quote;
+	while ((p = strchr(p, '*')) != NULL) {
+		tmp = estrdup(p);
+		op = p;
+		otmp = tmp;
+		*p++ = '\\';
+		while ((*p++ = *tmp++));
+		p = op + 2;
+		free(otmp);
+	}
 
 	return quote;
 }

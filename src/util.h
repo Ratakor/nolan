@@ -12,38 +12,27 @@
 #define MIN(X, Y)  ((X) < (Y) ? (X) : (Y))
 #define UNUSED(X)  ((void)(X))
 
-extern char *argv0;
-
-/* print errors */
-void warn(const char *fmt, ...);
-void die(const char *fmt, ...);
-
-/* copy string */
 size_t strlcpy(char *dst, const char *src, size_t siz);
 size_t wstrlcpy(char *dst, const char *src, size_t siz);
 size_t estrlcpy(char *dst, const char *src, size_t siz);
 
-/* concat string */
 size_t strlcat(char *dst, const char *src, size_t siz);
 size_t wstrlcat(char *dst, const char *src, size_t siz);
 size_t estrlcat(char *dst, const char *src, size_t siz);
 
-/* error handling */
-void *emalloc(size_t size);
-void *ecalloc(size_t nmemb, size_t size);
-void *erealloc(void *ptr, size_t size);
+void *emalloc(size_t siz);
+void *ecalloc(size_t nmemb, size_t siz);
+void *erealloc(void *p, size_t siz);
 void *estrdup(const char *s);
 void *estrndup(const char *s, size_t n);
 FILE *efopen(const char *filename, const char *mode);
 FILE *efreopen(const char *filename, const char *mode, FILE *stream);
 
-/* format number */
+char *nstrchr(const char *s, int c, size_t n);
 size_t ufmt(char *dst, size_t dsiz, unsigned long long n);
 size_t ifmt(char *dst, size_t dsiz, long long n);
-
-/* misc */
-char *nstrchr(const char *s, int c, size_t n);
 int file_exists(const char *filename);
 time_t ltime(void);
 
 #endif /* UTIL_H */
+

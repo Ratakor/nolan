@@ -111,6 +111,7 @@ char *ocr(char *fname, char *lang);
 /* stats.c */
 void create_slash_stats(struct discord *client);
 bool check_delim(const char *val);
+long trim_stat(const char *str);
 char *playtime_to_str(long playtime);
 void update_file(Player *player);
 void on_stats(struct discord *client, const struct discord_message *event);

@@ -187,12 +187,12 @@ stats.", siz);
 		return;
 	}
 
-	if (check_delim(val)) {
-		write_invalid_value(buf, siz, "%c is not a valid char.", DELIM);
-		return;
-	}
-
 	if (j == NAME) {
+		if (check_delim(val)) {
+			write_invalid_value(buf, siz,
+			                    "%c is not a valid char.", DELIM);
+			return;
+		}
 		if (strlen(val) > MAX_USERNAME_LEN) {
 			write_invalid_value(buf, siz, "Too big username.");
 			return;
@@ -201,6 +201,11 @@ stats.", siz);
 		         fields[j], players[i].name, val);
 		strlcpy(players[i].name, val, MAX_USERNAME_LEN);
 	} else if (j == KINGDOM) {
+		if (check_delim(val)) {
+			write_invalid_value(buf, siz,
+			                    "%c is not a valid char.", DELIM);
+			return;
+		}
 		if (strlen(val) > MAX_KINGDOM_LEN) {
 			write_invalid_value(buf, siz, "Too big kingdom name.");
 			return;
@@ -210,7 +215,7 @@ stats.", siz);
 		strlcpy(players[i].kingdom, val, MAX_KINGDOM_LEN);
 	} else {
 		old = ((long *)&players[i])[j];
-		new = strtol(val, NULL, 10);
+		new = trim_stat(val);
 		if (new == 0 || new == LONG_MAX) {
 			write_invalid_value(buf, siz, "Too big or zero.");
 			return;

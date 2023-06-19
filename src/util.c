@@ -2,60 +2,13 @@
 
 #include <sys/stat.h>
 
-#include <stdarg.h>
+#include <err.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include "util.h"
-
-static void evprintf(const char *fmt, va_list ap);
-
-char *argv0;
-
-void
-evprintf(const char *fmt, va_list ap)
-{
-	if (!fmt) {
-		fputc('\n', stderr);
-		return;
-	}
-
-	if (argv0 && strncmp(fmt, "usage", STRLEN("usage")))
-		fprintf(stderr, "%s: ", argv0);
-
-	vfprintf(stderr, fmt, ap);
-
-	if (fmt[0] && fmt[strlen(fmt) - 1] == ':') {
-		fputc(' ', stderr);
-		perror(NULL);
-	} else {
-		fputc('\n', stderr);
-	}
-}
-
-void
-warn(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	evprintf(fmt, ap);
-	va_end(ap);
-}
-
-void
-die(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	evprintf(fmt, ap);
-	va_end(ap);
-
-	exit(EXIT_FAILURE);
-}
 
 size_t
 strlcpy(char *dst, const char *src, size_t siz)
@@ -80,7 +33,7 @@ wstrlcpy(char *dst, const char *src, size_t siz)
 	size_t ret;
 
 	if ((ret = strlcpy(dst, src, siz)) >= siz)
-		warn("strlcpy: string truncation");
+		warnx("strlcpy: String truncation");
 
 	return ret;
 }
@@ -91,7 +44,7 @@ estrlcpy(char *dst, const char *src, size_t siz)
 	size_t ret;
 
 	if ((ret = strlcpy(dst, src, siz)) >= siz)
-		die("strlcpy: string truncation");
+		errx(1, "strlcpy: String truncation");
 
 	return ret;
 }
@@ -113,7 +66,7 @@ wstrlcat(char *dst, const char *src, size_t siz)
 	size_t ret;
 
 	if ((ret = strlcat(dst, src, siz)) >= siz)
-		warn("strlcat: string truncation");
+		warnx("strlcat: String truncation");
 
 	return ret;
 }
@@ -124,38 +77,38 @@ estrlcat(char *dst, const char *src, size_t siz)
 	size_t ret;
 
 	if ((ret = strlcat(dst, src, siz)) >= siz)
-		die("strlcat: string truncation");
+		errx(1, "strlcat: String truncation");
 
 	return ret;
 }
 
 void *
-emalloc(size_t size)
+emalloc(size_t siz)
 {
 	void *p;
 
-	if ((p = malloc(size)) == NULL)
-		die("malloc:");
+	if ((p = malloc(siz)) == NULL)
+		err(1, "malloc");
 
 	return p;
 }
 
 void *
-ecalloc(size_t nmemb, size_t size)
+ecalloc(size_t nmemb, size_t siz)
 {
 	void *p;
 
-	if ((p = calloc(nmemb, size)) == NULL)
-		die("calloc:");
+	if ((p = calloc(nmemb, siz)) == NULL)
+		err(1, "calloc");
 
 	return p;
 }
 
 void *
-erealloc(void *p, size_t size)
+erealloc(void *p, size_t siz)
 {
-	if ((p = realloc(p, size)) == NULL)
-		die("realloc:");
+	if ((p = realloc(p, siz)) == NULL)
+		err(1, "realloc");
 
 	return p;
 }
@@ -166,7 +119,7 @@ estrdup(const char *s)
 	char *p;
 
 	if ((p = strdup(s)) == NULL)
-		die("strdup:");
+		err(1, "strdup");
 
 	return p;
 }
@@ -177,7 +130,7 @@ estrndup(const char *s, size_t n)
 	char *p;
 
 	if ((p = strndup(s, n)) == NULL)
-		die("strndup:");
+		err(1, "strndup");
 
 	return p;
 }
@@ -188,7 +141,7 @@ efopen(const char *filename, const char *mode)
 	FILE *fp;
 
 	if ((fp = fopen(filename, mode)) == NULL)
-		die("fopen %s [%s]:", filename, mode);
+		err(1, "fopen: '%s' [%s]", filename, mode);
 
 	return fp;
 }
@@ -199,9 +152,24 @@ efreopen(const char *filename, const char *mode, FILE *stream)
 	FILE *fp;
 
 	if ((fp = freopen(filename, mode, stream)) == NULL)
-		die("freopen %s [%s]:", filename, mode);
+		err(1, "freopen: '%s' [%s]", filename, mode);
 
 	return fp;
+}
+
+char *
+nstrchr(const char *s, int c, size_t n)
+{
+	if (n == 0)
+		return NULL;
+
+	do {
+		if (n == 0)
+			return (char *)s - 1;
+		if (*s == c)
+			n--;
+	} while (*s++);
+	return NULL;
 }
 
 size_t
@@ -240,21 +208,6 @@ ifmt(char *dst, size_t dsiz, long long n)
 
 }
 
-char *
-nstrchr(const char *s, int c, size_t n)
-{
-	if (n == 0)
-		return NULL;
-
-	do {
-		if (n == 0)
-			return (char *)s - 1;
-		if (*s == c)
-			n--;
-	} while (*s++);
-	return NULL;
-}
-
 int
 file_exists(const char *filename)
 {
@@ -265,7 +218,7 @@ file_exists(const char *filename)
 time_t
 ltime(void)
 {
-	static long tz;
+	static time_t tz;
 
 	if (!tz) {
 		const time_t t = time(NULL);
