@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 
 #include <err.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -146,17 +147,6 @@ efopen(const char *filename, const char *mode)
 	return fp;
 }
 
-FILE *
-efreopen(const char *filename, const char *mode, FILE *stream)
-{
-	FILE *fp;
-
-	if ((fp = freopen(filename, mode, stream)) == NULL)
-		err(1, "freopen: '%s' [%s]", filename, mode);
-
-	return fp;
-}
-
 char *
 nstrchr(const char *s, int c, size_t n)
 {
@@ -173,7 +163,7 @@ nstrchr(const char *s, int c, size_t n)
 }
 
 size_t
-ufmt(char *dst, size_t dsiz, unsigned long long n)
+ufmt(char *dst, size_t dsiz, uint64_t n)
 {
 	char buf[32], *p = buf + sizeof(buf) - 1;
 	size_t sizn = 1;
@@ -192,7 +182,7 @@ ufmt(char *dst, size_t dsiz, unsigned long long n)
 }
 
 size_t
-ifmt(char *dst, size_t dsiz, long long n)
+ifmt(char *dst, size_t dsiz, int64_t n)
 {
 	if (dsiz == 0)
 		return 0;

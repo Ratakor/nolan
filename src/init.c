@@ -4,6 +4,7 @@
 
 #include <err.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "nolan.h"
@@ -11,7 +12,7 @@
 void
 create_folders(void)
 {
-	unsigned int i;
+	size_t i;
 	const char *folders[] = {
 		SAVE_FOLDER,
 		IMAGES_FOLDER,
@@ -25,7 +26,7 @@ create_folders(void)
 		if (mkdir(folders[i], 0755) == -1)
 			err(1, "mkdir: %s", folders[i]);
 		else
-			log_info("Create %s", folders[i]);
+			log_info("Created %s", folders[i]);
 	}
 }
 
@@ -33,24 +34,24 @@ void
 create_stats_file(void)
 {
 	FILE *fp;
-	unsigned int i;
-	long size = 0;
+	size_t i, fsiz = 0;
 
 	fp = fopen(STATS_FILE, "r");
 
 	if (fp != NULL) {
 		fseek(fp, 0, SEEK_END);
-		size = ftell(fp);
+		fsiz = ftell(fp);
+		fclose(fp);
 	}
 
-	if (size == 0) {
-		log_info("Create %s", STATS_FILE);
-		fp = efreopen(STATS_FILE, "w", fp);
+	if (fsiz == 0) {
+		fp = efopen(STATS_FILE, "w");
 		for (i = 0; i < LENGTH(fields) - 1; i++)
 			fprintf(fp, "%s%c", fields[i], DELIM);
 		fprintf(fp, "%s\n", fields[LENGTH(fields) - 1]);
+		fclose(fp);
+		log_info("Created %s", STATS_FILE);
 	}
-	fclose(fp);
 }
 
 void
