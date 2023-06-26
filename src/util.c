@@ -16,7 +16,7 @@ strlcpy(char *dst, const char *src, size_t siz)
 {
 	const char *osrc = src;
 
-	if (siz == 0) /* duh */
+	if (siz == 0)
 		return strlen(src);
 
 	while (--siz != 0 && (*dst++ = *src++) != '\0');
@@ -53,8 +53,9 @@ estrlcpy(char *dst, const char *src, size_t siz)
 size_t
 strlcat(char *dst, const char *src, size_t siz)
 {
-	size_t dsiz = strlen(dst);
+	size_t dsiz;
 
+	dsiz = strlen(dst);
 	if (dsiz >= siz)
 		return strlen(src) + siz;
 
@@ -165,9 +166,10 @@ nstrchr(const char *s, int c, size_t n)
 size_t
 ufmt(char *dst, size_t dsiz, uint64_t n)
 {
-	char buf[32], *p = buf + sizeof(buf) - 1;
+	char buf[32], *p;
 	size_t sizn = 1;
 
+	p = buf + sizeof(buf) - 1;
 	*p-- = '\0';
 	while (sizn < sizeof(buf)) {
 		*p-- = (n % 10) + '0';
@@ -185,7 +187,7 @@ size_t
 ifmt(char *dst, size_t dsiz, int64_t n)
 {
 	if (dsiz == 0)
-		return 0;
+		return ufmt(dst, dsiz, n);
 
 	if (n < 0) {
 		*dst = '-';

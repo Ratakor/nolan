@@ -3,9 +3,6 @@
 #include <concord/discord.h>
 #include <concord/discord-internal.h>
 
-#include <locale.h>
-#include <stdlib.h>
-
 #include "nolan.h"
 
 Player players[MAX_PLAYERS];
@@ -37,20 +34,18 @@ const char *fields[] = {
 	"User ID",
 };
 
-/* this func is under MIT License, Copyright (c) 2022 Cogmasters */
+/* This function is under MIT License, Copyright (c) 2022 Cogmasters */
 static void
-log_color_cb(log_Event *ev)
+log_callback(log_Event *ev)
 {
 	char buf[16];
 
 	buf[strftime(buf, sizeof(buf), "%H:%M:%S", ev->time)] = '\0';
-
 	fprintf(ev->udata, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ", buf,
 	        level_colors[ev->level], level_strings[ev->level], ev->file,
 	        ev->line);
-
 	vfprintf(ev->udata, ev->fmt, ev->ap);
-	fprintf(ev->udata, "\n");
+	fputc('\n', ev->udata);
 	fflush(ev->udata);
 }
 
@@ -61,14 +56,14 @@ main(void)
 	char *lb[] = { "lb", "leaderboard" };
 	struct discord *client;
 
-	setlocale(LC_NUMERIC, "");
 	create_folders();
 	create_stats_file();
 	init_players();
 
-	ccord_global_init(); /* init curl too */
-	client = discord_init(TOKEN); /* init ccord_global_init() too */
-	logconf_add_callback(&client->conf, &log_color_cb, stderr, LOG_INFO);
+	/* init curl, ccord global and client */
+	client = discord_init(TOKEN);
+
+	logconf_add_callback(&client->conf, &log_callback, stderr, LOG_WARN);
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT |
 	                    DISCORD_GATEWAY_GUILD_MEMBERS);
 	discord_set_prefix(client, PREFIX);
