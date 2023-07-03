@@ -3,6 +3,7 @@
 #include <concord/discord.h>
 #include <concord/discord-internal.h>
 
+#include <locale.h>
 #include <signal.h>
 
 #include "nolan.h"
@@ -58,6 +59,7 @@ main(void)
 	char *lb[] = { "lb", "leaderboard" };
 	struct discord *client;
 
+	setlocale(LC_ALL, NULL);
 	signal(SIGINT, &dalloc_sighandler);
 
 	create_folders();

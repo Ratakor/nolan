@@ -89,12 +89,15 @@ init_players(void)
 				continue;
 
 			*delim = '\0';
-			if (i == NAME)
+			if (i == NAME) {
 				players[nplayers].name = estrndup(p, MAX_USERNAME_LEN);
-			else if (i == KINGDOM)
+				dalloc_ignore(players[nplayers].name);
+			} else if (i == KINGDOM) {
 				players[nplayers].kingdom = estrndup(p, MAX_KINGDOM_LEN);
-			else
+				dalloc_ignore(players[nplayers].kingdom);
+			} else {
 				((long *)&players[nplayers])[i] = atol(p);
+			}
 			p = delim + 1;
 			i++;
 		}

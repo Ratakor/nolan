@@ -29,7 +29,8 @@ parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers)
 {
 	FILE *fp;
 	char line[LINE_SIZE], *endname;
-	unsigned int i, dmg;
+	size_t i;
+	uint32_t dmg;
 
 	fp = efopen(fname, "r");
 	while (fgets(line, LINE_SIZE, fp)) {
@@ -45,6 +46,7 @@ parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers)
 			slayers[i].damage += dmg;
 		} else {
 			slayers[i].name = estrdup(line);
+			dalloc_comment(slayers[i].name, "slayers name lbraid");
 			slayers[i].damage = dmg;
 			*nslayers += 1;
 		}
@@ -56,10 +58,11 @@ parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers)
 void
 load_files(Slayer slayers[], size_t *nslayers)
 {
+	char fname[PATH_MAX];
+	time_t day;
 	unsigned int i;
-	long day = time(NULL) / 86400;
-	char fname[128];
 
+	day = time(NULL) / 86400;
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - i);
@@ -86,16 +89,17 @@ compare(const void *s1, const void *s2)
 void
 write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers)
 {
-	unsigned int i, lb_max = MIN(nslayers, LB_MAX);
+	unsigned int i, lb_max;
 	size_t s = 0;
 
+	lb_max = MIN(nslayers, LB_MAX);
 	for (i = 0; i < lb_max; i++) {
 		if (s >= siz) {
 			log_warn("%s: string truncation", __func__);
 			return;
 		}
 
-		s += snprintf(buf + s, siz - s, "%d. %s: ", i, slayers[i].name);
+		s += snprintf(buf + s, siz - s, "%u. %s: ", i, slayers[i].name);
 		s += ufmt(buf + s, siz - s, slayers[i].damage);
 		s += strlcpy(buf + s, " damage\n", siz - s);
 	}
@@ -104,9 +108,8 @@ write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers)
 void
 lbraid(char *buf, size_t siz)
 {
-	unsigned int i;
-	size_t nslayers = 0;
 	Slayer slayers[MAX_SLAYERS];
+	size_t nslayers = 0, i;
 
 	load_files(slayers, &nslayers);
 	if (nslayers == 0) {
@@ -115,9 +118,8 @@ lbraid(char *buf, size_t siz)
 	}
 	qsort(slayers, nslayers, sizeof(slayers[0]), compare);
 	write_lbraid(buf, siz, slayers, nslayers);
-	for (i = 0; i < nslayers; i++) {
+	for (i = 0; i < nslayers; i++)
 		free(slayers[i].name);
-	}
 }
 
 void

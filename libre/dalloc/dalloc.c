@@ -165,10 +165,6 @@ dalloc_sighandler(int sig)
 	fprintf(stderr, "dalloc: %s\n", strsignal(sig));
 #endif /* _WIN32 */
 
-#ifdef NO_DALLOC
-	fprintf(stderr, "%s\n", NO_DALLOC);
-#endif /* NO_DALLOC */
-
 	exit(EXIT_STATUS);
 }
 

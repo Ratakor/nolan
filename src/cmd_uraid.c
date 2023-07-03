@@ -7,10 +7,13 @@
 #include "nolan.h"
 
 static void write_invalid(char *buf, size_t siz);
-static void load_files(char *username, unsigned int *dmgs);
-static void write_uraid(char *buf, size_t siz, char *username,
-                        unsigned int *dmgs);
+static void load_files(char *username, uint32_t *dmgs);
+static void write_uraid(char *buf, size_t siz, char *username, uint32_t *dmgs);
 static void uraid(char *buf, size_t siz, char *username);
+
+static const char *week[] = {
+	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+};
 
 void
 create_slash_uraid(struct discord *client)
@@ -44,13 +47,14 @@ write_invalid(char *buf, size_t siz)
 }
 
 void
-load_files(char *username, unsigned int *dmgs)
+load_files(char *username, uint32_t *dmgs)
 {
-	unsigned int i;
-	long day = time(NULL) / 86400;
 	char fname[128];
-	size_t namelen = strlen(username);
+	size_t namelen, i;
+	time_t day;
 
+	namelen = strlen(username);
+	day = time(NULL) / 86400;
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - i);
@@ -60,29 +64,19 @@ load_files(char *username, unsigned int *dmgs)
 }
 
 void
-write_uraid(char *buf, size_t siz, char *username, unsigned int *dmgs)
+write_uraid(char *buf, size_t siz, char *username, uint32_t *dmgs)
 {
-	unsigned int i = 0, total = 0;
-	size_t s = 0;
-	time_t t = time(NULL);
-	struct tm *tm = gmtime(&t);
-	int d = tm->tm_wday;
-	const char *week[] = {
-		"Sun",
-		"Mon",
-		"Tue",
-		"Wed",
-		"Thu",
-		"Fri",
-		"Sat"
-	};
+	size_t i = 0, s = 0;
+	uint32_t total = 0;
+	int day;
 
+	day = ((time(NULL) / 86400) + 4) % 7;
 	s += snprintf(buf + s, siz - s,
 	              "%s's raids stats for the last 7 days:\n", username);
-	for (; i < 7; i++, d--) {
-		if (d < 0) d = 6;
+	for (; i < 7; i++, day--) {
+		if (day < 0) day = 6;
 		total += dmgs[i];
-		s += snprintf(buf + s, siz - s, "%s: ", week[d]);
+		s += snprintf(buf + s, siz - s, "%s: ", week[day]);
 		s += ufmt(buf + s, siz - s, dmgs[i]);
 		s += strlcpy(buf + s, " damage\n", siz - s);
 		if (s >= siz) {
@@ -100,7 +94,7 @@ write_uraid(char *buf, size_t siz, char *username, unsigned int *dmgs)
 void
 uraid(char *buf, size_t siz, char *username)
 {
-	unsigned int dmgs[7];
+	uint32_t dmgs[7];
 
 	memset(dmgs, 0, sizeof(dmgs));
 	load_files(username, dmgs);

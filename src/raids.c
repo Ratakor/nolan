@@ -20,14 +20,14 @@ static void discord_send_message(struct discord *client,
                                  const char *fmt, ...);
 static char *skip_to_slayers(char *txt);
 static char *trim_name(char *name);
-static unsigned int trim_dmg(char *str);
+static uint32_t trim_dmg(char *str);
 static size_t get_slayers(Slayer slayers[], char *txt);
 static size_t parse(Slayer slayers[], char *txt);
-static unsigned int adjust(unsigned int dmg, char *raid);
+static uint32_t adjust(uint32_t dmg, char *raid);
 static void save_to_new_file(Slayer slayers[], size_t nslayers, char *fname,
                              char *raid);
-static unsigned int get_weekly_damage(char *username, size_t namelen);
-static void overcap_msg(char *name, unsigned int dmg, struct discord *client,
+static uint32_t get_weekly_damage(char *username, size_t namelen);
+static void overcap_msg(char *name, uint32_t dmg, struct discord *client,
                         const u64snowflake channel_id);
 static void save_to_file(Slayer slayers[], size_t nslayers, char *raid,
                          struct discord *client,
@@ -179,11 +179,11 @@ trim_name(char *name)
 }
 
 /* trim everything that is not a number, could segfault in very rare case */
-unsigned int
+uint32_t
 trim_dmg(char *str)
 {
 	const char *p = str;
-	unsigned int dmg = 0;
+	uint32_t dmg = 0;
 
 	do {
 		if (*p >= '0' && *p <= '9')
@@ -234,6 +234,7 @@ get_slayers(Slayer slayers[], char *txt)
 
 		}
 		slayers[nslayers].name = estrdup(trim_name(line));
+		dalloc_comment(slayers[nslayers].name, "slayer name");
 		line = endline + 1;
 
 		endline = strchr(line, '\n');
@@ -271,8 +272,8 @@ parse(Slayer slayers[], char *txt)
 	return get_slayers(slayers, skip_to_slayers(txt));
 }
 
-unsigned int
-adjust(unsigned int dmg, char *raid)
+uint32_t
+adjust(uint32_t dmg, char *raid)
 {
 	if (strcmp(raid, "starlord") == 0)
 		return dmg * 2;
@@ -289,7 +290,7 @@ void
 save_to_new_file(Slayer slayers[], size_t nslayers, char *fname, char *raid)
 {
 	FILE *fp;
-	unsigned int i;
+	size_t i;
 
 	fp = efopen(fname, "w");
 	for (i = 0; i < nslayers; i++) {
@@ -301,12 +302,12 @@ save_to_new_file(Slayer slayers[], size_t nslayers, char *fname, char *raid)
 }
 
 /* also used in uraid.c */
-unsigned int
+uint32_t
 parse_file(char *fname, char *username, size_t namelen)
 {
 	FILE *fp;
-	unsigned int dmg;
 	char line[LINE_SIZE];
+	uint32_t dmg;
 
 	fp = efopen(fname, "r");
 	while (fgets(line, LINE_SIZE, fp)) {
@@ -321,13 +322,15 @@ parse_file(char *fname, char *username, size_t namelen)
 	return 0;
 }
 
-unsigned int
+uint32_t
 get_weekly_damage(char *username, size_t namelen)
 {
-	unsigned int i, dmgs = 0;
-	long day = (time(NULL) / 86400) - 1; /* today is already included */
-	char fname[128];
+	time_t day;
+	uint32_t dmgs = 0;
+	unsigned int i;
+	char fname[PATH_MAX];
 
+	day = (time(NULL) / 86400) - 1; /* today is already included */
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - i);
@@ -339,12 +342,13 @@ get_weekly_damage(char *username, size_t namelen)
 }
 
 void
-overcap_msg(char *name, unsigned int dmg, struct discord *client,
+overcap_msg(char *name, uint32_t dmg, struct discord *client,
             const u64snowflake channel_id)
 {
-	unsigned int i = 0, dmgs = dmg;
-	size_t len = strlen(name);
+	size_t len, i = 0;
+	uint32_t dmgs = dmg;
 
+	len = strlen(name);
 	dmgs += get_weekly_damage(name, len);
 	if (dmgs < DAMAGE_CAP)
 		return;
@@ -356,6 +360,7 @@ overcap_msg(char *name, unsigned int dmg, struct discord *client,
 
 	if (i == MAX_SLAYERS) {
 		log_warn("%s: %s is not added to slayers", __func__, name);
+		/* FIXME: ' flag */
 		discord_send_message(client, channel_id,
 		                     "%s has overcapped the limit by %'lu \
 damage, he is now at %'lu damage. <@%lu> add this user to the list btw",
@@ -374,8 +379,8 @@ save_to_file(Slayer slayers[], size_t nslayers, char *raid,
 {
 	FILE *w, *r;
 	char line[LINE_SIZE], *endname, fname[128], tmpfname[128];
-	unsigned int i, olddmg, newdmg;
-	long day = time(NULL) / 86400;
+	uint32_t i, olddmg, newdmg;
+	time_t day = time(NULL) / 86400;
 
 	snprintf(fname, sizeof(fname), "%s%ld.csv", RAIDS_FOLDER, day);
 	strlcpy(tmpfname, SAVE_FOLDER, sizeof(tmpfname));

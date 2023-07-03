@@ -82,7 +82,7 @@ typedef struct {
 /* this is for raids */
 typedef struct {
 	char *name;
-	unsigned int damage;
+	uint32_t damage;
 	int found_in_file;
 } Slayer;
 
@@ -120,7 +120,7 @@ void on_stats_interaction(struct discord *client,
 
 /* raids.c */
 void on_raids(struct discord *client, const struct discord_message *event);
-unsigned int parse_file(char *fname, char *username, size_t namelen);
+uint32_t parse_file(char *fname, char *username, size_t namelen);
 
 /* roles.c */
 void update_roles(struct discord *client, Player *player);

@@ -146,8 +146,10 @@ playtime_to_str(long playtime)
 	long days = playtime / 24;
 	long hours = playtime % 24;
 	size_t siz = 36;
-	char *buf = emalloc(siz);
+	char *buf;
 
+	buf = emalloc(siz);
+	dalloc_comment(buf, "playtime_to_str buf");
 	switch (hours) {
 	case 0:
 		if (days <= 1)
@@ -326,7 +328,9 @@ create_player(Player *player, unsigned int i)
 	unsigned int j;
 
 	players[i].name = estrndup(player->name, MAX_USERNAME_LEN);
+	dalloc_ignore(players[i].name);
 	players[i].kingdom = estrndup(player->kingdom, MAX_KINGDOM_LEN);
+	dalloc_ignore(players[i].kingdom);
 	for (j = 2; j < LENGTH(fields); j++)
 		((long *)&players[i])[j] = ((long *)player)[j];
 }
