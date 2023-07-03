@@ -1,6 +1,6 @@
-tests/
-build/
-images/
+*.o
 *.csv
+tests/
+images/
 nolan
 config.h

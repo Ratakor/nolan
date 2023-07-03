@@ -3,6 +3,8 @@
 #include <concord/discord.h>
 #include <concord/discord-internal.h>
 
+#include <signal.h>
+
 #include "nolan.h"
 
 Player players[MAX_PLAYERS];
@@ -55,6 +57,8 @@ main(void)
 	char *src[] = { "src", "source" };
 	char *lb[] = { "lb", "leaderboard" };
 	struct discord *client;
+
+	signal(SIGINT, &dalloc_sighandler);
 
 	create_folders();
 	create_stats_file();

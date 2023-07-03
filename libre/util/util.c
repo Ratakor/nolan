@@ -1,4 +1,4 @@
-/* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
+/* Copyright © 2023 Ratakor. See LICENSE file for license details. */
 
 #include <sys/stat.h>
 
@@ -12,11 +12,11 @@
 #include "util.h"
 
 size_t
-strlcpy(char *dst, const char *src, size_t siz)
+strlcpy(char *restrict dst, const char *restrict src, size_t siz)
 {
 	const char *osrc = src;
 
-	if (siz == 0)
+	if (UNLIKELY(siz == 0))
 		return strlen(src);
 
 	while (--siz != 0 && (*dst++ = *src++) != '\0');
@@ -51,7 +51,7 @@ estrlcpy(char *dst, const char *src, size_t siz)
 }
 
 size_t
-strlcat(char *dst, const char *src, size_t siz)
+strlcat(char *restrict dst, const char *restrict src, size_t siz)
 {
 	size_t dsiz;
 
@@ -116,6 +116,15 @@ erealloc(void *p, size_t siz)
 }
 
 void *
+ereallocarray(void *p, size_t nmemb, size_t siz)
+{
+	if ((p = reallocarray(p, nmemb, siz)) == NULL)
+		err(1, "reallocarray");
+
+	return p;
+}
+
+void *
 estrdup(const char *s)
 {
 	char *p;
@@ -151,7 +160,7 @@ efopen(const char *filename, const char *mode)
 char *
 nstrchr(const char *s, int c, size_t n)
 {
-	if (n == 0)
+	if (UNLIKELY(n == 0))
 		return NULL;
 
 	do {
@@ -160,6 +169,7 @@ nstrchr(const char *s, int c, size_t n)
 		if (*s == c)
 			n--;
 	} while (*s++);
+
 	return NULL;
 }
 
@@ -186,7 +196,7 @@ ufmt(char *dst, size_t dsiz, uint64_t n)
 size_t
 ifmt(char *dst, size_t dsiz, int64_t n)
 {
-	if (dsiz == 0)
+	if (UNLIKELY(dsiz == 0))
 		return ufmt(dst, dsiz, n);
 
 	if (n < 0) {
@@ -204,6 +214,7 @@ int
 file_exists(const char *filename)
 {
 	struct stat buf;
+
 	return (stat(filename, &buf) == 0);
 }
 

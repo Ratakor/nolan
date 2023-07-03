@@ -1,46 +1,35 @@
 # Copywrong © 2023 Ratakor. See LICENSE file for license details.
 
-NAME         = nolan
-PREFIX      ?= /usr/local
-CC           = cc
+NAME       = nolan
+PREFIX    ?= /usr/local
+CC         = cc
 
-BUILD_DIR   ?= build
-SRC_DIR     ?= src
+LIBRE_DIR  = libre
+SRC_DIR    = src
 
-SRCS        := ${wildcard ${SRC_DIR}/*.c}
-OBJS        := ${SRCS:%=${BUILD_DIR}/%.o}
+CFLAGS    ?= -O3
+LDFLAGS   ?= -s
 
-DISCORDLIBS  = -ldiscord -lcurl -lpthread
-TESSLIBS     = -ltesseract -lleptonica
-GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
+all: build
 
-WARN_FLAGS   = -Werror -Wall -Wextra -Wmissing-prototypes -Wpadded\
-               -Waggregate-return -Wunused-macros -Wshadow -Wcast-align
-CFLAGS      += -std=c99 -pedantic -D_DEFAULT_SOURCE ${WARN_FLAGS}
-LDFLAGS     += -s ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
-
-all: options ${NAME}
-
-options:
+echo:
 	@echo ${NAME} build options:
+	@echo "CC       = ${CC}"
+	@echo "PREFIX   = ${PREFIX}"
 	@echo "CFLAGS   = ${CFLAGS}"
 	@echo "LDFLAGS  = ${LDFLAGS}"
-	@echo "CC       = ${CC}"
 
-${BUILD_DIR}/%.c.o: %.c
-	@mkdir -p ${dir $@}
-	${CC} -c ${CFLAGS} $< -o $@
+build:
+	@CFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ${MAKE} -C ${LIBRE_DIR}
+	@CFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ${MAKE} -C ${SRC_DIR}
 
-${OBJS}: config.h
-
-config.h:
-	cp config.def.h $@
-
-${NAME}: ${OBJS}
-	${CC} -o $@ ${OBJS} ${LDFLAGS}
+debug:
+	@${MAKE} -C ${LIBRE_DIR} $@
+	@${MAKE} -C ${SRC_DIR} $@
 
 clean:
-	rm -rf ${NAME} ${BUILD_DIR}
+	@${MAKE} -C ${LIBRE_DIR} $@
+	@${MAKE} -C $(SRC_DIR) $@
 
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin
@@ -50,4 +39,4 @@ install: all
 uninstall:
 	rm -f ${DESTDIR}${PREFIX}/bin/${NAME}
 
-.PHONY: all options clean install uninstall
+.PHONY: all echo build debug clean install uninstall

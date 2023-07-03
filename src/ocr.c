@@ -25,7 +25,6 @@ write_data(void *ptr, size_t size, size_t nmemb, void *stream)
 	return strlcpy(stream, ptr, MAX_MESSAGE_LEN);
 }
 
-
 char *
 curl(char *url)
 {

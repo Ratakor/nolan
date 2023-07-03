@@ -7,7 +7,7 @@
 #include <concord/log.h>
 
 #include "../config.h"
-#include "util.h"
+#include "../libre/libre.h"
 
 #define MAX_SLAYERS      50
 #define LINE_SIZE        300 + 1
