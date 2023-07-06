@@ -29,7 +29,7 @@ char *
 curl(char *url)
 {
 	CURL *handle = curl_easy_init();
-	char *buf = emalloc(MAX_MESSAGE_LEN);
+	char *buf = xmalloc(MAX_MESSAGE_LEN);
 
 	*buf = '\0';
 	curl_easy_setopt(handle, CURLOPT_URL, url);
@@ -46,7 +46,7 @@ curl_file(char *url, char *fname)
 {
 	CURL *handle = curl_easy_init();
 	CURLcode ret;
-	FILE *fp = efopen(fname, "wb");
+	FILE *fp = xfopen(fname, "wb");
 
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	/* curl uses fwrite by default */
@@ -87,7 +87,7 @@ crop(char *fname, int type)
 	gdImage *im, *cropped;
 	gdRect rect;
 
-	fp = efopen(fname, "rb");
+	fp = xfopen(fname, "rb");
 	if (type == 0)
 		im = gdImageCreateFromJpeg(fp);
 	else
@@ -100,7 +100,7 @@ crop(char *fname, int type)
 		return 1;
 
 	cropped = gdImageCrop(im, &rect);
-	fp = efopen(fname, "wb");
+	fp = xfopen(fname, "wb");
 	if (type == 0)
 		gdImageJpeg(cropped, fp, 100);
 	else
@@ -135,7 +135,7 @@ ocr(char *fname, char *lang)
 		errx(1, "Failed tesseract recognition");
 
 	txt_ocr = TessBaseAPIGetUTF8Text(handle);
-	txt_out = estrdup(txt_ocr);
+	txt_out = xstrdup(txt_ocr);
 
 	TessDeleteText(txt_ocr);
 	TessBaseAPIEnd(handle);

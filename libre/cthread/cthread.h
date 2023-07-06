@@ -5,8 +5,8 @@
  * under the terms of the ISC license. See cthread.c for details.
  */
 
-#ifndef CTHREAD_H
-#define CTHREAD_H
+#ifndef LIBRE_CTHREAD_H
+#define LIBRE_CTHREAD_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -245,4 +245,4 @@ int cthread_rwlock_destroy(cthread_rwlock_t *rwlock);
 }
 #endif /* __cplusplus */
 
-#endif /* CTHREAD_H */
+#endif /* LIBRE_CTHREAD_H */

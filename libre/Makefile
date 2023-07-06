@@ -1,6 +1,6 @@
 OBJS    = cthread.o \
           dalloc.o  \
-          util.o
+          ubik.o
 
 DFLAGS  = -O0 -g -DDALLOC
 CFLAGS += -std=c99 -pthread -D_DEFAULT_SOURCE

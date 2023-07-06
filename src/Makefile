@@ -6,7 +6,7 @@ LIBRE_DIR    = ../libre
 
 LIBRE_OBJS   = ${LIBRE_DIR}/cthread.o \
                ${LIBRE_DIR}/dalloc.o  \
-               ${LIBRE_DIR}/util.o
+               ${LIBRE_DIR}/ubik.o
 
 OBJS         = cmd_correct.o     \
                cmd_help.o        \

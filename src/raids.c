@@ -23,13 +23,11 @@ static char *trim_name(char *name);
 static uint32_t trim_dmg(char *str);
 static size_t get_slayers(Slayer slayers[], char *txt);
 static size_t parse(Slayer slayers[], char *txt);
-static uint32_t adjust(uint32_t dmg, char *raid);
-static void save_to_new_file(Slayer slayers[], size_t nslayers, char *fname,
-                             char *raid);
+static void save_to_new_file(Slayer slayers[], size_t nslayers, char *fname);
 static uint32_t get_weekly_damage(char *username, size_t namelen);
 static void overcap_msg(char *name, uint32_t dmg, struct discord *client,
                         const u64snowflake channel_id);
-static void save_to_file(Slayer slayers[], size_t nslayers, char *raid,
+static void save_to_file(Slayer slayers[], size_t nslayers,
                          struct discord *client,
                          const u64snowflake channel_id);
 
@@ -233,7 +231,7 @@ get_slayers(Slayer slayers[], char *txt)
 			}
 
 		}
-		slayers[nslayers].name = estrdup(trim_name(line));
+		slayers[nslayers].name = xstrdup(trim_name(line));
 		dalloc_comment(slayers[nslayers].name, "slayer name");
 		line = endline + 1;
 
@@ -272,30 +270,16 @@ parse(Slayer slayers[], char *txt)
 	return get_slayers(slayers, skip_to_slayers(txt));
 }
 
-uint32_t
-adjust(uint32_t dmg, char *raid)
-{
-	if (strcmp(raid, "starlord") == 0)
-		return dmg * 2;
-	if (strcmp(raid, "titan") == 0)
-		return dmg * 2;
-	if (strcmp(raid, "maelor") == 0)
-		return dmg * 2;
-	/* if (strcmp(raid, "arisen-morrigan") == 0) */
-	/* 	return dmg / 2; */
-	return dmg;
-}
-
 void
-save_to_new_file(Slayer slayers[], size_t nslayers, char *fname, char *raid)
+save_to_new_file(Slayer slayers[], size_t nslayers, char *fname)
 {
 	FILE *fp;
 	size_t i;
 
-	fp = efopen(fname, "w");
+	fp = xfopen(fname, "w");
 	for (i = 0; i < nslayers; i++) {
 		fprintf(fp, "%s%c%u\n", slayers[i].name, DELIM,
-		        adjust(slayers[i].damage, raid));
+		        slayers[i].damage);
 		free(slayers[i].name);
 	}
 	fclose(fp);
@@ -309,7 +293,7 @@ parse_file(char *fname, char *username, size_t namelen)
 	char line[LINE_SIZE];
 	uint32_t dmg;
 
-	fp = efopen(fname, "r");
+	fp = xfopen(fname, "r");
 	while (fgets(line, LINE_SIZE, fp)) {
 		dmg = strtoul(strchr(line, DELIM) + 1, NULL, 10);
 		if (strncasecmp(username, line, namelen - DIFF) == 0) {
@@ -374,8 +358,8 @@ damage, he is now at %'lu damage.", kingdom_slayers[i].userid,
 }
 
 void
-save_to_file(Slayer slayers[], size_t nslayers, char *raid,
-             struct discord *client, const u64snowflake channel_id)
+save_to_file(Slayer slayers[], size_t nslayers, struct discord *client,
+             const u64snowflake channel_id)
 {
 	FILE *w, *r;
 	char line[LINE_SIZE], *endname, fname[128], tmpfname[128];
@@ -386,10 +370,10 @@ save_to_file(Slayer slayers[], size_t nslayers, char *raid,
 	strlcpy(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
 	strlcat(tmpfname, "tmpfile2", sizeof(tmpfname));
 	if ((r = fopen(fname, "r")) == NULL) {
-		save_to_new_file(slayers, nslayers, fname, raid);
+		save_to_new_file(slayers, nslayers, fname);
 		return;
 	}
-	w = efopen(tmpfname, "w");
+	w = xfopen(tmpfname, "w");
 
 	while (fgets(line, LINE_SIZE, r)) {
 		endname = strchr(line, DELIM);
@@ -407,7 +391,7 @@ save_to_file(Slayer slayers[], size_t nslayers, char *raid,
 		}
 		if (i < nslayers) {
 			olddmg = strtoul(endname + 1, NULL, 10);
-			newdmg = olddmg + adjust(slayers[i].damage, raid);
+			newdmg = olddmg + slayers[i].damage;
 			overcap_msg(slayers[i].name, newdmg, client, channel_id);
 			fprintf(w, "%s%c%u\n", slayers[i].name, DELIM, newdmg);
 		} else {
@@ -419,7 +403,7 @@ save_to_file(Slayer slayers[], size_t nslayers, char *raid,
 	for (i = 0; i < nslayers; i++) {
 		if (!slayers[i].found_in_file) {
 			fprintf(w, "%s%c%u\n", slayers[i].name, DELIM,
-			        adjust(slayers[i].damage, raid));
+			        slayers[i].damage);
 		}
 		free(slayers[i].name);
 	}
@@ -436,13 +420,8 @@ on_raids(struct discord *client, const struct discord_message *event)
 	int is_png;
 	unsigned int i, ret;
 	char *txt = NULL, fname[128];
+	Slayer *slayers;
 	size_t nslayers;
-	Slayer slayers[MAX_SLAYERS];
-	struct discord_channel chan;
-	struct discord_ret_channel rchan = {
-		.keep = event,
-		.sync = &chan,
-	};
 
 	log_info("%s", __func__);
 	is_png = (strcmp(event->attachments->array->content_type,
@@ -484,15 +463,17 @@ Failed to read image <@%lu>.\nFix me <@%lu>", event->author->id, ADMIN);
 		return;
 	}
 
+	slayers = xmalloc(sizeof(*slayers) * MAX_SLAYERS);
 	nslayers = parse(slayers, txt);
-	if (nslayers == 0) {
+	if (nslayers > 0) {
+		save_to_file(slayers, nslayers, client, event->channel_id);
+		/* ^ will free slayers[].name */
+		discord_send_message(client, event->channel_id, "Success");
+	} else {
 		discord_send_message(client, event->channel_id, "This is not \
 a correct screenshot sir <@%lu>.", event->author->id);
-		free(txt);
-		return;
 	}
 	free(txt);
-	discord_get_channel(client, event->channel_id, &rchan);
-	save_to_file(slayers, nslayers, chan.name, client, event->channel_id);
-	/* ^ will free slayers[].name */
+	free(slayers);
+
 }

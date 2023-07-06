@@ -148,7 +148,7 @@ playtime_to_str(long playtime)
 	size_t siz = 36;
 	char *buf;
 
-	buf = emalloc(siz);
+	buf = xmalloc(siz);
 	dalloc_comment(buf, "playtime_to_str buf");
 	switch (hours) {
 	case 0:
@@ -297,7 +297,7 @@ get_quote(void)
 	/* change '*' to "\*", must need a large enough buffer */
 	p = quote;
 	while ((p = strchr(p, '*')) != NULL) {
-		tmp = estrdup(p);
+		tmp = xstrdup(p);
 		op = p;
 		otmp = tmp;
 		*p++ = '\\';
@@ -327,9 +327,9 @@ create_player(Player *player, unsigned int i)
 {
 	unsigned int j;
 
-	players[i].name = estrndup(player->name, MAX_USERNAME_LEN);
+	players[i].name = xstrndup(player->name, MAX_USERNAME_LEN);
 	dalloc_ignore(players[i].name);
-	players[i].kingdom = estrndup(player->kingdom, MAX_KINGDOM_LEN);
+	players[i].kingdom = xstrndup(player->kingdom, MAX_KINGDOM_LEN);
 	dalloc_ignore(players[i].kingdom);
 	for (j = 2; j < LENGTH(fields); j++)
 		((long *)&players[i])[j] = ((long *)player)[j];
@@ -432,8 +432,8 @@ update_file(Player *player)
 
 	strlcpy(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
 	strlcat(tmpfname, "tmpfile", sizeof(tmpfname));
-	r = efopen(STATS_FILE, "r");
-	w = efopen(tmpfname, "w");
+	r = xfopen(STATS_FILE, "r");
+	w = xfopen(tmpfname, "w");
 
 	while (fgets(line, LINE_SIZE, r)) {
 		if ((startuid = strrchr(line, DELIM)) == NULL)
@@ -569,7 +569,7 @@ on_stats_interaction(struct discord *client,
                      const struct discord_interaction *event)
 {
 	char buf[MAX_MESSAGE_LEN] = "", *url, *endurl;
-	json_char *attachment = estrdup(event->data->resolved->attachments);
+	json_char *attachment = xstrdup(event->data->resolved->attachments);
 
 	log_info("%s: start", __func__);
 	url = strstr(attachment, "\"url\":");

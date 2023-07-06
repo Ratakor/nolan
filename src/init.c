@@ -45,7 +45,7 @@ create_stats_file(void)
 	}
 
 	if (fsiz == 0) {
-		fp = efopen(STATS_FILE, "w");
+		fp = xfopen(STATS_FILE, "w");
 		for (i = 0; i < LENGTH(fields) - 1; i++)
 			fprintf(fp, "%s%c", fields[i], DELIM);
 		fprintf(fp, "%s\n", fields[LENGTH(fields) - 1]);
@@ -78,7 +78,7 @@ init_players(void)
 	char line[LINE_SIZE], *p, *delim;
 	unsigned int i;
 
-	fp = efopen(STATS_FILE, "r");
+	fp = xfopen(STATS_FILE, "r");
 	fgets(line, LINE_SIZE, fp); /* discard description line */
 	while ((p = fgets(line, LINE_SIZE, fp)) != NULL) {
 		i = 0;
@@ -90,10 +90,10 @@ init_players(void)
 
 			*delim = '\0';
 			if (i == NAME) {
-				players[nplayers].name = estrndup(p, MAX_USERNAME_LEN);
+				players[nplayers].name = xstrndup(p, MAX_USERNAME_LEN);
 				dalloc_ignore(players[nplayers].name);
 			} else if (i == KINGDOM) {
-				players[nplayers].kingdom = estrndup(p, MAX_KINGDOM_LEN);
+				players[nplayers].kingdom = xstrndup(p, MAX_KINGDOM_LEN);
 				dalloc_ignore(players[nplayers].kingdom);
 			} else {
 				((long *)&players[nplayers])[i] = atol(p);

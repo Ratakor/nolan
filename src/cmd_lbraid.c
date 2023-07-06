@@ -32,7 +32,7 @@ parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers)
 	size_t i;
 	uint32_t dmg;
 
-	fp = efopen(fname, "r");
+	fp = xfopen(fname, "r");
 	while (fgets(line, LINE_SIZE, fp)) {
 		endname = strchr(line, DELIM);
 		dmg = strtoul(endname + 1, NULL, 10);
@@ -45,7 +45,7 @@ parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers)
 		if (i < *nslayers) {
 			slayers[i].damage += dmg;
 		} else {
-			slayers[i].name = estrdup(line);
+			slayers[i].name = xstrdup(line);
 			dalloc_comment(slayers[i].name, "slayers name lbraid");
 			slayers[i].damage = dmg;
 			*nslayers += 1;
