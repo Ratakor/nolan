@@ -380,7 +380,7 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 			plto = playtime_to_str(old);
 			pltn = playtime_to_str(new);
 			pltd = playtime_to_str(diff);
-			s += snprintf(buf + s, siz - s, "%s: %s -> %s (+ %s)\n",
+			s += snprintf(buf + s, siz - s, "%s: %s -> %s (+%s)\n",
 			              fields[7], plto, pltn, pltd);
 			free(plto);
 			free(pltn);

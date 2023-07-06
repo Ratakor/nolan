@@ -93,6 +93,7 @@ write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers)
 	size_t s = 0;
 
 	lb_max = MIN(nslayers, LB_MAX);
+	s += snprintf(buf + s, siz - s, "Raid stats for the last 7 days:\n");
 	for (i = 0; i < lb_max; i++) {
 		if (s >= siz) {
 			log_warn("%s: string truncation", __func__);
