@@ -1,5 +1,6 @@
 /* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
 
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -346,13 +347,15 @@ overcap_msg(char *name, uint32_t dmg, struct discord *client,
 		log_warn("%s: %s is not added to slayers", __func__, name);
 		/* FIXME: ' flag */
 		discord_send_message(client, channel_id,
-		                     "%s has overcapped the limit by %'lu \
-damage, he is now at %'lu damage. <@%lu> add this user to the list btw",
+		                     "%s has overcapped the limit by %'"PRIu32
+		                     " damage, he is now at %'"PRIu32" damage. "
+		                     "<@%"PRIu64"> add this user to the list btw",
 		                     name, dmgs - DAMAGE_CAP, dmgs, ADMIN);
 	} else {
 		discord_send_message(client, channel_id,
-		                     "<@%lu> has overcapped the limit by %'lu \
-damage, he is now at %'lu damage.", kingdom_slayers[i].userid,
+		                     "<@%"PRIu64"> has overcapped the limit by "
+		                     "%'"PRIu32" damage, he is now at %'"PRIu32
+		                     " damage.", kingdom_slayers[i].userid,
 		                     dmgs - DAMAGE_CAP, dmgs);
 	}
 }
@@ -419,7 +422,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 {
 	int is_png;
 	unsigned int i, ret;
-	char *txt = NULL, fname[128];
+	char *txt = NULL, fname[128], *lang;
 	Slayer *slayers;
 	size_t nslayers;
 
@@ -432,46 +435,50 @@ on_raids(struct discord *client, const struct discord_message *event)
 		snprintf(fname, sizeof(fname), "%s/raids.jpg", IMAGES_FOLDER);
 	if ((ret = curl_file(event->attachments->array->url, fname)) != 0) {
 		log_error("curl failed CURLcode: %u", ret);
-		discord_send_message(client, event->channel_id, "Error: \
-Failed to download image <@%lu>.\nFix me <@%lu>", event->author->id, ADMIN);
+		discord_send_message(client, event->channel_id,
+		                     "Error: Failed to download image <@%"PRIu64">.\n"
+		                     "Fix me <@%"PRIu64">", event->author->id, ADMIN);
 		return;
 	}
 	crop(fname, is_png);
 
 	for (i = 0; i < LENGTH(cn_slayer_ids); i++) {
 		if (event->author->id == cn_slayer_ids[i]) {
-			txt = ocr(fname, "chi_sim");
-			break;
+			lang = "chi_sim";
+			goto lang_found;
 		}
 	}
-	if (txt == NULL) {
-		for (i = 0; i < LENGTH(jp_slayer_ids); i++) {
-			if (event->author->id == jp_slayer_ids[i]) {
-				txt = ocr(fname, "jpn");
-				break;
-			}
+	for (i = 0; i < LENGTH(jp_slayer_ids); i++) {
+		if (event->author->id == jp_slayer_ids[i]) {
+			lang = "jpn";
+			goto lang_found;
 		}
 	}
-	if (txt == NULL)
-		txt = ocr(fname, "eng");
+	lang = "eng";
 
+lang_found:
+	txt = ocr(fname, lang);
 	if (txt == NULL) {
 		log_error("failed to read raid image from %s",
 		          event->author->username);
-		discord_send_message(client, event->channel_id, "Error: \
-Failed to read image <@%lu>.\nFix me <@%lu>", event->author->id, ADMIN);
+		discord_send_message(client, event->channel_id,
+		                     "Error: Failed to read image <@%"PRIu64">.\n"
+		                     "Fix me <@%"PRIu64">", event->author->id, ADMIN);
 		return;
 	}
 
 	slayers = xmalloc(sizeof(*slayers) * MAX_SLAYERS);
 	nslayers = parse(slayers, txt);
-	if (nslayers > 0) {
+	if (nslayers == 0) {
+		/* TODO: change Ratakor to ADMIN_NAME */
+		discord_send_message(client, event->channel_id,
+		                     "Failed to read <@%"PRIu64">'s screenshot in language '%s'.\n"
+		                     "Please send the screenshot again or ping Ratakor if it didn't work again.",
+		                     event->author->id, lang);
+	} else {
 		save_to_file(slayers, nslayers, client, event->channel_id);
 		/* ^ will free slayers[].name */
 		discord_send_message(client, event->channel_id, "Success");
-	} else {
-		discord_send_message(client, event->channel_id, "This is not \
-a correct screenshot sir <@%lu>.", event->author->id);
 	}
 	free(txt);
 	free(slayers);
