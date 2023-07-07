@@ -113,7 +113,7 @@ crop(char *fname, int type)
 }
 
 char *
-ocr(char *fname, char *lang)
+ocr(const char *fname, const char *lang)
 {
 	TessBaseAPI *handle;
 	PIX *img;

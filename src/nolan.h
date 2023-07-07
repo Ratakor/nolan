@@ -9,7 +9,7 @@
 #include "../config.h"
 #include "../libre/libre.h"
 
-#define MAX_SLAYERS      50
+#define MAX_SLAYERS      50 + 10
 #define LINE_SIZE        300 + 1
 #define MAX_MESSAGE_LEN  2000 + 1
 #define MAX_USERNAME_LEN 32 + 1
@@ -106,7 +106,7 @@ void on_message(struct discord *client, const struct discord_message *event);
 char *curl(char *url);
 unsigned int curl_file(char *url, char *fname);
 int crop(char *fname, int type);
-char *ocr(char *fname, char *lang);
+char *ocr(const char *fname, const char *lang);
 
 /* stats.c */
 void create_slash_stats(struct discord *client);
@@ -120,7 +120,8 @@ void on_stats_interaction(struct discord *client,
 
 /* raids.c */
 void on_raids(struct discord *client, const struct discord_message *event);
-uint32_t parse_file(char *fname, char *username, size_t namelen);
+void parse_file(char *fname, Slayer slayers[], size_t *nslayers);
+void load_files(Slayer slayers[], size_t *nslayers);
 
 /* roles.c */
 void update_roles(struct discord *client, Player *player);

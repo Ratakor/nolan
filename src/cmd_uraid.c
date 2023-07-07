@@ -6,8 +6,12 @@
 
 #include "nolan.h"
 
+/* see raids.c */
+#define DIFF        3 /* reduce n size in strncmp to reduce tesseract errors */
+
+static uint32_t parse_file_uraid(char *fname, char *username, size_t namelen);
 static void write_invalid(char *buf, size_t siz);
-static void load_files(char *username, uint32_t *dmgs);
+static void load_files_uraid(char *username, uint32_t *dmgs);
 static void write_uraid(char *buf, size_t siz, char *username, uint32_t *dmgs);
 static void uraid(char *buf, size_t siz, char *username);
 
@@ -46,8 +50,28 @@ write_invalid(char *buf, size_t siz)
 	strlcat(buf, "Valid argument is an Orna username.\n", siz);
 }
 
+uint32_t
+parse_file_uraid(char *fname, char *username, size_t namelen)
+{
+	FILE *fp;
+	char line[LINE_SIZE];
+	uint32_t dmg;
+
+	fp = xfopen(fname, "r");
+	while (fgets(line, LINE_SIZE, fp)) {
+		dmg = strtoul(strchr(line, DELIM) + 1, NULL, 10);
+		if (strncasecmp(username, line, namelen - DIFF) == 0) {
+			fclose(fp);
+			return dmg;
+		}
+	}
+
+	fclose(fp);
+	return 0;
+}
+
 void
-load_files(char *username, uint32_t *dmgs)
+load_files_uraid(char *username, uint32_t *dmgs)
 {
 	char fname[128];
 	size_t namelen, i;
@@ -59,7 +83,7 @@ load_files(char *username, uint32_t *dmgs)
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - i);
 		if (file_exists(fname))
-			dmgs[i] = parse_file(fname, username, namelen);
+			dmgs[i] = parse_file_uraid(fname, username, namelen);
 	}
 }
 
@@ -97,7 +121,7 @@ uraid(char *buf, size_t siz, char *username)
 	uint32_t dmgs[7];
 
 	memset(dmgs, 0, sizeof(dmgs));
-	load_files(username, dmgs);
+	load_files_uraid(username, dmgs);
 	write_uraid(buf, siz, username, dmgs);
 }
 

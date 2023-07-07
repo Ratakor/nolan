@@ -6,8 +6,6 @@
 
 #include "nolan.h"
 
-static void parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers);
-static void load_files(Slayer slayers[], size_t *nslayers);
 static void write_invalid(char *buf, size_t siz);
 static int compare(const void *s1, const void *s2);
 static void write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers);
@@ -22,53 +20,6 @@ create_slash_lbraid(struct discord *client)
 	};
 	discord_create_guild_application_command(client, APP_ID, RAID_GUILD_ID,
 	                &cmd, NULL);
-}
-
-void
-parse_file_lbraid(char *fname, Slayer slayers[], size_t *nslayers)
-{
-	FILE *fp;
-	char line[LINE_SIZE], *endname;
-	size_t i;
-	uint32_t dmg;
-
-	fp = xfopen(fname, "r");
-	while (fgets(line, LINE_SIZE, fp)) {
-		endname = strchr(line, DELIM);
-		dmg = strtoul(endname + 1, NULL, 10);
-		if (endname)
-			*endname = '\0';
-		for (i = 0; i < *nslayers; i++) {
-			if (strcmp(slayers[i].name, line) == 0)
-				break;
-		}
-		if (i < *nslayers) {
-			slayers[i].damage += dmg;
-		} else {
-			slayers[i].name = xstrdup(line);
-			dalloc_comment(slayers[i].name, "slayers name lbraid");
-			slayers[i].damage = dmg;
-			*nslayers += 1;
-		}
-	}
-
-	fclose(fp);
-}
-
-void
-load_files(Slayer slayers[], size_t *nslayers)
-{
-	char fname[PATH_MAX];
-	time_t day;
-	unsigned int i;
-
-	day = time(NULL) / 86400;
-	for (i = 0; i < 6; i++) {
-		snprintf(fname, sizeof(fname), "%s%ld.csv",
-		         RAIDS_FOLDER, day - i);
-		if (file_exists(fname))
-			parse_file_lbraid(fname, slayers, nslayers);
-	}
 }
 
 void
@@ -109,18 +60,21 @@ write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers)
 void
 lbraid(char *buf, size_t siz)
 {
-	Slayer slayers[MAX_SLAYERS];
+	Slayer *slayers;
 	size_t nslayers = 0, i;
 
+	slayers = xcalloc(MAX_SLAYERS, sizeof(*slayers));
 	load_files(slayers, &nslayers);
 	if (nslayers == 0) {
 		write_invalid(buf, siz);
+		free(slayers);
 		return;
 	}
 	qsort(slayers, nslayers, sizeof(slayers[0]), compare);
 	write_lbraid(buf, siz, slayers, nslayers);
 	for (i = 0; i < nslayers; i++)
 		free(slayers[i].name);
+	free(slayers);
 }
 
 void
