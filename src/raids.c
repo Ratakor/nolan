@@ -354,18 +354,19 @@ save_to_file(Slayer slayers[], size_t nslayers)
 int
 raids(struct discord_attachment *attachment, const char *lang, Slayer slayers[])
 {
-	char *txt = NULL, fname[128];
+	char *txt = NULL, fname[PATH_MAX];
 	size_t nslayers;
 	CURLcode ret;
 	int is_png;
 
 	log_info("%s", __func__);
-	is_png = (strcmp(attachment->content_type,
-	                 "image/png") == 0) ? 1 : 0;
+	is_png = (strcmp(attachment->content_type, "image/png") == 0);
 	if (is_png)
-		snprintf(fname, sizeof(fname), "%s/raids.png", IMAGES_FOLDER);
+		snprintf(fname, sizeof(fname), "%s/%s.png",
+		         IMAGES_FOLDER, attachment->filename);
 	else
-		snprintf(fname, sizeof(fname), "%s/raids.jpg", IMAGES_FOLDER);
+		snprintf(fname, sizeof(fname), "%s/%s.jpg",
+		         IMAGES_FOLDER, attachment->filename);
 
 	if ((ret = curl_file(attachment->url, fname)) != 0) {
 		log_error("curl failed CURLcode: %u", ret);
