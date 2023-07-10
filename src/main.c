@@ -59,8 +59,8 @@ main(void)
 	char *lb[] = { "lb", "leaderboard" };
 	struct discord *client;
 
-	setlocale(LC_ALL, NULL);
-	signal(SIGINT, &dalloc_sighandler);
+	setlocale(LC_ALL, "");
+	/* signal(SIGINT, &dalloc_sighandler); */
 
 	create_folders();
 	create_stats_file();

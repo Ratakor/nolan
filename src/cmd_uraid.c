@@ -6,10 +6,7 @@
 
 #include "nolan.h"
 
-/* see raids.c */
-#define DIFF        3 /* reduce n size in strncmp to reduce tesseract errors */
-
-static uint32_t parse_file_uraid(char *fname, char *username, size_t namelen);
+static uint32_t parse_file_uraid(char *fname, char *username);
 static void write_invalid(char *buf, size_t siz);
 static void load_files_uraid(char *username, uint32_t *dmgs);
 static void write_uraid(char *buf, size_t siz, char *username, uint32_t *dmgs);
@@ -47,7 +44,7 @@ write_invalid(char *buf, size_t siz)
 }
 
 uint32_t
-parse_file_uraid(char *fname, char *username, size_t namelen)
+parse_file_uraid(char *fname, char *username)
 {
 	FILE *fp;
 	char line[LINE_SIZE];
@@ -56,7 +53,7 @@ parse_file_uraid(char *fname, char *username, size_t namelen)
 	fp = xfopen(fname, "r");
 	while (fgets(line, LINE_SIZE, fp)) {
 		dmg = strtoul(strchr(line, DELIM) + 1, NULL, 10);
-		if (strncasecmp(username, line, namelen - DIFF) == 0) {
+		if (strncasecmp(username, line, strlen(username)) == 0) {
 			fclose(fp);
 			return dmg;
 		}
@@ -70,11 +67,9 @@ void
 load_files_uraid(char *username, uint32_t *dmgs)
 {
 	char fname[128];
-	size_t namelen;
 	time_t day;
 	int n, i;
 
-	namelen = strlen(username);
 	day = time(NULL) / 86400;
 	i = (day + 3) % 7; /* current day, used as index */
 	for (n = 0; n < 6; n++, i--) {
@@ -82,7 +77,7 @@ load_files_uraid(char *username, uint32_t *dmgs)
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - n);
 		if (file_exists(fname))
-			dmgs[i] = parse_file_uraid(fname, username, namelen);
+			dmgs[i] = parse_file_uraid(fname, username);
 	}
 }
 

@@ -8,7 +8,6 @@
 
 #include "nolan.h"
 
-#define DIFF        3 /* reduce n size in strncmp to reduce tesseract errors */
 #define DAMAGE_CAP  300000000 /* weekly */
 
 enum {
@@ -319,9 +318,8 @@ save_to_file(Slayer slayers[], size_t nslayers)
 		for (i = 0; i < nslayers; i++) {
 			if (slayers[i].found_in_file)
 				continue;
-			/* should be strcmp but for common mistakes */
 			if (strncasecmp(slayers[i].name, line,
-			                strlen(slayers[i].name) - DIFF) == 0) {
+			                strlen(slayers[i].name)) == 0) {
 				slayers[i].found_in_file = 1;
 				break;
 			}
@@ -437,7 +435,7 @@ load_files(Slayer slayers[], size_t *nslayers)
 void
 overcap_msg(struct discord *client, u64snowflake channel_id, Slayer slayers[])
 {
-	size_t nslayers = 0, i, j, len;
+	size_t nslayers = 0, i, j;
 
 	load_files(slayers, &nslayers);
 	for (i = 0, j = 0; i < nslayers; i++, j = 0) {
@@ -446,11 +444,10 @@ overcap_msg(struct discord *client, u64snowflake channel_id, Slayer slayers[])
 			continue;
 		}
 
-		len = strlen(slayers[i].name);
 		for (j = 0; j <  LENGTH(kingdom_slayers); j++) {
 			if (strncasecmp(slayers[i].name,
 			                kingdom_slayers[j].name,
-			                len - DIFF) == 0)
+			                strlen(slayers[i].name)) == 0)
 				break;
 		}
 
