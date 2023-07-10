@@ -486,6 +486,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 	Slayer *slayers;
 	char *lang;
 	size_t i;
+	int twice = 0;
 
 	for (i = 0; i < LENGTH(cn_slayer_ids); i++) {
 		if (event->author->id == cn_slayer_ids[i]) {
@@ -505,32 +506,40 @@ lang_found:
 
 	slayers = xcalloc(MAX_SLAYERS, sizeof(*slayers));
 	for (i = 0; i < (size_t)event->attachments->size; i++) {
+run_again:
 		switch (raids(event->attachments->array + i, lang, slayers)) {
 		case SUCCESS:
 			discord_send_message(client, event->channel_id, "Success");
 			break;
 		case DOWNLOAD_FAILED:
+			log_error("Download failed with URL:%s from %s",
+			          event->attachments->array[i].url,
+			          event->author->username);
 			discord_send_message(client, event->channel_id,
 			                     "Error: Failed to download image <@%"PRIu64">.\n"
 			                     "Fix me <@%"PRIu64">", event->author->id, ADMIN);
 			break;
 		case OCR_FAILED:
-			log_error("failed to read raid image from %s",
-			          event->author->username);
+			log_error("OCR failed with lang:%s from %s",
+			          lang, event->author->username);
 			discord_send_message(client, event->channel_id,
 			                     "Error: Failed to read image <@%"PRIu64">.\n"
 			                     "Fix me <@%"PRIu64">", event->author->id, ADMIN);
 			break;
 		case PARSING_FAILED:
-			log_error("parsing failed with lang:%s from %s",
+			/* TODO: this is ugly */
+			if (!twice) {
+				twice = 1;
+				goto run_again;
+			}
+			log_error("parsing failed twice with lang:%s from %s",
 			          lang, event->author->username);
-			/* TODO: change Ratakor to ADMIN_NAME */
 			discord_send_message(client, event->channel_id,
-			                     "Failed to read <@%"PRIu64">'s screenshot in language '%s'.\n"
-			                     "Please send the screenshot again or ping Ratakor if it didn't work again.",
-			                     event->author->id, lang);
+			                     "Error: Failed to parse image <@%"PRIu64">.\n"
+			                     "Fix me <@%"PRIu64">", event->author->id, ADMIN);
 			break;
 		}
+		twice = 0;
 		memset(slayers, 0, MAX_SLAYERS * sizeof(*slayers));
 	}
 

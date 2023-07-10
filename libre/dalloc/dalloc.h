@@ -3,6 +3,7 @@
 #ifndef LIBRE_DALLOC_H
 #define LIBRE_DALLOC_H
 
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,6 +19,8 @@ extern "C" {
 #define reallocarray(p, n, s)  (_dalloc_reallocarray(p, n, s, __FILE__, __LINE__))
 #define strdup(s)              (_dalloc_strdup(s, __FILE__, __LINE__))
 #define strndup(s, n)          (_dalloc_strndup(s, n, __FILE__, __LINE__))
+#define vasprintf(p, fmt, ap)  (_dalloc_vasprintf(p, fmt, ap, __FILE__, __LINE__))
+#define asprintf(p, fmt, ...)  (_dalloc_asprintf(p, __FILE__, __LINE__, fmt, __VA_ARGS__))
 
 #ifdef LIBRE_UBIK_H
 #define xmalloc(siz)           (malloc(siz))
@@ -26,6 +29,8 @@ extern "C" {
 #define xreallocarray(p, n, s) (reallocarray(p, n, s))
 #define xstrdup(s)             (strdup(s))
 #define xstrndup(s, n)         (strndup(s, n))
+#define xvasprintf(p, fmt, ap) (vasprintf(p, fmt, ap))
+#define xasprintf(p, fmt, ...) (asprintf(p, fmt, __VA_ARGS__))
 #endif /* LIBRE_UBIK_H */
 
 #define dalloc_ignore(p)       (_dalloc_ignore(p, __FILE__, __LINE__))
@@ -46,6 +51,8 @@ void *_dalloc_realloc(void *p, size_t siz, char *file, int line);
 void *_dalloc_reallocarray(void *p, size_t n, size_t s, char *file, int line);
 char *_dalloc_strdup(const char *s, char *file, int line);
 char *_dalloc_strndup(const char *s, size_t n, char *file, int line);
+int _dalloc_vasprintf(char **p, const char *fmt, va_list ap, char *file, int line);
+int _dalloc_asprintf(char **p, char *file, int line, const char *fmt, ...);
 #else
 #define _NO_DALLOC              "dalloc: Define `DALLOC` to enable dalloc"
 #define dalloc_ignore(p)

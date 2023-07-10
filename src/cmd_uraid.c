@@ -15,10 +15,6 @@ static void load_files_uraid(char *username, uint32_t *dmgs);
 static void write_uraid(char *buf, size_t siz, char *username, uint32_t *dmgs);
 static void uraid(char *buf, size_t siz, char *username);
 
-static const char *week[] = {
-	"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
-};
-
 void
 create_slash_uraid(struct discord *client)
 {
@@ -74,14 +70,17 @@ void
 load_files_uraid(char *username, uint32_t *dmgs)
 {
 	char fname[128];
-	size_t namelen, i;
+	size_t namelen;
 	time_t day;
+	int n, i;
 
 	namelen = strlen(username);
 	day = time(NULL) / 86400;
-	for (i = 0; i < 6; i++) {
+	i = (day + 3) % 7; /* current day, used as index */
+	for (n = 0; n < 6; n++, i--) {
+		if (i == -1) i = 6;
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
-		         RAIDS_FOLDER, day - i);
+		         RAIDS_FOLDER, day - n);
 		if (file_exists(fname))
 			dmgs[i] = parse_file_uraid(fname, username, namelen);
 	}
@@ -90,17 +89,17 @@ load_files_uraid(char *username, uint32_t *dmgs)
 void
 write_uraid(char *buf, size_t siz, char *username, uint32_t *dmgs)
 {
-	size_t i = 0, s = 0;
+	static const char *wday[] = {
+		"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
+	};
+	size_t i, s = 0;
 	uint32_t total = 0;
-	int day;
 
-	day = ((time(NULL) / 86400) + 4) % 7;
 	s += snprintf(buf + s, siz - s,
 	              "%s's raids stats for the last 7 days:\n", username);
-	for (; i < 7; i++, day--) {
-		if (day < 0) day = 6;
+	for (i = 0; i < 7; i++) {
 		total += dmgs[i];
-		s += snprintf(buf + s, siz - s, "%s: ", week[day]);
+		s += snprintf(buf + s, siz - s, "%s: ", wday[i]);
 		s += ufmt(buf + s, siz - s, dmgs[i]);
 		s += strlcpy(buf + s, " damage\n", siz - s);
 		if (s >= siz) {

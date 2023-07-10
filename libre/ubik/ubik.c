@@ -3,6 +3,8 @@
 #include <sys/stat.h>
 
 #include <err.h>
+#include <errno.h>
+#include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -53,7 +55,7 @@ nstrchr(const char *s, int c, size_t n)
 }
 
 size_t
-ufmt(char *dst, size_t dsiz, uint64_t n)
+ufmt(char *dst, size_t dsiz, uintmax_t n)
 {
 	char buf[32], *p;
 	size_t sizn = 1;
@@ -73,7 +75,7 @@ ufmt(char *dst, size_t dsiz, uint64_t n)
 }
 
 size_t
-ifmt(char *dst, size_t dsiz, int64_t n)
+ifmt(char *dst, size_t dsiz, intmax_t n)
 {
 	if (dsiz == 0)
 		return ufmt(dst, dsiz, n);
@@ -100,11 +102,17 @@ time_t
 ltime(void)
 {
 	static time_t tz;
+	static int once;
 
-	if (tz == 0) {
+	if (!once) {
 		const time_t t = time(NULL);
 		const struct tm *tm = localtime(&t);
-		tz = tm->tm_gmtoff;
+		time_t tz_hour, tz_min;
+
+		tz_hour = tm->tm_hour - HOUR(t);
+		tz_min = tm->tm_min - MINUTE(t);
+		tz = ((tz_hour * 60) + tz_min) * 60;
+		once = 1;
 	}
 
 	return time(NULL) + tz;
@@ -113,23 +121,34 @@ ltime(void)
 size_t
 xstrlcpy(char *dst, const char *src, size_t siz)
 {
-	size_t ret;
+	size_t rv;
 
-	if ((ret = strlcpy(dst, src, siz)) >= siz)
+	if ((rv = strlcpy(dst, src, siz)) >= siz)
 		errx(1, "strlcpy: String truncation");
 
-	return ret;
+	return rv;
 }
 
 size_t
 xstrlcat(char *dst, const char *src, size_t siz)
 {
-	size_t ret;
+	size_t rv;
 
-	if ((ret = strlcat(dst, src, siz)) >= siz)
+	if ((rv = strlcat(dst, src, siz)) >= siz)
 		errx(1, "strlcat: String truncation");
 
-	return ret;
+	return rv;
+}
+
+FILE *
+xfopen(const char *filename, const char *mode)
+{
+	FILE *fp;
+
+	if ((fp = fopen(filename, mode)) == NULL)
+		err(1, "fopen: '%s' [%s]", filename, mode);
+
+	return fp;
 }
 
 void *
@@ -157,7 +176,8 @@ xcalloc(size_t nmemb, size_t siz)
 void *
 xrealloc(void *p, size_t siz)
 {
-	if ((p = realloc(p, siz)) == NULL)
+	/* siz == 0 can mean free */
+	if ((p = realloc(p, siz)) == NULL && siz != 0)
 		err(1, "realloc");
 
 	return p;
@@ -166,10 +186,10 @@ xrealloc(void *p, size_t siz)
 void *
 xreallocarray(void *p, size_t nmemb, size_t siz)
 {
-	if ((p = reallocarray(p, nmemb, siz)) == NULL)
-		err(1, "reallocarray");
+	if (siz && nmemb > -1 / siz)
+		errx(1, "reallocarray: %s", strerror(ENOMEM));
 
-	return p;
+	return xrealloc(p, nmemb * siz);
 }
 
 void *
@@ -194,13 +214,36 @@ xstrndup(const char *s, size_t n)
 	return p;
 }
 
-FILE *
-xfopen(const char *filename, const char *mode)
+int
+xvasprintf(char **strp, const char *fmt, va_list ap)
 {
-	FILE *fp;
+	va_list ap2;
+	size_t siz;
+	int rv;
 
-	if ((fp = fopen(filename, mode)) == NULL)
-		err(1, "fopen: '%s' [%s]", filename, mode);
+	va_copy(ap2, ap);
+	rv = vsnprintf(NULL, 0, fmt, ap2);
+	va_end(ap2);
+	if (rv < 0)
+		err(1, "snprintf");
+	siz = rv + 1;
+	*strp = xmalloc(siz);
+	rv = vsnprintf(*strp, siz, fmt, ap);
+	if (rv < 0)
+		err(1, "snprintf");
 
-	return fp;
+	return rv;
+}
+
+int
+xasprintf(char **strp, const char *fmt, ...)
+{
+	va_list ap;
+	int rv;
+
+	va_start(ap, fmt);
+	rv = xvasprintf(strp, fmt, ap);
+	va_end(ap);
+
+	return rv;
 }

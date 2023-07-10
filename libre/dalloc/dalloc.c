@@ -1,6 +1,8 @@
 /* Copyright © 2023 Ratakor. See LICENSE file for license details. */
 
 #include <errno.h>
+#include <pthread.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -29,7 +31,7 @@ static int overflow(void *p, size_t siz);
 static size_t find_pointer_index(void *p, char *file, int line);
 extern void dalloc_check_all(void) __attribute__((destructor));
 
-static cthread_mutex_t dalloc_mutex = CTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t dalloc_mutex = PTHREAD_MUTEX_INITIALIZER;
 static char magic_numbers[OVER_ALLOC];
 static struct Pointer pointers[MAX_POINTERS];
 static size_t npointers;
@@ -53,7 +55,7 @@ find_pointer_index(void *p, char *file, int line)
 	if (i == (size_t) -1) {
 		fprintf(stderr, "%s:%d: dalloc: Unknown pointer %p\n",
 		        file, line, p);
-		cthread_mutex_unlock(&dalloc_mutex);
+		pthread_mutex_unlock(&dalloc_mutex);
 		exit(EXIT_STATUS);
 	}
 
@@ -65,7 +67,7 @@ dalloc_check_overflow(void)
 {
 	size_t i, sum = 0;
 
-	cthread_mutex_lock(&dalloc_mutex);
+	pthread_mutex_lock(&dalloc_mutex);
 	fprintf(stderr, "Memory overflow:");
 	for (i = 0; i < npointers; i++) {
 		if (!overflow(pointers[i].p, pointers[i].siz))
@@ -78,7 +80,7 @@ dalloc_check_overflow(void)
 		if (pointers[i].comment[0])
 			fprintf(stderr, " /* %s */", pointers[i].comment);
 	}
-	cthread_mutex_unlock(&dalloc_mutex);
+	pthread_mutex_unlock(&dalloc_mutex);
 
 	if (sum == 0)
 		fprintf(stderr, " 0 overflow :)\n");
@@ -93,7 +95,7 @@ dalloc_check_free(void)
 {
 	size_t i, n = 0, sum = 0;
 
-	cthread_mutex_lock(&dalloc_mutex);
+	pthread_mutex_lock(&dalloc_mutex);
 	fprintf(stderr, "Memory allocated and not freed:");
 	for (i = 0; i < npointers; i++) {
 		if (pointers[i].ignored)
@@ -107,7 +109,7 @@ dalloc_check_free(void)
 		if (pointers[i].comment[0])
 			fprintf(stderr, " /* %s */", pointers[i].comment);
 	}
-	cthread_mutex_unlock(&dalloc_mutex);
+	pthread_mutex_unlock(&dalloc_mutex);
 
 	if (sum == 0)
 		fprintf(stderr, " 0 byte :)\n");
@@ -127,10 +129,10 @@ _dalloc_ignore(void *p, char *file, int line)
 {
 	size_t i;
 
-	cthread_mutex_lock(&dalloc_mutex);
+	pthread_mutex_lock(&dalloc_mutex);
 	i = find_pointer_index(p, file, line);
 	pointers[i].ignored = 1;
-	cthread_mutex_unlock(&dalloc_mutex);
+	pthread_mutex_unlock(&dalloc_mutex);
 }
 
 void
@@ -142,11 +144,11 @@ _dalloc_comment(void *p, const char *comment, char *file, int line)
 		return;
 
 	siz = MIN(strlen(comment), COMMENT_MAX - 1);
-	cthread_mutex_lock(&dalloc_mutex);
+	pthread_mutex_lock(&dalloc_mutex);
 	i = find_pointer_index(p, file, line);
 	memcpy(pointers[i].comment, comment, siz);
 	pointers[i].comment[siz] = '\0';
-	cthread_mutex_unlock(&dalloc_mutex);
+	pthread_mutex_unlock(&dalloc_mutex);
 }
 
 void
@@ -157,7 +159,7 @@ _dalloc_free(void *p, char *file, int line)
 	if (p == NULL)
 		return;
 
-	cthread_mutex_lock(&dalloc_mutex);
+	pthread_mutex_lock(&dalloc_mutex);
 	i = find_pointer_index(p, file, line);
 	if (overflow(pointers[i].p, pointers[i].siz)) {
 		fprintf(stderr, "%s:%d: dalloc: "
@@ -168,7 +170,7 @@ _dalloc_free(void *p, char *file, int line)
 			fprintf(stderr, "'%s' ", pointers[i].comment);
 		fprintf(stderr, "was allocated in '%s' on line %d.\n",
 		        pointers[i].file, pointers[i].line);
-		cthread_mutex_unlock(&dalloc_mutex);
+		pthread_mutex_unlock(&dalloc_mutex);
 		exit(EXIT_STATUS);
 	}
 
@@ -176,7 +178,7 @@ _dalloc_free(void *p, char *file, int line)
 		pointers[i - 1] = pointers[i];
 	npointers--;
 	free(p);
-	cthread_mutex_unlock(&dalloc_mutex);
+	pthread_mutex_unlock(&dalloc_mutex);
 }
 
 void *
@@ -185,8 +187,11 @@ _dalloc_malloc(size_t siz, char *file, int line)
 	void *p = NULL;
 	size_t sizfname;
 
-	if (siz == 0)
+	if (siz == 0) {
+		fprintf(stderr, "%s:%d: dalloc: malloc with size == 0\n",
+		        file, line);
 		return NULL;
+	}
 
 	if (npointers == MAX_POINTERS) {
 		fprintf(stderr, "dalloc: Too much pointers (max:%d)\n",
@@ -207,14 +212,14 @@ _dalloc_malloc(size_t siz, char *file, int line)
 
 	sizfname = MIN(strlen(file), FILENAME_MAX - 1);
 	memset((char *)p + siz, MAGIC_NUMBER, OVER_ALLOC);
-	cthread_mutex_lock(&dalloc_mutex);
+	pthread_mutex_lock(&dalloc_mutex);
 	pointers[npointers].p = p;
 	pointers[npointers].siz = siz;
 	memcpy(pointers[npointers].file, file, sizfname);
 	pointers[npointers].file[sizfname] = '\0';
 	pointers[npointers].line = line;
 	npointers++;
-	cthread_mutex_unlock(&dalloc_mutex);
+	pthread_mutex_unlock(&dalloc_mutex);
 
 	return p;
 }
@@ -224,8 +229,11 @@ _dalloc_calloc(size_t nmemb, size_t siz, char *file, int line)
 {
 	void *p;
 
-	if (nmemb == 0 || siz == 0)
+	if (nmemb == 0 || siz == 0) {
+		fprintf(stderr, "%s:%d: dalloc: calloc with size == 0\n",
+		        file, line);
 		return NULL;
+	}
 
 	if (nmemb > -1 / siz) {
 		fprintf(stderr, "%s:%d: dalloc: calloc: %s\n",
@@ -253,7 +261,7 @@ _dalloc_realloc(void *p, size_t siz, char *file, int line)
 		return NULL;
 	}
 
-	cthread_mutex_lock(&dalloc_mutex);
+	pthread_mutex_lock(&dalloc_mutex);
 	i = find_pointer_index(p, file, line);
 
 	if (overflow(pointers[i].p, pointers[i].siz)) {
@@ -265,7 +273,7 @@ _dalloc_realloc(void *p, size_t siz, char *file, int line)
 			fprintf(stderr, "'%s' ", pointers[i].comment);
 		fprintf(stderr, "was allocated in '%s' on line %d.\n",
 		        pointers[i].file, pointers[i].line);
-		cthread_mutex_unlock(&dalloc_mutex);
+		pthread_mutex_unlock(&dalloc_mutex);
 		exit(EXIT_STATUS);
 	}
 
@@ -279,7 +287,7 @@ _dalloc_realloc(void *p, size_t siz, char *file, int line)
 	if (p == NULL) {
 		fprintf(stderr, "%s:%d: dalloc: %s\n",
 		        file, line, strerror(errno));
-		cthread_mutex_unlock(&dalloc_mutex);
+		pthread_mutex_unlock(&dalloc_mutex);
 		exit(EXIT_STATUS);
 	}
 
@@ -290,7 +298,7 @@ _dalloc_realloc(void *p, size_t siz, char *file, int line)
 	memcpy(pointers[i].file, file, sizfname);
 	pointers[i].file[sizfname] = '\0';
 	pointers[i].line = line;
-	cthread_mutex_unlock(&dalloc_mutex);
+	pthread_mutex_unlock(&dalloc_mutex);
 
 	return p;
 }
@@ -298,7 +306,13 @@ _dalloc_realloc(void *p, size_t siz, char *file, int line)
 void *
 _dalloc_reallocarray(void *p, size_t n, size_t s, char *file, int line)
 {
-	if (s != 0 && n > -1 / s) {
+	if (n == 0 || s == 0) {
+		fprintf(stderr, "%s:%d: dalloc: reallocarray with size == 0\n",
+		        file, line);
+		return NULL;
+	}
+
+	if (n > -1 / s) {
 		fprintf(stderr, "%s:%d: dalloc: reallocarray: %s\n",
 		        file, line, strerror(ENOMEM));
 		exit(EXIT_STATUS);
@@ -334,6 +348,46 @@ _dalloc_strndup(const char *s, size_t n, char *file, int line)
 	p[siz - 1] = '\0';
 
 	return p;
+}
+
+int
+_dalloc_vasprintf(char **p, const char *fmt, va_list ap, char *file, int line)
+{
+	va_list ap2;
+	size_t siz;
+	int rv;
+
+	va_copy(ap2, ap);
+	rv = vsnprintf(NULL, 0, fmt, ap2);
+	va_end(ap2);
+	if (rv < 0) {
+		fprintf(stderr, "%s:%d: dalloc: asprintf: %s\n",
+		        file, line, strerror(errno));
+		exit(EXIT_STATUS);
+	}
+	siz = rv + 1;
+	*p = _dalloc_malloc(siz, file, line);
+	rv = vsnprintf(*p, siz, fmt, ap);
+	if (rv < 0) {
+		fprintf(stderr, "%s:%d: dalloc: asprintf: %s\n",
+		        file, line, strerror(errno));
+		exit(EXIT_STATUS);
+	}
+
+	return rv;
+}
+
+int
+_dalloc_asprintf(char **p, char *file, int line, const char *fmt, ...)
+{
+	int rv;
+	va_list ap;
+
+	va_start(ap, fmt);
+	rv = _dalloc_vasprintf(p, fmt, ap, file, line);
+	va_end(ap);
+
+	return rv;
 }
 #endif /* DALLOC */
 

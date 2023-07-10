@@ -1,9 +1,8 @@
-OBJS    = cthread.o \
-          dalloc.o  \
+OBJS    = dalloc.o \
           ubik.o
 
 DFLAGS  = -O0 -g -DDALLOC
-CFLAGS += -std=c99 -pthread -D_DEFAULT_SOURCE
+CFLAGS += -std=c99 -pedantic -pthread -D_POSIX_C_SOURCE=200809L
 
 all: ${OBJS}
 
