@@ -60,7 +60,9 @@ main(void)
 	struct discord *client;
 
 	setlocale(LC_ALL, "");
-	/* signal(SIGINT, &dalloc_sighandler); */
+#ifdef DALLOC
+	signal(SIGINT, &dalloc_sighandler);
+#endif /* DALLOC */
 
 	create_folders();
 	create_stats_file();
@@ -69,6 +71,9 @@ main(void)
 	/* init curl, ccord global and client */
 	client = discord_init(TOKEN);
 
+	/* client->conf.http = xmalloc(sizeof(*(client->conf.http))); */
+	/* dalloc_ignore(client->conf.http); */
+	/* client->conf.http->f = stderr; */
 	logconf_add_callback(&client->conf, &log_callback, stderr, LOG_WARN);
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT |
 	                    DISCORD_GATEWAY_GUILD_MEMBERS);

@@ -9,7 +9,8 @@
 #include "../config.h"
 #include "../libre/libre.h"
 
-#define MAX_SLAYERS      50 + 10
+/* normally 50 but let's do * 3 to prevent from buffer overflow :) */
+#define MAX_SLAYERS      50 * 3
 #define LINE_SIZE        300 + 1
 #define MAX_MESSAGE_LEN  2000 + 1
 #define MAX_USERNAME_LEN 32 + 1
