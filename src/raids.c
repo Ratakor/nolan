@@ -30,7 +30,6 @@ static char *skip_to_slayers(char *txt);
 static char *trim_name(char *name);
 static uint32_t trim_dmg(char *str);
 static size_t get_slayers(Slayer slayers[], char *txt);
-static size_t parse(Slayer slayers[], char *txt);
 static void save_to_new_file(Slayer slayers[], size_t nslayers, char *fname);
 static void save_to_file(Slayer slayers[], size_t nslayers);
 static int raids(struct discord_attachment *attachment, const char *lang,
@@ -271,12 +270,6 @@ get_slayers(Slayer slayers[], char *txt)
 	return nslayers;
 }
 
-size_t
-parse(Slayer slayers[], char *txt)
-{
-	return get_slayers(slayers, skip_to_slayers(txt));
-}
-
 void
 save_to_new_file(Slayer slayers[], size_t nslayers, char *fname)
 {
@@ -376,7 +369,7 @@ raids(struct discord_attachment *attachment, const char *lang, Slayer slayers[])
 	if (txt == NULL)
 		return OCR_FAILED;
 
-	nslayers = parse(slayers, txt);
+	nslayers = get_slayers(slayers, skip_to_slayers(txt));
 	if (nslayers > 0)
 		save_to_file(slayers, nslayers);
 	free(txt);

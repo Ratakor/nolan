@@ -93,8 +93,9 @@ init_players(void)
 				players[nplayers].name = xstrndup(p, MAX_USERNAME_LEN);
 				dalloc_ignore(players[nplayers].name);
 			} else if (i == KINGDOM) {
-				players[nplayers].kingdom = xstrndup(p, MAX_KINGDOM_LEN);
+				players[nplayers].kingdom = xcalloc(1, MAX_KINGDOM_LEN);
 				dalloc_ignore(players[nplayers].kingdom);
+				strlcpy(players[nplayers].kingdom, p, MAX_KINGDOM_LEN);
 			} else {
 				((long *)&players[nplayers])[i] = atol(p);
 			}

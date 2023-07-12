@@ -329,10 +329,12 @@ create_player(Player *player, unsigned int i)
 
 	players[i].name = xstrndup(player->name, MAX_USERNAME_LEN);
 	dalloc_ignore(players[i].name);
-	players[i].kingdom = xstrndup(player->kingdom, MAX_KINGDOM_LEN);
+	players[i].kingdom = xcalloc(1, MAX_KINGDOM_LEN);
 	dalloc_ignore(players[i].kingdom);
+	strlcpy(players[i].kingdom, player->kingdom, MAX_KINGDOM_LEN);
 	for (j = 2; j < LENGTH(fields); j++)
 		((long *)&players[i])[j] = ((long *)player)[j];
+
 }
 
 void
@@ -547,7 +549,7 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 void
 on_stats(struct discord *client, const struct discord_message *event)
 {
-	char buf[MAX_MESSAGE_LEN] = "";
+	char buf[MAX_MESSAGE_LEN];
 
 	log_info("%s: start", __func__);
 	stats(buf,
