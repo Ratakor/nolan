@@ -84,28 +84,45 @@ load_files_uraid(char *username, uint32_t *dmgs)
 void
 write_uraid(char *buf, size_t siz, char *username, uint32_t *dmgs)
 {
-	static const char *wday[] = {
+	static const char *wday[7] = {
 		"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
 	};
-	size_t i, s = 0;
+	int day, i, s = 0;
 	uint32_t total = 0;
 
+	day = (time(NULL) / 86400 + 3) % 7 - 6;
 	s += snprintf(buf + s, siz - s,
 	              "%s's raids stats for the last 7 days:\n", username);
-	for (i = 0; i < 7; i++) {
+	for (i = 0; i < 6; i++, day++) {
 		total += dmgs[i];
-		s += snprintf(buf + s, siz - s, "%s: ", wday[i]);
-		s += ufmt(buf + s, siz - s, dmgs[i]);
+		if (day < 0) {
+			s += snprintf(buf + s, siz - s, "%s: ", wday[7 + day]);
+			s += ufmt(buf + s, siz - s, dmgs[7 + day]);
+		} else {
+			s += snprintf(buf + s, siz - s, "%s: ", wday[day]);
+			s += ufmt(buf + s, siz - s, dmgs[day]);
+		}
 		s += strlcpy(buf + s, " damage\n", siz - s);
-		if (s >= siz) {
+		if ((size_t)s >= siz) {
 			log_warn("%s: string truncation", __func__);
 			return;
 		}
 	}
-	s += strlcpy(buf + s, "\nTotal: ", siz - s);
+	total += dmgs[i];
+	if (total == 0) {
+		snprintf(buf, siz, "There is no data for %s.", username);
+		return;
+	}
+
+	s += snprintf(buf + s, siz - s, "Today: ");
+	if (day < 0)
+		s += ufmt(buf + s, siz - s, dmgs[7 + day]);
+	else
+		s += ufmt(buf + s, siz - s, dmgs[day]);
+	s += strlcpy(buf + s, " damage\n\nTotal: ", siz - s);
 	s += ufmt(buf + s, siz - s, total);
 	s += strlcpy(buf + s, " damage", siz - s);
-	if (s >= siz)
+	if ((size_t)s >= siz)
 		log_warn("%s: string truncation", __func__);
 }
 
@@ -113,8 +130,15 @@ void
 uraid(char *buf, size_t siz, char *username)
 {
 	uint32_t dmgs[7];
+	const char *r = username;
+	char *w = username;
 
 	memset(dmgs, 0, sizeof(dmgs));
+	do {
+		if ((*r >= 'A' && *r <= 'Z') || (*r >= 'a' && *r <= 'z'))
+			*w++ = *r;
+	} while (*r++);
+	*w = '\0';
 	load_files_uraid(username, dmgs);
 	write_uraid(buf, siz, username, dmgs);
 }
