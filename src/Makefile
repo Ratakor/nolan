@@ -13,6 +13,7 @@ OBJS         = cmd_correct.o     \
                cmd_lbraid.o      \
                cmd_leaderboard.o \
                cmd_source.o      \
+               cmd_time.o        \
                cmd_uraid.o       \
                init.o            \
                main.o            \

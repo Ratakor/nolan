@@ -18,11 +18,6 @@ enum {
 
 };
 
-struct Slayers {
-	const char *name;
-	u64snowflake userid;
-};
-
 static void discord_send_message(struct discord *client,
                                  const u64snowflake channel_id,
                                  const char *fmt, ...);
@@ -36,50 +31,6 @@ static int raids(struct discord_attachment *attachment, const char *lang,
                  Slayer slayers[]);
 static void overcap_msg(struct discord *client, u64snowflake channel_id,
                         Slayer slayers[]);
-
-static const struct Slayers kingdom_slayers[] = {
-	{ "Davethegray",                618842282564648976 },
-	{ "SmittyWerbenJaeger",         372349296772907008 },
-	{ "Damaquandey",                237305375211257866 },
-	{ "Fhullegans",                 401213200688742412 },
-	{ "PhilipXIVTheGintonicKnight", 653570978068299777 },
-	{ "Heatnick",                   352065341901504512 },
-	{ "Tazziekat",                  669809258153639937 },
-	{ "Basic",                      274260433521737729 },
-	{ "KovikFrunobulax",            589110637267779584 },
-	{ "GoDLiKeKiLL",                425706840060592130 },
-	{ "Shazaaamm",                  516711375330869367 },
-	{ "Yiri",                       179396886254452736 },
-	{ "MilesandroIlgnorante",       163351655478329344 },
-	{ "HurricaneHam",               245010787817488384 },
-	{ "SneakPeek",                  559664517198381057 },
-	{ "Ensseric",                   659545497144655903 },
-	{ "Mijikai",                    163048434478088192 },
-	{ "BigYoshi",                   247796779804917770 },
-	{ "Ratakor",                    277534384175841280 },
-	{ "oxDje",                      452860420034789396 },
-	{ "LordDroopy",                 704457235467730986 },
-	{ "discosoutmurdersin",         609770024944664657 },
-	{ "EchinChanfromHELL",          819244261760565280 },
-	{ "ANIMAL",                     222464347568472064 },
-	{ "Soreloser",                  345516161838088192 },
-	{ "KyzeMythos",                 189463147571052544 },
-	{ "ElucidatorS",                636975696186441739 },
-	{ "BrewmasterAalst",            155893692740141056 },
-	{ "Tiroc",                      519282218057596929 },
-	{ "Kyzee",                      685267547377106990 },
-	{ "Shadowssin",                 265837021400924162 },
-	{ "Burtonlol",                  353969780702576641 },
-	{ "Wingeren",                   75695406381543424  },
-	{ "Schmiss",                    460552631778279457 },
-	{ "Bloodshade",                 329400042324623371 },
-	{ "Randylittle",                555760640329777153 },
-	{ "Sunveela",                   269171964105457665 },
-	{ "SaiSenpai",                  958922552284172349 },
-	{ "Jakealope",                  164209517926678528 },
-	{ "CleverCaitlin",              297650487585406976 },
-	{ "Demmo",                      807849505105248287 }, /* Demm974 */
-};
 
 static const char *delims[] = {
 	"+ Raid options",
@@ -320,7 +271,6 @@ save_to_file(Slayer slayers[], size_t nslayers)
 		if (i < nslayers) {
 			olddmg = strtoul(endname + 1, NULL, 10);
 			newdmg = olddmg + slayers[i].damage;
-			/* overcap_msg(slayers[i].name, newdmg, client, channel_id); */
 			fprintf(w, "%s%c%u\n", slayers[i].name, DELIM, newdmg);
 		} else {
 			if (endname)
@@ -428,7 +378,7 @@ load_files(Slayer slayers[], size_t *nslayers)
 void
 overcap_msg(struct discord *client, u64snowflake channel_id, Slayer slayers[])
 {
-	size_t nslayers = 0, i, j;
+	size_t nslayers = 0, i;
 
 	load_files(slayers, &nslayers);
 	for (i = 0; i < nslayers; i++) {
@@ -437,33 +387,13 @@ overcap_msg(struct discord *client, u64snowflake channel_id, Slayer slayers[])
 			continue;
 		}
 
-		for (j = 0; j < LENGTH(kingdom_slayers); j++) {
-			if (strncasecmp(slayers[i].name,
-			                kingdom_slayers[j].name,
-			                strlen(slayers[i].name)) == 0)
-				break;
-		}
-
-		if (j == LENGTH(kingdom_slayers)) {
-			log_warn("%s: %s is not added to slayers",
-			         __func__, slayers[i].name);
-			/* FIXME: ' flag */
-			discord_send_message(client, channel_id,
-			                     "%s has overcapped the limit by %'"PRIu32
-			                     " damage, he is now at %'"PRIu32" damage. "
-			                     "<@%"PRIu64"> add this user to the list btw",
-			                     slayers[i].name,
-			                     slayers[i].damage - DAMAGE_CAP,
-			                     slayers[i].damage, ADMIN);
-		} else {
-			discord_send_message(client, channel_id,
-			                     "<@%"PRIu64"> has overcapped the limit by "
-			                     "%'"PRIu32" damage, he is now at %'"PRIu32
-			                     " damage.",
-			                     kingdom_slayers[j].userid,
-			                     slayers[i].damage - DAMAGE_CAP,
-			                     slayers[i].damage);
-		}
+		/* FIXME: ' flag */
+		discord_send_message(client, channel_id,
+		                     "%s has overcapped the limit by %'"PRIu32
+		                     " damage, he is now at %'"PRIu32" damage.",
+		                     slayers[i].name,
+		                     slayers[i].damage - DAMAGE_CAP,
+		                     slayers[i].damage);
 
 		free(slayers[i].name);
 	}
@@ -524,9 +454,15 @@ run_again:
 			}
 			log_error("parsing failed twice with lang:%s from %s",
 			          lang, event->author->username);
-			discord_send_message(client, event->channel_id,
-			                     "Error: Failed to parse image <@%"PRIu64">.\n"
-			                     "Fix me <@%"PRIu64">", event->author->id, ADMIN);
+			/* TODO: just me being lazy */
+			if (strcmp(lang, "jpn") == 0) {
+				discord_send_message(client, event->channel_id,
+				                     "Error: Sorry japanese doesn't work well");
+			} else {
+				discord_send_message(client, event->channel_id,
+				                     "Error: Failed to parse image <@%"PRIu64">.\n"
+				                     "Fix me <@%"PRIu64">", event->author->id, ADMIN);
+			}
 			break;
 		}
 		twice = 0;

@@ -89,6 +89,7 @@ main(void)
 	discord_set_on_command(client, "lbraid", on_lbraid);
 	discord_set_on_command(client, "uraid", on_uraid);
 	discord_set_on_command(client, "correct", on_correct);
+	discord_set_on_command(client, "time", on_time);
 
 	discord_run(client);
 

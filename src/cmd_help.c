@@ -43,6 +43,7 @@ help(char *buf, size_t siz, u64snowflake guild_id)
 		strlcat(buf, "\t/uraid *username*\n", siz);
 		strlcat(buf, "\t/lbraid\n", siz);
 	}
+	strlcat(buf, "\t/time\n", siz);
 	strlcat(buf, "\t/help\n", siz);
 	strlcat(buf, "\n[...] means optional.\n", siz);
 	strlcat(buf, "Also works with ", siz);
@@ -54,7 +55,7 @@ help(char *buf, size_t siz, u64snowflake guild_id)
 }
 
 void
-on_help(struct discord * client, const struct discord_message * event)
+on_help(struct discord *client, const struct discord_message *event)
 {
 	char buf[MAX_MESSAGE_LEN];
 

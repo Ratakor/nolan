@@ -68,6 +68,7 @@ create_slash_commands(struct discord *client)
 	create_slash_source(client);
 	create_slash_lbraid(client);
 	create_slash_uraid(client);
+	create_slash_time(client);
 #endif /* DEVEL */
 }
 

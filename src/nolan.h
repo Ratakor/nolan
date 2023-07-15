@@ -172,4 +172,10 @@ void on_correct(struct discord *client, const struct discord_message *event);
 void on_correct_interaction(struct discord *client,
                             const struct discord_interaction *event);
 
+/* cmd_time.c */
+void create_slash_time(struct discord *client);
+void on_time(struct discord *client, const struct discord_message *event);
+void on_time_interaction(struct discord *client,
+                            const struct discord_interaction *event);
+
 #endif /* NOLAN_H */
