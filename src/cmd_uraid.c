@@ -72,7 +72,7 @@ load_files_uraid(char *username, uint32_t *dmgs)
 
 	day = time(NULL) / 86400;
 	i = (day + 3) % 7; /* current day, used as index */
-	for (n = 0; n < 6; n++, i--) {
+	for (n = 0; n < 7; n++, i--) {
 		if (i == -1) i = 6;
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - n);

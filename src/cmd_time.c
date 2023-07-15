@@ -66,10 +66,10 @@ timepercent(char *buf, size_t siz)
 	mpercent = ((double)m * 100) / (86400 * days[tm->tm_mon]);
 	ypercent = ((double)y * 100) / (86400 * (365 + leap));
 
-	memset(dbar, '#', (int)dpercent / 10);
-	memset(wbar, '#', (int)wpercent / 10);
-	memset(mbar, '#', (int)mpercent / 10);
-	memset(ybar, '#', (int)ypercent / 10);
+	memset(dbar, '#', (size_t)dpercent / 10);
+	memset(wbar, '#', (size_t)wpercent / 10);
+	memset(mbar, '#', (size_t)mpercent / 10);
+	memset(ybar, '#', (size_t)ypercent / 10);
 	dbar[STRLEN(dbar)] = '\0';
 	wbar[STRLEN(wbar)] = '\0';
 	mbar[STRLEN(mbar)] = '\0';

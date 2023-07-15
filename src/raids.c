@@ -29,6 +29,7 @@ static void save_to_new_file(Slayer slayers[], size_t nslayers, char *fname);
 static void save_to_file(Slayer slayers[], size_t nslayers);
 static int raids(struct discord_attachment *attachment, const char *lang,
                  Slayer slayers[]);
+static void parse_file(char *fname, Slayer slayers[], size_t *nslayers);
 static void overcap_msg(struct discord *client, u64snowflake channel_id,
                         Slayer slayers[]);
 
@@ -236,8 +237,6 @@ save_to_new_file(Slayer slayers[], size_t nslayers, char *fname)
 	fclose(fp);
 }
 
-/* also used in uraid.c */
-
 void
 save_to_file(Slayer slayers[], size_t nslayers)
 {
@@ -359,6 +358,7 @@ parse_file(char *fname, Slayer slayers[], size_t *nslayers)
 	fclose(fp);
 }
 
+/* also used in cmd_lbraid.c */
 void
 load_files(Slayer slayers[], size_t *nslayers)
 {
@@ -367,7 +367,7 @@ load_files(Slayer slayers[], size_t *nslayers)
 	unsigned int i;
 
 	day = time(NULL) / 86400;
-	for (i = 0; i < 6; i++) {
+	for (i = 0; i < 7; i++) {
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - i);
 		if (file_exists(fname))

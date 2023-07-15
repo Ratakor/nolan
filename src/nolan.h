@@ -121,7 +121,6 @@ void on_stats_interaction(struct discord *client,
 
 /* raids.c */
 void on_raids(struct discord *client, const struct discord_message *event);
-void parse_file(char *fname, Slayer slayers[], size_t *nslayers);
 void load_files(Slayer slayers[], size_t *nslayers);
 
 /* roles.c */
