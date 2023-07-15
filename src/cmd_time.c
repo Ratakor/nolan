@@ -30,13 +30,8 @@ timepercent(char *buf, size_t siz)
 	memset(wbar, '-', STRLEN(wbar));
 	memset(mbar, '-', STRLEN(mbar));
 	memset(ybar, '-', STRLEN(ybar));
-	dbar[STRLEN(dbar)] = '\0';
-	wbar[STRLEN(wbar)] = '\0';
-	mbar[STRLEN(mbar)] = '\0';
-	ybar[STRLEN(ybar)] = '\0';
-
 	t = time(NULL);
-	tm = localtime(&t);
+	tm = gmtime(&t);
 	year = tm->tm_year;
 
 	if (year < 1900)
@@ -75,15 +70,21 @@ timepercent(char *buf, size_t siz)
 	memset(wbar, '#', (int)wpercent / 10);
 	memset(mbar, '#', (int)mpercent / 10);
 	memset(ybar, '#', (int)ypercent / 10);
+	dbar[STRLEN(dbar)] = '\0';
+	wbar[STRLEN(wbar)] = '\0';
+	mbar[STRLEN(mbar)] = '\0';
+	ybar[STRLEN(ybar)] = '\0';
 
 	snprintf(buf, siz,
 	         "Time progress:\n"
 	         "```\n"
+	         "time:  %02d:%02d:%02d\n"
 	         "day:   %s %05.2f%%\n"
 	         "week:  %s %05.2f%%\n"
 	         "month: %s %05.2f%%\n"
 	         "year:  %s %05.2f%%\n"
 	         "```",
+	         tm->tm_hour, tm->tm_min, tm->tm_sec,
 	         dbar, dpercent,
 	         wbar, wpercent,
 	         mbar, mpercent,
