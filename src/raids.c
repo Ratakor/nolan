@@ -431,20 +431,20 @@ overcap_msg(struct discord *client, u64snowflake channel_id, Slayer slayers[])
 	size_t nslayers = 0, i, j;
 
 	load_files(slayers, &nslayers);
-	for (i = 0, j = 0; i < nslayers; i++, j = 0) {
+	for (i = 0; i < nslayers; i++) {
 		if (slayers[i].damage < DAMAGE_CAP) {
 			free(slayers[i].name);
 			continue;
 		}
 
-		for (j = 0; j <  LENGTH(kingdom_slayers); j++) {
+		for (j = 0; j < LENGTH(kingdom_slayers); j++) {
 			if (strncasecmp(slayers[i].name,
 			                kingdom_slayers[j].name,
 			                strlen(slayers[i].name)) == 0)
 				break;
 		}
 
-		if (i == MAX_SLAYERS) {
+		if (j == LENGTH(kingdom_slayers)) {
 			log_warn("%s: %s is not added to slayers",
 			         __func__, slayers[i].name);
 			/* FIXME: ' flag */
@@ -460,7 +460,7 @@ overcap_msg(struct discord *client, u64snowflake channel_id, Slayer slayers[])
 			                     "<@%"PRIu64"> has overcapped the limit by "
 			                     "%'"PRIu32" damage, he is now at %'"PRIu32
 			                     " damage.",
-			                     kingdom_slayers[i].userid,
+			                     kingdom_slayers[j].userid,
 			                     slayers[i].damage - DAMAGE_CAP,
 			                     slayers[i].damage);
 		}

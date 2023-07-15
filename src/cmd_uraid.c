@@ -92,7 +92,7 @@ write_uraid(char *buf, size_t siz, char *username, uint32_t *dmgs)
 
 	day = (time(NULL) / 86400 + 3) % 7 - 6;
 	s += snprintf(buf + s, siz - s,
-	              "%s's raids stats for the last 7 days:\n", username);
+	              "%s's raids stats for the last 7 days:\n```\n", username);
 	for (i = 0; i < 6; i++, day++) {
 		total += dmgs[i];
 		if (day < 0) {
@@ -119,7 +119,7 @@ write_uraid(char *buf, size_t siz, char *username, uint32_t *dmgs)
 		s += ufmt(buf + s, siz - s, dmgs[7 + day]);
 	else
 		s += ufmt(buf + s, siz - s, dmgs[day]);
-	s += strlcpy(buf + s, " damage\n\nTotal: ", siz - s);
+	s += strlcpy(buf + s, " damage\n```\n\nTotal: ", siz - s);
 	s += ufmt(buf + s, siz - s, total);
 	s += strlcpy(buf + s, " damage", siz - s);
 	if ((size_t)s >= siz)
