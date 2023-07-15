@@ -62,14 +62,22 @@ curl_file(char *url, char *fname)
 int
 write_rect(gdRect *rect, gdImage *im)
 {
+	int x = 0, y, X;
+
+	y = (3 * gdImageSY(im)) / 4;
+	X = gdImageSX(im);
 	rect->y = 0;
 	rect->height = gdImageSY(im);
-	int x = 0, y, X = gdImageSX(im);
-	y = (3 * gdImageSY(im)) / 4;
 
 	while (x < X && gdImageGetPixel(im, x++, y) < WHITE);
-	if (x == X)
-		return 1;
+	if (x == X) {
+		x = 0;
+		y = (2 * gdImageSY(im)) / 3;
+		while (x < X && gdImageGetPixel(im, x++, y) < WHITE);
+		if (x == X)
+			return 1;
+	}
+
 	if (x > 40)
 		x += DIFF + 5;
 	else
