@@ -33,6 +33,8 @@ on_interaction(struct discord *client, const struct discord_interaction *event)
 		on_lbraid_interaction(client, event);
 	else if (strcmp(event->data->name, "uraid") == 0)
 		on_uraid_interaction(client, event);
+	else if (strcmp(event->data->name, "time") == 0)
+		on_time_interaction(client, event);
 }
 
 void
