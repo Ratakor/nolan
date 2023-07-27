@@ -4,3 +4,4 @@ tests/
 images/
 nolan
 config.h
+compile_flags.txt

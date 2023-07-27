@@ -91,8 +91,9 @@ init_players(void)
 
 			*delim = '\0';
 			if (i == NAME) {
-				players[nplayers].name = xstrndup(p, MAX_USERNAME_LEN);
+				players[nplayers].name = xcalloc(1, MAX_USERNAME_LEN);
 				dalloc_ignore(players[nplayers].name);
+				strlcpy(players[nplayers].name, p, MAX_USERNAME_LEN);
 			} else if (i == KINGDOM) {
 				players[nplayers].kingdom = xcalloc(1, MAX_KINGDOM_LEN);
 				dalloc_ignore(players[nplayers].kingdom);

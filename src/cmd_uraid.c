@@ -39,7 +39,7 @@ create_slash_uraid(struct discord *client)
 void
 write_invalid(char *buf, size_t siz)
 {
-	strlcpy(buf, "NO WRONG YOU MUST USE AN ARGUMENT.\n", siz);
+	strlcpy(buf, "NO WRONG THIS IS NOT A VALID ARGUMENT.\n", siz);
 	strlcat(buf, "Valid argument is an Orna username.\n", siz);
 }
 
@@ -139,6 +139,11 @@ uraid(char *buf, size_t siz, char *username)
 			*w++ = *r;
 	} while (*r++);
 	*w = '\0';
+
+	if (username[0] == '\0') {
+		write_invalid(buf, siz);
+		return;
+	}
 	load_files_uraid(username, dmgs);
 	write_uraid(buf, siz, username, dmgs);
 }

@@ -27,7 +27,7 @@ DISCORDLIBS  = -ldiscord -lcurl -lpthread
 TESSLIBS     = -ltesseract -lleptonica
 GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
 
-WFLAGS       = -Werror -Wall -Wextra -Wpedantic -Waggregate-return -Wshadow\
+WFLAGS       = -pedantic -Werror -Wall -Wextra -Waggregate-return -Wshadow\
                -Wmissing-prototypes -Wunused-macros -Wdouble-promotion
 DFLAGS       = -O0 -g -DDALLOC
 CFLAGS      += -std=c99 -D_DEFAULT_SOURCE ${WFLAGS}

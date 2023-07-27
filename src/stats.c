@@ -53,7 +53,6 @@ static const struct Field english[] = {
 	{ "REPUTATION",     REPUTATION,       STRLEN("REPUTATION")     },
 	{ "ENDLESS",        ENDLESS,          STRLEN("ENDLESS")        },
 	{ "ENTRIES",        CODEX,            STRLEN("ENTRIES")        },
-
 };
 
 static const struct Field french[] = {
@@ -76,7 +75,6 @@ static const struct Field french[] = {
 	{ "POISSONS",         FISH,             STRLEN("POISSONS")         },
 	{ "RECORD DU MODE",   ENDLESS,          STRLEN("RECORD DU MODE")   },
 	{ "RECHERCHES",       CODEX,            STRLEN("RECHERCHES")       },
-
 };
 
 static const struct Field *languages[] = {
@@ -327,10 +325,11 @@ create_player(Player *player, unsigned int i)
 {
 	unsigned int j;
 
-	players[i].name = xstrndup(player->name, MAX_USERNAME_LEN);
-	dalloc_ignore(players[i].name);
+	players[i].name = xcalloc(1, MAX_USERNAME_LEN);
 	players[i].kingdom = xcalloc(1, MAX_KINGDOM_LEN);
+	dalloc_ignore(players[i].name);
 	dalloc_ignore(players[i].kingdom);
+	strlcpy(players[i].name, player->name, MAX_USERNAME_LEN);
 	strlcpy(players[i].kingdom, player->kingdom, MAX_KINGDOM_LEN);
 	for (j = 2; j < LENGTH(fields); j++)
 		((long *)&players[i])[j] = ((long *)player)[j];

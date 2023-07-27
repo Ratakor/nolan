@@ -50,7 +50,7 @@ timepercent(char *buf, size_t siz)
 	d = (tm->tm_hour * 3600 + tm->tm_min * 60 + tm->tm_sec);
 
 	if (tm->tm_wday == 0)
-		w = d;
+		w = 6 * 86400 + d;
 	else
 		w = (tm->tm_wday - 1) * 86400 + d;
 
