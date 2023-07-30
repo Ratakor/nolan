@@ -24,12 +24,12 @@ build:
 	@CFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ${MAKE} -C ${SRC_DIR}
 
 debug:
-	@${MAKE} -C ${LIBRE_DIR} $@
+	@${MAKE} -C ${LIBRE_DIR}
 	@${MAKE} -C ${SRC_DIR} $@
 
 clean:
 	@${MAKE} -C ${LIBRE_DIR} $@
-	@${MAKE} -C $(SRC_DIR) $@
+	@${MAKE} -C ${SRC_DIR} $@
 
 install: all
 	mkdir -p ${DESTDIR}${PREFIX}/bin

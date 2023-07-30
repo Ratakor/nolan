@@ -1,23 +1,45 @@
-OBJS    = dalloc.o \
-          ubik.o
+# Copyright © 2023 Ratakor. See LICENSE file for license details.
 
-DFLAGS  = -O0 -g -DDALLOC
-CFLAGS += -std=c99 -pedantic -pthread -D_POSIX_C_SOURCE=200809L
+PREFIX   ?= /usr/local
+LIBDIR    = ${DESTDIR}${PREFIX}/lib
+INCDIR    = ${DESTDIR}${PREFIX}/include/libre
+MANDIR    = ${DESTDIR}${PREFIX}/share/man/man3
 
-all: ${OBJS}
+LIB       = libre.a
+LIBS      = dalloc ubik
 
-echo:
-	@echo "CC      = ${CC}"
-	@echo "CFLAGS  = ${CFLAGS}"
-	@echo "OBJS    = ${OBJS}"
+OBJS      = ${LIBS:%=src/%.o}
+HEADERS   = ${LIBS:%=inc/%.h} inc/evil.h
+MANPAGES  = ${LIBS:%=man/%.3} man/evil.3
 
-${OBJS}:
-	${CC} ${CFLAGS} -c ${@:.o=}/${@:.o=.c} -o $@
+CFLAGS   += -std=c99 -pedantic -pthread -I./inc
+ARFLAGS   = -crs
 
-debug:
-	@CFLAGS="${DFLAGS}" ${MAKE}
+all: ${LIB}
+
+.c.o:
+	${CC} ${CFLAGS} ${CPPFLAGS} -c $< -o $@
+
+${LIB}: ${OBJS}
+	${AR} ${ARFLAGS} $@ ${OBJS}
 
 clean:
-	rm -f ${OBJS}
+	rm -f ${LIB} ${OBJS}
 
-.PHONY: all echo debug clean
+install: all
+	@mkdir -p ${LIBDIR}
+	@mkdir -p ${INCDIR}
+	@mkdir -p ${MANDIR}
+	cp -f ${LIB} ${LIBDIR}
+	cp -f ${HEADERS} ${INCDIR}
+	cp -f ${MANPAGES} ${MANDIR}
+	@chmod 644 ${LIBDIR}/${LIB}
+	@chmod 644 ${HEADERS:inc%=${INCDIR}%}
+	@chmod 644 ${MANPAGES:man%=${MANDIR}%}
+
+uninstall:
+	rm -f ${LIBDIR}/${LIB}
+	rm -rf ${INCDIR}
+	rm -f ${MANPAGES:man%=${MANDIR}%}
+
+.PHONY: all clean install uninstall

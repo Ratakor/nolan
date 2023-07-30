@@ -6,8 +6,12 @@
 #include <concord/discord.h>
 #include <concord/log.h>
 
-#include "../config.h"
+/* main.c */
+void cleanup(void);
+
+#define try_errfunc() do { cleanup(); die(1, 0); } while (0)
 #include "../libre/libre.h"
+#include "../config.h"
 
 /* normally 50 but let's do * 3 to prevent from buffer overflow :) */
 #define MAX_SLAYERS      50 * 3
@@ -54,9 +58,10 @@ enum {
 };
 
 typedef struct {
-	char *name;
-	char *kingdom;
-	long level;
+	/* put char and kd at the end */
+	char *name; /* TODO: change this to char name[MAX_USERNAME_LEN] */
+	char *kingdom; /* TODO: change this to char kingdom[MAX_KINGDOM_LEN] */
+	long level; /* TODO: change to uint64_t */
 	long ascension;
 	long global;
 	long regional;
@@ -87,9 +92,14 @@ typedef struct {
 	int found_in_file;
 } Slayer;
 
+/* TODO: change this to a linked list */
 extern Player players[MAX_PLAYERS];
 extern size_t nplayers;
 extern const char *fields[24];
+
+/* util.c */
+FILE *xfopen(const char *filename, const char *mode);
+int file_exists(const char *filename);
 
 /* init.c */
 void create_folders(void);
@@ -121,7 +131,7 @@ void on_stats_interaction(struct discord *client,
 
 /* raids.c */
 void on_raids(struct discord *client, const struct discord_message *event);
-void load_files(Slayer slayers[], size_t *nslayers);
+size_t load_files(Slayer slayers[]);
 
 /* roles.c */
 void update_roles(struct discord *client, Player *player);

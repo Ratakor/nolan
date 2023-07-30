@@ -13,6 +13,7 @@ A discord bot for Orna.
 - ascensions (track mats)
 
 ### chore
+- add mutexes
 - use config.json instead of config.h
 - optimize raids.c and cmd_..raid with slayers
 - add documentation

@@ -38,7 +38,7 @@ load_source(size_t *fszp)
 	size_t mfsz = LINE_SIZE + nplayers * LINE_SIZE;
 
 	fp = xfopen(STATS_FILE, "r");
-	res = xmalloc(mfsz);
+	res = try (malloc(mfsz));
 	*res = '\0';
 	while (fgets(line, LINE_SIZE, fp) != NULL) {
 		/* skip everything after codex */
@@ -62,7 +62,7 @@ load_sorted_source(size_t *fszp, char *kingdom)
 	size_t mfsz = LINE_SIZE + nplayers * LINE_SIZE;
 
 	fp = xfopen(STATS_FILE, "r");
-	res = xmalloc(mfsz);
+	res = try (malloc(mfsz));
 	fgets(line, LINE_SIZE, fp); /* fields name */
 	/* skip everything after codex */
 	if ((end = nstrchr(line, DELIM, CODEX + 1))) {

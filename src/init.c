@@ -91,12 +91,10 @@ init_players(void)
 
 			*delim = '\0';
 			if (i == NAME) {
-				players[nplayers].name = xcalloc(1, MAX_USERNAME_LEN);
-				dalloc_ignore(players[nplayers].name);
+				players[nplayers].name = try (calloc(1, MAX_USERNAME_LEN));
 				strlcpy(players[nplayers].name, p, MAX_USERNAME_LEN);
 			} else if (i == KINGDOM) {
-				players[nplayers].kingdom = xcalloc(1, MAX_KINGDOM_LEN);
-				dalloc_ignore(players[nplayers].kingdom);
+				players[nplayers].kingdom = try (calloc(1, MAX_KINGDOM_LEN));
 				strlcpy(players[nplayers].kingdom, p, MAX_KINGDOM_LEN);
 			} else {
 				((long *)&players[nplayers])[i] = atol(p);

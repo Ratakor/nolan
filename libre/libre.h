@@ -1,7 +1,8 @@
 #ifndef LIBRE_H
 #define LIBRE_H
 
-#include "ubik/ubik.h"
-#include "dalloc/dalloc.h"
+#include "inc/ubik.h"
+#include "inc/evil.h"
+#include "inc/dalloc.h"
 
 #endif /* LIBRE_H */

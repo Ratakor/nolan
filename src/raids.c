@@ -189,7 +189,7 @@ get_slayers(Slayer slayers[], char *txt)
 			}
 
 		}
-		slayers[nslayers].name = xstrdup(trim_name(line));
+		slayers[nslayers].name = try (strdup(trim_name(line)));
 		dalloc_comment(slayers[nslayers].name, "slayer name");
 		line = endline + 1;
 
@@ -299,7 +299,6 @@ raids(struct discord_attachment *attachment, const char *lang, Slayer slayers[])
 	CURLcode ret;
 	int is_png;
 
-	log_info("%s", __func__);
 	is_png = (strcmp(attachment->content_type, "image/png") == 0);
 	if (is_png)
 		snprintf(fname, sizeof(fname), "%s/%s.png",
@@ -347,7 +346,7 @@ parse_file(char *fname, Slayer slayers[], size_t *nslayers)
 		if (i < *nslayers) {
 			slayers[i].damage += dmg;
 		} else {
-			slayers[i].name = xstrdup(line);
+			slayers[i].name = try (strdup(line));
 			dalloc_comment(slayers[i].name,
 			               "parse_file slayers name");
 			slayers[i].damage = dmg;
@@ -358,29 +357,31 @@ parse_file(char *fname, Slayer slayers[], size_t *nslayers)
 	fclose(fp);
 }
 
-/* also used in cmd_lbraid.c */
-void
-load_files(Slayer slayers[], size_t *nslayers)
+/* also used in cmd_lbraid.c, retuns nslayers */
+size_t
+load_files(Slayer slayers[])
 {
 	char fname[PATH_MAX];
+	size_t nslayers = 0, i;
 	time_t day;
-	unsigned int i;
 
 	day = time(NULL) / 86400;
 	for (i = 0; i < 7; i++) {
 		snprintf(fname, sizeof(fname), "%s%ld.csv",
 		         RAIDS_FOLDER, day - i);
 		if (file_exists(fname))
-			parse_file(fname, slayers, nslayers);
+			parse_file(fname, slayers, &nslayers);
 	}
+
+	return nslayers;
 }
 
 void
 overcap_msg(struct discord *client, u64snowflake channel_id, Slayer slayers[])
 {
-	size_t nslayers = 0, i;
+	size_t nslayers, i;
 
-	load_files(slayers, &nslayers);
+	nslayers = load_files(slayers);
 	for (i = 0; i < nslayers; i++) {
 		if (slayers[i].damage < DAMAGE_CAP) {
 			free(slayers[i].name);
@@ -424,7 +425,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 
 lang_found:
 
-	slayers = xcalloc(MAX_SLAYERS, sizeof(*slayers));
+	slayers = try (calloc(MAX_SLAYERS, sizeof(*slayers)));
 	for (i = 0; i < (size_t)event->attachments->size; i++) {
 run_again:
 		switch (raids(event->attachments->array + i, lang, slayers)) {
@@ -469,6 +470,7 @@ run_again:
 		memset(slayers, 0, MAX_SLAYERS * sizeof(*slayers));
 	}
 
+	log_info("%s %d\n", __func__, event->attachments->size);
 	overcap_msg(client, event->channel_id, slayers);
 	free(slayers);
 }

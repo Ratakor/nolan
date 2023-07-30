@@ -270,7 +270,7 @@ on_correct(struct discord *client, const struct discord_message *event)
 	if (strlen(event->content) == 0) {
 		write_invalid_category(buf, sizeof(buf));
 	} else {
-		category = xstrdup(event->content);
+		category = try (strdup(event->content));
 		if (!(val = get_value(category))) {
 			write_invalid_value(buf, sizeof(buf),
 			                    "Hint: No value 😜");

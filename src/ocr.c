@@ -29,12 +29,11 @@ char *
 curl(char *url)
 {
 	CURL *handle = curl_easy_init();
-	char *buf = xmalloc(MAX_MESSAGE_LEN);
+	char *buf = NULL;
 
-	*buf = '\0';
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_data);
-	curl_easy_setopt(handle, CURLOPT_WRITEDATA, buf);
+	curl_easy_setopt(handle, CURLOPT_WRITEDATA, &buf);
 	curl_easy_perform(handle);
 	curl_easy_cleanup(handle);
 
@@ -143,7 +142,7 @@ ocr(const char *fname, const char *lang)
 		errx(1, "Failed tesseract recognition");
 
 	txt_ocr = TessBaseAPIGetUTF8Text(handle);
-	txt_out = xstrdup(txt_ocr);
+	txt_out = try (strdup(txt_ocr));
 
 	TessDeleteText(txt_ocr);
 	TessBaseAPIEnd(handle);

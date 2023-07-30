@@ -146,7 +146,7 @@ playtime_to_str(long playtime)
 	size_t siz = 36;
 	char *buf;
 
-	buf = xmalloc(siz);
+	buf = try (malloc(siz));
 	dalloc_comment(buf, "playtime_to_str buf");
 	switch (hours) {
 	case 0:
@@ -295,7 +295,7 @@ get_quote(void)
 	/* change '*' to "\*", must need a large enough buffer */
 	p = quote;
 	while ((p = strchr(p, '*')) != NULL) {
-		tmp = xstrdup(p);
+		tmp = try (strdup(p));
 		op = p;
 		otmp = tmp;
 		*p++ = '\\';
@@ -325,10 +325,8 @@ create_player(Player *player, unsigned int i)
 {
 	unsigned int j;
 
-	players[i].name = xcalloc(1, MAX_USERNAME_LEN);
-	players[i].kingdom = xcalloc(1, MAX_KINGDOM_LEN);
-	dalloc_ignore(players[i].name);
-	dalloc_ignore(players[i].kingdom);
+	players[i].name = try (calloc(1, MAX_USERNAME_LEN));
+	players[i].kingdom = try (calloc(1, MAX_KINGDOM_LEN));
 	strlcpy(players[i].name, player->name, MAX_USERNAME_LEN);
 	strlcpy(players[i].kingdom, player->kingdom, MAX_KINGDOM_LEN);
 	for (j = 2; j < LENGTH(fields); j++)
@@ -550,7 +548,7 @@ on_stats(struct discord *client, const struct discord_message *event)
 {
 	char buf[MAX_MESSAGE_LEN];
 
-	log_info("%s: start", __func__);
+	log_info("%s", __func__);
 	stats(buf,
 	      sizeof(buf),
 	      event->attachments->array[0].url,
@@ -570,9 +568,10 @@ on_stats_interaction(struct discord *client,
                      const struct discord_interaction *event)
 {
 	char buf[MAX_MESSAGE_LEN] = "", *url, *endurl;
-	json_char *attachment = xstrdup(event->data->resolved->attachments);
+	json_char *attachment;
 
-	log_info("%s: start", __func__);
+	log_info("%s", __func__);
+	attachment = try (strdup(event->data->resolved->attachments));
 	url = strstr(attachment, "\"url\":");
 	if (!url) {
 		free(attachment);

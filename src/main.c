@@ -8,6 +8,7 @@
 
 #include "nolan.h"
 
+static struct discord *client;
 Player players[MAX_PLAYERS];
 size_t nplayers;
 const char *fields[] = {
@@ -52,17 +53,34 @@ log_callback(log_Event *ev)
 	fflush(ev->udata);
 }
 
+void
+cleanup(void)
+{
+	size_t i;
+
+	discord_cleanup(client);
+	ccord_global_cleanup();
+	for (i = 0; i < nplayers; i++) {
+		free(players[i].name);
+		free(players[i].kingdom);
+	}
+}
+
+static void
+sighandler(int sig)
+{
+	UNUSED(sig);
+	ccord_shutdown_async();
+}
+
 int
 main(void)
 {
 	char *src[] = { "src", "source" };
 	char *lb[] = { "lb", "leaderboard" };
-	struct discord *client;
 
 	setlocale(LC_ALL, "");
-#ifdef DALLOC
-	signal(SIGINT, &dalloc_sighandler);
-#endif /* DALLOC */
+	signal(SIGINT, &sighandler);
 
 	create_folders();
 	create_stats_file();
@@ -71,8 +89,7 @@ main(void)
 	/* init curl, ccord global and client */
 	client = discord_init(TOKEN);
 
-	/* client->conf.http = xmalloc(sizeof(*(client->conf.http))); */
-	/* dalloc_ignore(client->conf.http); */
+	/* client->conf.http = try (calloc(1, sizeof(*(client->conf.http)))); */
 	/* client->conf.http->f = stderr; */
 	logconf_add_callback(&client->conf, &log_callback, stderr, LOG_WARN);
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT |
@@ -93,8 +110,7 @@ main(void)
 
 	discord_run(client);
 
-	discord_cleanup(client);
-	ccord_global_cleanup();
+	cleanup();
 
 	return EXIT_SUCCESS;
 }

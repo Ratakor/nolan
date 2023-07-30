@@ -61,10 +61,10 @@ void
 lbraid(char *buf, size_t siz)
 {
 	Slayer *slayers;
-	size_t nslayers = 0, i;
+	size_t nslayers, i;
 
-	slayers = xcalloc(MAX_SLAYERS, sizeof(*slayers));
-	load_files(slayers, &nslayers);
+	slayers = try (calloc(MAX_SLAYERS, sizeof(*slayers)));
+	nslayers = load_files(slayers);
 	if (nslayers == 0) {
 		write_invalid(buf, siz);
 		free(slayers);
