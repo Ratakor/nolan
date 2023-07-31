@@ -53,9 +53,8 @@ write_invalid(char *buf, size_t siz)
 void
 write_info(char *buf, size_t siz, const Player *player)
 {
-	unsigned int i;
 	char *playtime;
-	size_t s = 0;
+	size_t i, s = 0;
 
 	/* -2 to not include upadte and userid */
 	for (i = 0; i < LENGTH(fields) - 2; i++) {
@@ -73,13 +72,13 @@ write_info(char *buf, size_t siz, const Player *player)
 				              fields[i], player->kingdom);
 			}
 		} else if (i == PLAYTIME) {
-			playtime = playtime_to_str(((const long *)player)[i]);
+			playtime = playtime_to_str(U32CAST(player)[i]);
 			s += snprintf(buf + s, siz - s, "%s: %s\n", fields[i],
 			              playtime);
 			free(playtime);
-		} else if (((const long *)player)[i]) {
+		} else if (U32CAST(player)[i]) {
 			s += snprintf(buf + s, siz - s, "%s: ", fields[i]);
-			s += ufmt(buf + s, siz - s, ((const long *)player)[i]);
+			s += ufmt(buf + s, siz - s, U32CAST(player)[i]);
 			if (i == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 			s += strlcpy(buf + s, "\n", siz - s);
 		}
@@ -89,21 +88,21 @@ write_info(char *buf, size_t siz, const Player *player)
 void
 info_from_uid(char *buf, size_t siz, u64snowflake userid)
 {
-	unsigned int i = 0;
+	Player *player;
 
-	while (i < nplayers && players[i].userid != userid)
-		i++;
-
-	if (i == nplayers)
+	pthread_mutex_lock(&player_mutex);
+	player = find_player(userid);
+	if (player == NULL)
 		write_invalid(buf, siz);
 	else
-		write_info(buf, siz, &players[i]);
+		write_info(buf, siz, player);
+	pthread_mutex_unlock(&player_mutex);
 }
 
 void
 info_from_txt(char *buf, size_t siz, char *txt)
 {
-	unsigned int i = 0;
+	Player *player;
 	u64snowflake userid;
 
 	userid = str_to_uid(txt);
@@ -112,12 +111,16 @@ info_from_txt(char *buf, size_t siz, char *txt)
 		return;
 	}
 
-	while (i < nplayers && strcasecmp(players[i].name, txt) != 0)
-		i++;
-	if (i == nplayers)
+	pthread_mutex_lock(&player_mutex);
+	for (player = player_head; player; player = player->next) {
+		if (strcasecmp(player->name, txt) == 0)
+			break;
+	}
+	if (player == NULL)
 		write_invalid(buf, siz);
 	else
-		write_info(buf, siz, &players[i]);
+		write_info(buf, siz, player);
+	pthread_mutex_unlock(&player_mutex);
 }
 
 void

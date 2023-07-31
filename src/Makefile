@@ -2,9 +2,7 @@
 
 BIN          = ../nolan
 CONFIG_H     = ../config.h
-LIBRE_DIR    = ../libre
 
-LIBRE_AR     = ${LIBRE_DIR}/libre.a
 OBJS         = cmd_correct.o     \
                cmd_help.o        \
                cmd_info.o        \
@@ -22,15 +20,15 @@ OBJS         = cmd_correct.o     \
                stats.o           \
                util.o
 
+RELIBS       = -lre
 DISCORDLIBS  = -ldiscord -lcurl -lpthread
 TESSLIBS     = -ltesseract -lleptonica
 GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
 
 WFLAGS       = -pedantic -Werror -Wall -Wextra -Waggregate-return -Wshadow\
                -Wmissing-prototypes -Wunused-macros -Wdouble-promotion
-DFLAGS       = -O0 -g -DDALLOC
 CFLAGS      += -std=c99 -D_DEFAULT_SOURCE ${WFLAGS}
-LDFLAGS     += ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
+LDFLAGS     += ${RELIBS} ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
 
 all: ${BIN}
 
@@ -41,15 +39,12 @@ echo:
 	@echo "OBJS     = ${OBJS}"
 
 ${BIN}: ${CONFIG_H} ${OBJS}
-	${CC} ${OBJS} ${LIBRE_AR} ${LDFLAGS} -o $@
+	${CC} ${OBJS} ${LDFLAGS} -o $@
 
 ${CONFIG_H}:
 	@cp ../config.def.h $@
 
-debug:
-	@CFLAGS="${DFLAGS}" ${MAKE}
-
 clean:
 	rm -f ${OBJS} ${BIN}
 
-.PHONY: all echo debug clean
+.PHONY: all echo clean

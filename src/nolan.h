@@ -3,22 +3,21 @@
 #ifndef NOLAN_H
 #define NOLAN_H
 
+#include <pthread.h>
 #include <concord/discord.h>
 #include <concord/log.h>
+#include <libre/ubik.h>
+#include <libre/x.h>
+#include <libre/dalloc.h>
 
-/* main.c */
-void cleanup(void);
-
-#define try_errfunc() do { cleanup(); die(1, 0); } while (0)
-#include "../libre/libre.h"
 #include "../config.h"
 
 /* normally 50 but let's do * 3 to prevent from buffer overflow :) */
 #define MAX_SLAYERS      50 * 3
 #define LINE_SIZE        300 + 1
 #define MAX_MESSAGE_LEN  2000 + 1
-#define MAX_USERNAME_LEN 32 + 1
-#define MAX_KINGDOM_LEN  32 + 1
+#define MAX_USERNAME_SIZ 32
+#define MAX_KINGDOM_SIZ  32
 
 #ifdef DEVEL
 #define SAVE_FOLDER      "./"
@@ -29,6 +28,8 @@ void cleanup(void);
 #define IMAGES_FOLDER    SAVE_FOLDER "images/"
 #define RAIDS_FOLDER     SAVE_FOLDER "raids/"
 #define STATS_FILE       SAVE_FOLDER FILENAME
+#define U32CAST(player)\
+	((uint32_t *)((char *)(player) + MAX_USERNAME_SIZ + MAX_KINGDOM_SIZ) - 2)
 
 enum {
 	NAME,
@@ -57,49 +58,51 @@ enum {
 	USERID,
 };
 
-typedef struct {
-	/* put char and kd at the end */
-	char *name; /* TODO: change this to char name[MAX_USERNAME_LEN] */
-	char *kingdom; /* TODO: change this to char kingdom[MAX_KINGDOM_LEN] */
-	long level; /* TODO: change to uint64_t */
-	long ascension;
-	long global;
-	long regional;
-	long competitive;
-	long playtime;
-	long monsters;
-	long bosses;
-	long players;
-	long quests;
-	long explored;
-	long taken;
-	long dungeons;
-	long coliseum;
-	long items;
-	long fish;
-	long distance;
-	long reputation;
-	long endless;
-	long codex;
+typedef struct Player Player;
+struct Player {
+	char name[MAX_USERNAME_SIZ];
+	char kingdom[MAX_KINGDOM_SIZ];
+	uint32_t level;
+	uint32_t ascension;
+	uint32_t global;
+	uint32_t regional;
+	uint32_t competitive;
+	uint32_t playtime;
+	uint32_t monsters;
+	uint32_t bosses;
+	uint32_t players;
+	uint32_t quests;
+	uint32_t explored;
+	uint32_t taken;
+	uint32_t dungeons;
+	uint32_t coliseum;
+	uint32_t items;
+	uint32_t fish;
+	uint32_t distance;
+	uint32_t reputation;
+	uint32_t endless;
+	uint32_t codex;
 	time_t update;
 	u64snowflake userid;
-} Player;
+	Player *next;
+};
 
 /* this is for raids */
 typedef struct {
 	char *name;
 	uint32_t damage;
-	int found_in_file;
+	bool found_in_file;
 } Slayer;
 
-/* TODO: change this to a linked list */
-extern Player players[MAX_PLAYERS];
-extern size_t nplayers;
+extern Player *player_head;
+extern pthread_mutex_t player_mutex;
 extern const char *fields[24];
 
 /* util.c */
-FILE *xfopen(const char *filename, const char *mode);
 int file_exists(const char *filename);
+Player *find_player(u64snowflake userid);
+void discord_send_message(struct discord *client, u64snowflake channel_id,
+                          const char *fmt, ...);
 
 /* init.c */
 void create_folders(void);
@@ -122,8 +125,8 @@ char *ocr(const char *fname, const char *lang);
 /* stats.c */
 void create_slash_stats(struct discord *client);
 bool check_delim(const char *val);
-long trim_stat(const char *str);
-char *playtime_to_str(long playtime);
+uint32_t trim_stat(const char *str);
+char *playtime_to_str(uint32_t playtime);
 void update_file(Player *player);
 void on_stats(struct discord *client, const struct discord_message *event);
 void on_stats_interaction(struct discord *client,
@@ -185,6 +188,6 @@ void on_correct_interaction(struct discord *client,
 void create_slash_time(struct discord *client);
 void on_time(struct discord *client, const struct discord_message *event);
 void on_time_interaction(struct discord *client,
-                            const struct discord_interaction *event);
+                         const struct discord_interaction *event);
 
 #endif /* NOLAN_H */

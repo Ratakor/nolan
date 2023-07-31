@@ -5,7 +5,7 @@
 #include <leptonica/allheaders.h>
 #include <tesseract/capi.h>
 
-#include <err.h>
+#include <errno.h>
 #include <string.h>
 
 #include "nolan.h"
@@ -14,39 +14,57 @@
 #define DIFF 110
 #define WHITE 12000000
 
+struct Slice {
+	char *data;
+	size_t siz;
+};
+
 static size_t write_data(void *ptr, size_t size, size_t nmemb, void *stream);
 static int write_rect(gdRect *rect, gdImagePtr im);
 
 size_t
-write_data(void *ptr, size_t size, size_t nmemb, void *stream)
+write_data(void *ptr, size_t siz, size_t nmemb, void *stream)
 {
-	if (size * nmemb > MAX_MESSAGE_LEN)
-		errx(1, "%s:%d %s: fix your code", __FILE__, __LINE__, __func__);
-	return strlcpy(stream, ptr, MAX_MESSAGE_LEN);
+	struct Slice *buf;
+
+	if (siz && nmemb > (size_t) -1 / siz)
+		die(1, "realloc: %s", strerror(ENOMEM));
+
+	siz *= nmemb;
+	buf = (struct Slice *)stream;
+	buf->data = xrealloc(buf->data, buf->siz + siz + 1);
+	memcpy(buf->data + buf->siz, ptr, siz);
+	buf->siz += siz + 1;
+	buf->data[buf->siz - 1] = '\0';
+
+	return buf->siz;
 }
 
 char *
 curl(char *url)
 {
-	CURL *handle = curl_easy_init();
-	char *buf = NULL;
+	CURL *handle;
+	struct Slice buf = { .data = NULL, .siz = 0 };
 
+	handle = curl_easy_init();
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	curl_easy_setopt(handle, CURLOPT_WRITEFUNCTION, write_data);
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, &buf);
 	curl_easy_perform(handle);
 	curl_easy_cleanup(handle);
 
-	return buf;
+	return buf.data;
 }
 
 unsigned int
 curl_file(char *url, char *fname)
 {
-	CURL *handle = curl_easy_init();
+	CURL *handle;
 	CURLcode ret;
-	FILE *fp = xfopen(fname, "wb");
+	FILE *fp;
 
+	handle = curl_easy_init();
+	fp = xfopen(fname, "wb");
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	/* curl uses fwrite by default */
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, fp);
@@ -139,10 +157,10 @@ ocr(const char *fname, const char *lang)
 
 	TessBaseAPISetImage2(handle, img);
 	if (TessBaseAPIRecognize(handle, NULL) != 0)
-		errx(1, "Failed tesseract recognition");
+		die(1, "Failed tesseract recognition");
 
 	txt_ocr = TessBaseAPIGetUTF8Text(handle);
-	txt_out = try (strdup(txt_ocr));
+	txt_out = xstrdup(txt_ocr);
 
 	TessDeleteText(txt_ocr);
 	TessBaseAPIEnd(handle);

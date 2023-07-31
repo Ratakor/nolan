@@ -31,10 +31,7 @@ write_invalid(char *buf, size_t siz)
 int
 compare(const void *s1, const void *s2)
 {
-	const unsigned int dmg1 = ((const Slayer *)s1)->damage;
-	const unsigned int dmg2 = ((const Slayer *)s2)->damage;
-
-	return dmg2 - dmg1;
+	return ((const Slayer *)s2)->damage - ((const Slayer *)s1)->damage;
 }
 
 void
@@ -63,7 +60,7 @@ lbraid(char *buf, size_t siz)
 	Slayer *slayers;
 	size_t nslayers, i;
 
-	slayers = try (calloc(MAX_SLAYERS, sizeof(*slayers)));
+	slayers = xcalloc(MAX_SLAYERS, sizeof(*slayers));
 	nslayers = load_files(slayers);
 	if (nslayers == 0) {
 		write_invalid(buf, siz);

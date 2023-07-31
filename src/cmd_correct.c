@@ -166,72 +166,72 @@ write_invalid_value(char *buf, size_t siz, char *fmt, ...)
 void
 correct(char *buf, size_t siz, char *category, char *val, u64snowflake userid)
 {
-	unsigned int i = 0, j = 0;
-	long old, new;
-	size_t s = 0;
+	Player *player;
+	uint32_t old, new;
+	size_t i = 0, s = 0;
 
-	while (i < nplayers && players[i].userid != userid)
-		i++;
-
-	if (i == nplayers) {
-		strlcpy(buf, "Please register before trying to correct your \
-stats.", siz);
+	pthread_mutex_lock(&player_mutex);
+	player = find_player(userid);
+	if (player == NULL) {
+		strlcpy(buf, "Please register before trying to correct your "
+		        "stats.", siz);
 		return;
 	}
 
-	while (j < LENGTH(fields) - 2 && strcasecmp(fields[j], category) != 0)
-		j++;
+	while (i < LENGTH(fields) - 2 && strcasecmp(fields[i], category) != 0)
+		i++;
 
-	if (j == LENGTH(fields) - 2 || j == PLAYTIME) {
+	if (i == LENGTH(fields) - 2 || i == PLAYTIME) {
 		write_invalid_category(buf, siz);
 		return;
 	}
 
-	if (j == NAME) {
+	if (i == NAME) {
 		if (check_delim(val)) {
 			write_invalid_value(buf, siz,
 			                    "%c is not a valid char.", DELIM);
 			return;
 		}
-		if (strlen(val) > MAX_USERNAME_LEN) {
+		if (strlen(val) >= MAX_USERNAME_SIZ) {
 			write_invalid_value(buf, siz, "Too big username.");
 			return;
 		}
 		snprintf(buf, siz, "<@%lu>\n%s: %s -> %s", userid,
-		         fields[j], players[i].name, val);
-		strlcpy(players[i].name, val, MAX_USERNAME_LEN);
-	} else if (j == KINGDOM) {
+		         fields[i], player->name, val);
+		strlcpy(player->name, val, MAX_USERNAME_SIZ);
+	} else if (i == KINGDOM) {
 		if (check_delim(val)) {
 			write_invalid_value(buf, siz,
 			                    "%c is not a valid char.", DELIM);
 			return;
 		}
-		if (strlen(val) > MAX_KINGDOM_LEN) {
+		if (strlen(val) >= MAX_KINGDOM_SIZ) {
 			write_invalid_value(buf, siz, "Too big kingdom name.");
 			return;
 		}
 		snprintf(buf, siz, "<@%lu>\n%s: %s -> %s", userid,
-		         fields[j], players[i].kingdom, val);
-		strlcpy(players[i].kingdom, val, MAX_KINGDOM_LEN);
+		         fields[i], player->kingdom, val);
+		strlcpy(player->kingdom, val, MAX_KINGDOM_SIZ);
 	} else {
-		old = ((long *)&players[i])[j];
+		old = U32CAST(player)[i];
 		new = trim_stat(val);
-		if (new == 0 || new == LONG_MAX) {
+		if (new == 0 || new == UINT32_MAX) {
 			write_invalid_value(buf, siz, "Too big or zero.");
 			return;
 		}
-		s += snprintf(buf, siz, "<@%lu>\n%s: ", userid, fields[j]);
+		s += snprintf(buf, siz, "<@%lu>\n%s: ", userid, fields[i]);
 		s += ufmt(buf + s, siz - s, old);
-		if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+		if (i == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 		s += strlcpy(buf + s, " -> ", siz - s);
 		s += ufmt(buf + s, siz - s, new);
-		if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
-		((long *)&players[i])[j] = new;
+		if (i == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+		U32CAST(player)[i] = new;
 	}
 
 	/* TODO: update roles */
 
-	update_file(&players[i]);
+	update_file(player);
+	pthread_mutex_unlock(&player_mutex);
 }
 
 char *
@@ -270,7 +270,7 @@ on_correct(struct discord *client, const struct discord_message *event)
 	if (strlen(event->content) == 0) {
 		write_invalid_category(buf, sizeof(buf));
 	} else {
-		category = try (strdup(event->content));
+		category = xstrdup(event->content);
 		if (!(val = get_value(category))) {
 			write_invalid_value(buf, sizeof(buf),
 			                    "Hint: No value 😜");

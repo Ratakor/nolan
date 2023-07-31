@@ -5,8 +5,8 @@
 
 #include "nolan.h"
 
-static char *load_source(size_t *fszp);
-static char *load_sorted_source(size_t *fszp, char *kingdom);
+static char *load_source(void);
+static char *load_sorted_source(char *kingdom);
 
 void
 create_slash_source(struct discord *client)
@@ -30,71 +30,74 @@ create_slash_source(struct discord *client)
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
 
+
 char *
-load_source(size_t *fszp)
+load_source(void)
 {
 	FILE *fp;
-	char *res, line[LINE_SIZE], *end;
-	size_t mfsz = LINE_SIZE + nplayers * LINE_SIZE;
+	char *res = NULL, line[LINE_SIZE], *end;
+	size_t llen, len = 0;
 
 	fp = xfopen(STATS_FILE, "r");
-	res = try (malloc(mfsz));
-	*res = '\0';
-	while (fgets(line, LINE_SIZE, fp) != NULL) {
+	while (fgets(line, sizeof(line), fp)) {
 		/* skip everything after codex */
 		if ((end = nstrchr(line, DELIM, CODEX + 1))) {
 			*end = '\n';
 			*(end + 1) = '\0';
 		}
-		strlcat(res, line, mfsz);
+		llen = strlen(line);
+		res = xrealloc(res, len + llen + 1);
+		memcpy(res + len, line, llen);
+		len += llen;
 	}
-
 	fclose(fp);
-	*fszp = strlen(res);
+
 	return res;
 }
 
 char *
-load_sorted_source(size_t *fszp, char *kingdom)
+load_sorted_source(char *kingdom)
 {
 	FILE *fp;
 	char *res, line[LINE_SIZE], *kd, *endkd, *end;
-	size_t mfsz = LINE_SIZE + nplayers * LINE_SIZE;
+	size_t llen, len;
 
 	fp = xfopen(STATS_FILE, "r");
-	res = try (malloc(mfsz));
-	fgets(line, LINE_SIZE, fp); /* fields name */
+	if (fgets(line, LINE_SIZE, fp) == NULL) /* fields name */
+		die(1, "Field name line in %s is wrong", STATS_FILE);
 	/* skip everything after codex */
 	if ((end = nstrchr(line, DELIM, CODEX + 1))) {
 		*end = '\n';
 		*(end + 1) = '\0';
 	}
-	strlcpy(res, line, mfsz);
-	while (fgets(line, LINE_SIZE, fp) != NULL) {
+	res = xstrdup(line);
+	len = strlen(res);
+	while (fgets(line, LINE_SIZE, fp)) {
 		kd = strchr(line, DELIM) + 1;
-		if ((endkd = nstrchr(line, DELIM, 2)))
+		if ((endkd = nstrchr(line, DELIM, KINGDOM + 1)))
 			* endkd = '\0';
-		if (strcmp(kd, kingdom) == 0) {
-			if (endkd)
-				*endkd = DELIM;
-			/* skip everything after codex */
-			if ((end = nstrchr(line, DELIM, CODEX + 1))) {
-				*end = '\n';
-				*(end + 1) = '\0';
-			}
-			strlcat(res, line, mfsz);
+		if (strcmp(kd, kingdom) != 0)
+			continue;
+		if (endkd)
+			*endkd = DELIM;
+		/* skip everything after codex */
+		if ((end = nstrchr(line, DELIM, CODEX + 1))) {
+			*end = '\n';
+			*(end + 1) = '\0';
 		}
+		llen = strlen(line);
+		res = xrealloc(res, len + llen + 1);
+		memcpy(res + len, line, llen);
+		len += llen;
 	}
-
 	fclose(fp);
-	*fszp = strlen(res);
+
 	return res;
 }
 
 void
 on_source(struct discord *client, const struct discord_message *event)
 {
-	size_t fsiz = 0;
 	char *fbuf = NULL;
 
 	if (event->author->bot)
@@ -107,14 +110,14 @@ on_source(struct discord *client, const struct discord_message *event)
 
 	log_info("%s", __func__);
 	if (strlen(event->content) == 0)
-		fbuf = load_source(&fsiz);
+		fbuf = load_source();
 	else
-		fbuf = load_sorted_source(&fsiz, event->content);
+		fbuf = load_sorted_source(event->content);
 
 	struct discord_attachment attachment = {
 		.filename = FILENAME,
 		.content = fbuf,
-		.size = fsiz
+		.size = strlen(fbuf)
 	};
 	struct discord_attachments attachments = {
 		.size = 1,
@@ -131,20 +134,18 @@ void
 on_source_interaction(struct discord *client,
                       const struct discord_interaction *event)
 {
-	size_t fsiz = 0;
 	char *fbuf = NULL;
 
 	log_info("%s", __func__);
 	if (!event->data->options)
-		fbuf = load_source(&fsiz);
+		fbuf = load_source();
 	else
-		fbuf = load_sorted_source(&fsiz,
-		                          event->data->options->array[0].value);
+		fbuf = load_sorted_source(event->data->options->array[0].value);
 
 	struct discord_attachment attachment = {
 		.filename = FILENAME,
 		.content = fbuf,
-		.size = fsiz
+		.size = strlen(fbuf)
 	};
 	struct discord_attachments attachments = {
 		.size = 1,

@@ -9,8 +9,8 @@
 #include "nolan.h"
 
 static struct discord *client;
-Player players[MAX_PLAYERS];
-size_t nplayers;
+Player *player_head;
+pthread_mutex_t player_mutex = PTHREAD_MUTEX_INITIALIZER;
 const char *fields[] = {
 	"Name",
 	"Kingdom",
@@ -53,17 +53,20 @@ log_callback(log_Event *ev)
 	fflush(ev->udata);
 }
 
-void
+static void
 cleanup(void)
 {
-	size_t i;
+	Player *player, *next;
 
 	discord_cleanup(client);
 	ccord_global_cleanup();
-	for (i = 0; i < nplayers; i++) {
-		free(players[i].name);
-		free(players[i].kingdom);
+	pthread_mutex_lock(&player_mutex);
+	for (player = player_head; player; player = next) {
+		next = player->next;
+		free(player);
 	}
+	player_head = NULL;
+	pthread_mutex_unlock(&player_mutex);
 }
 
 static void
@@ -78,9 +81,6 @@ main(void)
 {
 	char *src[] = { "src", "source" };
 	char *lb[] = { "lb", "leaderboard" };
-
-	setlocale(LC_ALL, "");
-	signal(SIGINT, &sighandler);
 
 	create_folders();
 	create_stats_file();
@@ -107,6 +107,9 @@ main(void)
 	discord_set_on_command(client, "uraid", on_uraid);
 	discord_set_on_command(client, "correct", on_correct);
 	discord_set_on_command(client, "time", on_time);
+
+	setlocale(LC_ALL, "");
+	signal(SIGINT, &sighandler);
 
 	discord_run(client);
 

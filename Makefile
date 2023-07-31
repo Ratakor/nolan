@@ -7,6 +7,7 @@ CC         = cc
 LIBRE_DIR  = libre
 SRC_DIR    = src
 
+DFLAGS    ?= -O0 -g -DDALLOC
 CFLAGS    ?= -O3
 LDFLAGS   ?= -s
 
@@ -20,15 +21,12 @@ echo:
 	@echo "LDFLAGS  = ${LDFLAGS}"
 
 build:
-	@CFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ${MAKE} -C ${LIBRE_DIR}
 	@CFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ${MAKE} -C ${SRC_DIR}
 
 debug:
-	@${MAKE} -C ${LIBRE_DIR}
-	@${MAKE} -C ${SRC_DIR} $@
+	@CFLAGS="${DFLAGS}" ${MAKE} -C ${SRC_DIR}
 
 clean:
-	@${MAKE} -C ${LIBRE_DIR} $@
 	@${MAKE} -C ${SRC_DIR} $@
 
 install: all

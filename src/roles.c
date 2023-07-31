@@ -59,7 +59,7 @@ level(struct discord *client, u64snowflake userid, Player *player)
 void
 playtime(struct discord *client, u64snowflake userid, Player *player)
 {
-	long playtime = player->playtime / 24;
+	uint32_t playtime = player->playtime / 24;
 
 	if (playtime >= 150) {
 		discord_add_guild_member_role(client, ROLE_GUILD_ID, userid,

@@ -1,6 +1,5 @@
 /* Copywrong © 2023 Ratakor. See LICENSE file for license details. */
 
-#include <err.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,20 +11,20 @@
 
 struct Field {
 	const char *key;
-	const int val;
+	const unsigned int val;
 	const unsigned int keylen;
 };
 
 enum { ENGLISH, FRENCH };
 
-static long playtime_to_long(char *playtime, int lang);
+static uint32_t playtime_to_u32(char *playtime, int lang);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
 static char *get_quote(void);
 static size_t write_quote(char *buf, size_t siz);
-static void create_player(Player *player, unsigned int i);
-static void update_player(char *buf, size_t siz, Player *player, unsigned int i);
-static unsigned int update_players(char *buf, size_t siz, Player *player);
+static void update_player(char *buf, size_t siz, Player *player,
+                          Player *new_player);
+static Player *update_players(char *buf, size_t siz, Player *new_player);
 static void stats(char *buf, size_t siz, char *url, char *username,
                   u64snowflake userid, u64snowflake guild_id,
                   struct discord *client);
@@ -115,61 +114,70 @@ check_delim(const char *val)
 	return false;
 }
 
-long
-playtime_to_long(char *playtime, int lang)
+uint32_t
+playtime_to_u32(char *playtime, int lang)
 {
-	char *p, dayname[32], *pdn = dayname;
-	long days, hours;
+	const char *dayname = NULL, *pdn;
+	char *p;
+	uint32_t days, hours;
 
 	if (lang == ENGLISH)
-		strlcpy(dayname, "days, ", sizeof(dayname));
+		dayname = "days, ";
 	else if (lang == FRENCH)
-		strlcpy(dayname, "jours, ", sizeof(dayname));
+		dayname = "jours, ";
 	else
-		errx(1, "%s:%d %s: New language not correctly added",
-		     __FILE__, __LINE__, __func__);
+		die(1, "%s:%d %s: New language not correctly added",
+		    __FILE__, __LINE__, __func__);
 
-	days = strtol(playtime, NULL, 10);
+	days = strtoul(playtime, NULL, 10);
 	if ((p = strchr(playtime, dayname[0])) == 0)
 		return days; /* less than a day of playtime */
+	pdn = dayname;
 	while (*pdn && (*p++ == *pdn++));
-	hours = strtol(p, NULL, 10);
+	hours = strtoul(p, NULL, 10);
 
 	return days * 24 + hours;
 }
 
 char *
-playtime_to_str(long playtime)
+playtime_to_str(uint32_t playtime)
 {
-	long days = playtime / 24;
-	long hours = playtime % 24;
-	size_t siz = 36;
+	uint32_t days, hours;
+	const size_t siz = 36;
 	char *buf;
 
-	buf = try (malloc(siz));
+	days = playtime / 24;
+	hours = playtime % 24;
+	buf = xmalloc(siz);
 	dalloc_comment(buf, "playtime_to_str buf");
 	switch (hours) {
 	case 0:
 		if (days <= 1)
-			snprintf(buf, siz, "%ld day", days);
+			snprintf(buf, siz, "%"PRIu32" day", days);
 		else
-			snprintf(buf, siz, "%ld days", days);
+			snprintf(buf, siz, "%"PRIu32" days", days);
 		break;
 	case 1:
-		if (days == 0)
-			snprintf(buf, siz, "%ld hour", hours);
-		else if (days == 1)
-			snprintf(buf, siz, "%ld day, %ld hour", days, hours);
-		else
-			snprintf(buf, siz, "%ld days, %ld hour", days, hours);
+		if (days == 0) {
+			snprintf(buf, siz, "%"PRIu32" hour", hours);
+		} else if (days == 1) {
+			snprintf(buf, siz, "%"PRIu32" day, %"PRIu32" hour",
+			         days, hours);
+		} else {
+			snprintf(buf, siz, "%"PRIu32" days, %"PRIu32" hour",
+			         days, hours);
+		}
 		break;
 	default:
-		if (days == 0)
-			snprintf(buf, siz, "%ld hours", hours);
-		else if (days == 1)
-			snprintf(buf, siz, "%ld day, %ld hours", days, hours);
-		else
-			snprintf(buf, siz, "%ld days, %ld hours", days, hours);
+		if (days == 0) {
+			snprintf(buf, siz, "%"PRIu32" hours", hours);
+		} else if (days == 1) {
+			snprintf(buf, siz, "%"PRIu32" day, %"PRIu32" hours",
+			         days, hours);
+		} else {
+			snprintf(buf, siz, "%"PRIu32" days, %"PRIu32" hours",
+			         days, hours);
+		}
 		break;
 	}
 
@@ -177,10 +185,10 @@ playtime_to_str(long playtime)
 }
 
 /* trim everything that is not a number and replace | with 1 */
-long
+uint32_t
 trim_stat(const char *str)
 {
-	long stat = 0;
+	uint32_t stat = 0;
 
 	do {
 		if (*str >= '0' && *str <= '9')
@@ -198,7 +206,7 @@ parse_line(Player *player, char *line)
 	const struct Field *field;
 	unsigned int lang, i;
 	size_t langlen;
-	long stat;
+	uint32_t stat;
 
 	for (lang = 0; lang < LENGTH(languages); lang++) {
 		if (lang == ENGLISH)
@@ -206,8 +214,8 @@ parse_line(Player *player, char *line)
 		else if (lang == FRENCH)
 			langlen = LENGTH(french);
 		else
-			errx(1, "%s:%d %s: New language not correctly added",
-			     __FILE__, __LINE__, __func__);
+			die(1, "%s:%d %s: New language not correctly added",
+			    __FILE__, __LINE__, __func__);
 
 		for (i = 0; i < langlen; i++) {
 			field = &languages[lang][i];
@@ -224,10 +232,11 @@ parse_line(Player *player, char *line)
 	switch (field->val) {
 	case KINGDOM:
 		if (!check_delim(line + field->keylen + 1))
-			player->kingdom = line + field->keylen + 1;
+			strlcpy(player->kingdom, line + field->keylen + 1,
+			        MAX_KINGDOM_SIZ);
 		break;
 	case PLAYTIME:
-		player->playtime = playtime_to_long(line + field->keylen, lang);
+		player->playtime = playtime_to_u32(line + field->keylen, lang);
 		break;
 	case LEVEL:
 		stat = trim_stat(line);
@@ -237,7 +246,7 @@ parse_line(Player *player, char *line)
 	default:
 		stat = trim_stat(line);
 		if (stat)
-			((long *)player)[field->val] = stat;
+			U32CAST(player)[field->val] = stat;
 		break;
 	}
 }
@@ -295,7 +304,7 @@ get_quote(void)
 	/* change '*' to "\*", must need a large enough buffer */
 	p = quote;
 	while ((p = strchr(p, '*')) != NULL) {
-		tmp = try (strdup(p));
+		tmp = xstrdup(p);
 		op = p;
 		otmp = tmp;
 		*p++ = '\\';
@@ -321,48 +330,31 @@ write_quote(char *buf, size_t siz)
 }
 
 void
-create_player(Player *player, unsigned int i)
-{
-	unsigned int j;
-
-	players[i].name = try (calloc(1, MAX_USERNAME_LEN));
-	players[i].kingdom = try (calloc(1, MAX_KINGDOM_LEN));
-	strlcpy(players[i].name, player->name, MAX_USERNAME_LEN);
-	strlcpy(players[i].kingdom, player->kingdom, MAX_KINGDOM_LEN);
-	for (j = 2; j < LENGTH(fields); j++)
-		((long *)&players[i])[j] = ((long *)player)[j];
-
-}
-
-void
-update_player(char *buf, size_t siz, Player *player, unsigned int i)
+update_player(char *buf, size_t siz, Player *player, Player *new_player)
 {
 	char *plto, *pltn, *pltd;
-	unsigned int j;
-	long old, new, diff;
-	size_t s = 0;
-
-	/* keep this commented to not update name and keep corrected change */
-	/* strlcpy(players[i].name, player->name, MAX_USERNAME_LEN); */
+	size_t i, s = 0;
+	uint32_t old, new;
+	int32_t diff;
 
 	s += snprintf(buf + s, siz - s, "**%s**'s profile has been updated.\n",
-	              players[i].name);
+	              player->name);
 
-	if (strcmp(players[i].kingdom, player->kingdom) != 0) {
+	if (strcmp(player->kingdom, new_player->kingdom) != 0) {
 		s += snprintf(buf + s, siz - s, "%s: %s -> %s\n", fields[1],
-		              players[i].kingdom, player->kingdom);
-		strlcpy(players[i].kingdom, player->kingdom, MAX_KINGDOM_LEN);
+		              player->kingdom, new_player->kingdom);
+		strlcpy(player->kingdom, new_player->kingdom, MAX_KINGDOM_SIZ);
 	}
 
 	/* -2 to not include update and userid */
-	for (j = 2; j < LENGTH(fields) - 2; j++) {
+	for (i = 2; i < LENGTH(fields) - 2; i++) {
 		if (s >= siz) {
 			log_warn("%s: string truncation", __func__);
 			return;
 		}
 
-		old = ((long *)&players[i])[j];
-		new = ((long *)player)[j];
+		old = U32CAST(player)[i];
+		new = U32CAST(new_player)[i];
 		diff = new - old;
 		/*
 		 * this is to prevent random tesseract error but block the user
@@ -371,40 +363,40 @@ update_player(char *buf, size_t siz, Player *player, unsigned int i)
 		if (new == 0 || diff == 0)
 			continue;
 		/* don't update if stat decreases except for special cases */
-		if (diff < 0 && j != ASCENSION     && j != GLOBAL_RANK &&
-		                j != REGIONAL_RANK && j != COMPETITIVE_RANK)
+		if (diff < 0 && i != ASCENSION     && i != GLOBAL_RANK &&
+		                i != REGIONAL_RANK && i != COMPETITIVE_RANK)
 			continue;
 
-		if (j == PLAYTIME) {
+		if (i == PLAYTIME) {
 			plto = playtime_to_str(old);
 			pltn = playtime_to_str(new);
 			pltd = playtime_to_str(diff);
 			s += snprintf(buf + s, siz - s, "%s: %s -> %s (+%s)\n",
-			              fields[7], plto, pltn, pltd);
+			              fields[i], plto, pltn, pltd);
 			free(plto);
 			free(pltn);
 			free(pltd);
 		} else {
-			s += snprintf(buf + s, siz - s, "%s: ", fields[j]);
+			s += snprintf(buf + s, siz - s, "%s: ", fields[i]);
 			s += ufmt(buf + s, siz - s, old);
-			if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+			if (i == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 			s += strlcpy(buf + s, " -> ", siz - s);
 			s += ufmt(buf + s, siz - s, new);
-			if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+			if (i == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 			s += strlcpy(buf + s, " (", siz - s);
 			s += ifmt(buf + s, siz - s, diff);
-			if (j == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
+			if (i == DISTANCE) s += strlcpy(buf + s, "m", siz - s);
 			s += strlcpy(buf + s, ")\n", siz - s);
 		}
 
 		/* update player */
-		((long *)&players[i])[j] = new;
+		U32CAST(player)[i] = new;
 	}
 
 	s += snprintf(buf + s, siz - s,
 	              "\nLast update was <t:%ld:R> on <t:%ld:f>\n",
-	              players[i].update, players[i].update);
-	players[i].update = player->update;
+	              player->update, player->update);
+	player->update = new_player->update;
 	if (s >= siz) {
 		log_warn("string truncation", __func__);
 		return;
@@ -424,27 +416,27 @@ void
 update_file(Player *player)
 {
 	FILE *w, *r;
-	char line[LINE_SIZE], *startuid, tmpfname[128];
+	char line[LINE_SIZE], *startuid;
 	u64snowflake userid;
 	unsigned int i;
-	int found = 0;
+	bool found = false;
 
-	strlcpy(tmpfname, SAVE_FOLDER, sizeof(tmpfname));
-	strlcat(tmpfname, "tmpfile", sizeof(tmpfname));
 	r = xfopen(STATS_FILE, "r");
-	w = xfopen(tmpfname, "w");
+	w = xfopen(SAVE_FOLDER "tmpfile", "w");
 
 	while (fgets(line, LINE_SIZE, r)) {
 		if ((startuid = strrchr(line, DELIM)) == NULL)
-			errx(1, "Line \"%s\" in %s is wrong", line, STATS_FILE);
-		userid = strtoul(startuid + 1, NULL, 10);
+			die(1, "Line \"%s\" in %s is wrong", line, STATS_FILE);
+		userid = strtoull(startuid + 1, NULL, 10);
 		if (userid == player->userid) {
-			found = 1;
+			found = true;
 			fprintf(w, "%s%c", player->name, DELIM);
 			fprintf(w, "%s%c", player->kingdom, DELIM);
-			for (i = 2; i < LENGTH(fields) - 1; i++)
-				fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
-			fprintf(w, "%lu\n", player->userid);
+			for (i = 2; i < LENGTH(fields) - 2; i++)
+				fprintf(w, "%"PRIu32"%c", U32CAST(player)[i],
+				        DELIM);
+			fprintf(w, "%ld%c", player->update, DELIM);
+			fprintf(w, "%"PRIu64"\n", player->userid);
 		} else {
 			fprintf(w, "%s", line);
 		}
@@ -452,44 +444,42 @@ update_file(Player *player)
 	if (!found) {
 		fprintf(w, "%s%c", player->name, DELIM);
 		fprintf(w, "%s%c", player->kingdom, DELIM);
-		for (i = 2; i < LENGTH(fields) - 1; i++)
-			fprintf(w, "%ld%c", ((long *)player)[i], DELIM);
-		fprintf(w, "%lu\n", player->userid);
+		for (i = 2; i < LENGTH(fields) - 2; i++)
+			fprintf(w, "%"PRIu32"%c", U32CAST(player)[i], DELIM);
+		fprintf(w, "%ld%c", player->update, DELIM);
+		fprintf(w, "%"PRIu64"\n", player->userid);
 	}
 
 	fclose(r);
 	fclose(w);
 	remove(STATS_FILE);
-	rename(tmpfname, STATS_FILE);
+	rename(SAVE_FOLDER "tmpfile", STATS_FILE);
 }
 
-/* update players, write the update msg and update file, returns player's index */
-unsigned int
-update_players(char *buf, size_t siz, Player *player)
+/* update players, write the update msg and update file, returns updated plyr */
+Player *
+update_players(char *buf, size_t siz, Player *new_player)
 {
-	unsigned int i = 0;
+	Player *player;
 	size_t s = 0;
 
-	while (i < nplayers && players[i].userid != player->userid)
-		i++;
-
+	player = find_player(new_player->userid);
 	s += write_quote(buf + s, siz - s);
-	if (i == nplayers) { /* new player */
-		nplayers++;
-		if (nplayers > MAX_PLAYERS)
-			errx(1, "There is too much players (max:%d)", MAX_PLAYERS);
-		create_player(player, i);
+	if (player == NULL) { /* new player */
+		player = xmemdup(new_player, sizeof(*new_player));
+		player->next = player_head;
+		player_head = player;
 		s += snprintf(buf + s, siz - s,
 		              "**%s** has been registrated in the database.\n",
 		              player->name);
-		write_info(buf + s, siz - s, &players[i]);
+		write_info(buf + s, siz - s, player);
 	} else {
-		update_player(buf + s, siz - s, player, i);
+		update_player(buf + s, siz - s, player, new_player);
 	}
 
-	update_file(&players[i]);
+	update_file(player);
 
-	return i;
+	return player;
 }
 
 void
@@ -498,7 +488,7 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 {
 	unsigned int i, ret;
 	char *txt, fname[128];
-	Player player;
+	Player local_player, *player;
 
 	/* not always a jpg but idc */
 	snprintf(fname, sizeof(fname), "%s/%lu.jpg", IMAGES_FOLDER, userid);
@@ -513,34 +503,33 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 		return;
 	}
 
-	memset(&player, 0, sizeof(player));
-	player.name = username;
-	player.userid = userid;
-	player.update = time(NULL);
-	for_line(&player, txt);
-	/* txt contains player.kingdom */
+	memset(&local_player, 0, sizeof(local_player));
+	strlcpy(local_player.name, username, MAX_USERNAME_SIZ);
+	local_player.userid = userid;
+	local_player.update = time(NULL);
+	for_line(&local_player, txt);
+	free(txt);
 
 	/* detect wrong images */
 	i = 2;
-	while (((long *)&player)[i] == 0 && i++ < LENGTH(fields) - 2);
-	if (i == LENGTH(fields) - 2) {
-		free(txt);
+	while (U32CAST(&local_player)[i] == 0 && i++ < LENGTH(fields) - 2);
+	if (i == LENGTH(fields) - 2)
 		return;
-	}
 
-	if (player.kingdom == NULL)
-		player.kingdom = "(null)";
+	if (local_player.kingdom[0] == 0)
+		strlcpy(local_player.kingdom, "(null)", MAX_KINGDOM_SIZ);
 
-	i = update_players(buf, siz, &player);
-	free(txt);
-
+	pthread_mutex_lock(&player_mutex);
+	player = update_players(buf, siz, &local_player);
 #ifdef DEVEL
 	UNUSED(guild_id);
 	UNUSED(client);
+	UNUSED(player);
 #else
 	if (guild_id == ROLE_GUILD_ID)
-		update_roles(client, &players[i]);
+		update_roles(client, player);
 #endif /* DEVEL */
+	pthread_mutex_unlock(&player_mutex);
 }
 
 void
@@ -571,7 +560,7 @@ on_stats_interaction(struct discord *client,
 	json_char *attachment;
 
 	log_info("%s", __func__);
-	attachment = try (strdup(event->data->resolved->attachments));
+	attachment = xstrdup(event->data->resolved->attachments);
 	url = strstr(attachment, "\"url\":");
 	if (!url) {
 		free(attachment);

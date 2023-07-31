@@ -6,12 +6,15 @@
 #include "nolan.h"
 
 static void write_invalid(char *buf, size_t siz);
-static int compare(const void *p1, const void *p2);
-static void write_player(char *buf, size_t siz, unsigned int i, int author);
+static void split(Player *head, Player **front, Player **back);
+static Player *compare(Player *p1, Player *p2);
+static void sort(Player **head);
+static void write_player(char *buf, size_t siz, Player *player, unsigned rank,
+                         bool author);
 static void write_leaderboard(char *buf, size_t siz, u64snowflake userid);
 static void leaderboard(char *buf, size_t siz, char *txt, u64snowflake userid);
 
-static int category = 0;
+static unsigned int category = 0;
 
 void
 create_slash_leaderboard(struct discord *client)
@@ -136,41 +139,97 @@ write_invalid(char *buf, size_t siz)
 	}
 }
 
-int
-compare(const void *p1, const void *p2)
+void
+split(Player *head, Player **front, Player **back)
 {
-	const long l1 = ((const long *)(const Player *)p1)[category];
-	const long l2 = ((const long *)(const Player *)p2)[category];
+	Player *fast, *slow;
 
-	if (category == GLOBAL_RANK || category == COMPETITIVE_RANK) {
-		if (l1 == 0)
-			return 1;
-		if (l2 == 0)
-			return -1;
-		return l1 - l2;
+	slow = head;
+	fast = head->next;
+
+	while (fast) {
+		fast = fast->next;
+		if (fast) {
+			slow = slow->next;
+			fast = fast->next;
+		}
+
 	}
 
-	return l2 - l1;
+	*front = head;
+	*back = slow->next;
+	slow->next = NULL;
+}
+
+Player *
+compare(Player *p1, Player *p2)
+{
+	Player *res;
+	uint32_t s1, s2;
+
+	if (p1 == NULL)
+		return p2;
+	if (p2 == NULL)
+		return p1;
+
+	s1 = U32CAST(p1)[category];
+	s2 = U32CAST(p2)[category];
+
+	if (category == GLOBAL_RANK || category == COMPETITIVE_RANK) {
+		if (s2 == 0 || (s1 != 0 && s1 < s2)) {
+			res = p1;
+			res->next = compare(p1->next, p2);
+		} else {
+			res = p2;
+			res->next = compare(p1, p2->next);
+		}
+	} else {
+		if (s1 > s2) {
+			res = p1;
+			res->next = compare(p1->next, p2);
+		} else {
+			res = p2;
+			res->next = compare(p1, p2->next);
+		}
+
+	}
+
+	return res;
 }
 
 void
-write_player(char *buf, size_t siz, unsigned int i, int author)
+sort(Player **head)
 {
-	size_t ssiz = 32;
-	char *plt, stat[ssiz];
+	Player *front, *back;
+
+	if ((head == NULL) || (*head == NULL) || ((*head)->next == NULL))
+		return;
+
+	split(*head, &front, &back);
+	sort(&front);
+	sort(&back);
+
+	*head = compare(front, back);
+}
+
+void
+write_player(char *buf, size_t siz, Player *player, unsigned rank, bool author)
+{
+	char *plt, stat[32];
 
 	if (author)
-		snprintf(buf, siz, "%d. **%s**: ", i + 1, players[i].name);
+		snprintf(buf, siz, "%u. **%s**: ", rank, player->name);
 	else
-		snprintf(buf, siz, "%d. %s: ", i + 1, players[i].name);
+		snprintf(buf, siz, "%u. %s: ", rank, player->name);
 	if (category == PLAYTIME) {
-		plt = playtime_to_str(((long *)&players[i])[category]);
+		plt = playtime_to_str(U32CAST(player)[category]);
 		strlcat(buf, plt, siz);
 		free(plt);
 	} else {
-		ufmt(stat, ssiz, ((long *)&players[i])[category]);
+		ufmt(stat, sizeof(stat), U32CAST(player)[category]);
 		strlcat(buf, stat, siz);
-		if (i == DISTANCE) strlcat(buf, "m", siz);
+		if (category == DISTANCE)
+			strlcat(buf, "m", siz);
 	}
 	strlcat(buf, "\n", siz);
 }
@@ -178,49 +237,56 @@ write_player(char *buf, size_t siz, unsigned int i, int author)
 void
 write_leaderboard(char *buf, size_t siz, u64snowflake userid)
 {
-	int in_lb = 0;
-	unsigned int i, lb_max = MIN(nplayers, LB_MAX);
-	char player[LINE_SIZE];
-	/* siz = (lb_max + 2) * 64; */
+	Player *player;
+	char player_buf[256];
+	unsigned int rank = 1;
+	bool in_lb = false;
 
 	strlcpy(buf, fields[category], siz);
 	strlcat(buf, ":\n", siz);
-	for (i = 0; i < lb_max; i++) {
-		if (userid == players[i].userid) {
-			in_lb = 1;
-			write_player(player, sizeof(player), i, 1);
+	for (player = player_head; player; player = player->next, rank++) {
+		if (rank > LB_MAX)
+			break;
+
+		if (player->userid == userid) {
+			in_lb = true;
+			write_player(player_buf, sizeof(player_buf), player,
+			             rank, true);
 		} else {
-			write_player(player, sizeof(player), i, 0);
+			write_player(player_buf, sizeof(player_buf), player,
+			             rank, false);
 		}
-		if (strlcat(buf, player, siz) >= siz) {
-			log_warn("%s: string truncation\n\
-\033[33mhint:\033[39m this is probably because LB_MAX is too big", __func__);
+		if (strlcat(buf, player_buf, siz) >= siz) {
+			log_warn("%s: string truncation\n"
+			         "\033[33mhint:\033[39m this is probably "
+			         "because LB_MAX is too big", __func__);
 			return;
 		}
 	}
 
-	if (!in_lb) {
-		while (i < nplayers && players[i].userid != userid)
-			i++;
-		if (i == nplayers) /* not a player */
-			return;
-		strlcat(buf, "...\n", siz);
-		write_player(player, sizeof(player), i, 1);
-		if (strlcat(buf, player, siz) >= siz) {
-			log_warn("%s: string truncation\n\
-\033[33mhint:\033[39m this is probably because LB_MAX is too big", __func__);
-		}
+	if (in_lb)
+		return;
+
+	for (; player && player->userid != userid; player = player->next, rank++);
+	if (player == NULL) /* not a player */
+		return;
+
+	strlcat(buf, "...\n", siz);
+	write_player(player_buf, sizeof(player_buf), player, rank, true);
+	if (strlcat(buf, player_buf, siz) >= siz) {
+		log_warn("%s: string truncation\n\033[33mhint:\033[39m this "
+		         "is probably because LB_MAX is too big", __func__);
 	}
 }
 
 void
-leaderboard(char *buf, size_t siz, char *categ, u64snowflake userid)
+leaderboard(char *buf, size_t siz, char *txt, u64snowflake userid)
 {
 	unsigned int i = 2; /* ignore name and kingdom */
 
 	/* -2 to not include userid and update */
 	while (i < LENGTH(fields) - 2 &&
-	                strcasecmp(fields[i], categ) != 0)
+	                strcasecmp(fields[i], txt) != 0)
 		i++;
 
 	if (i == LENGTH(fields) - 2 || i == REGIONAL_RANK) {
@@ -228,9 +294,11 @@ leaderboard(char *buf, size_t siz, char *categ, u64snowflake userid)
 		return;
 	}
 
+	pthread_mutex_lock(&player_mutex);
 	category = i;
-	qsort(players, nplayers, sizeof(players[0]), compare);
+	sort(&player_head);
 	write_leaderboard(buf, siz, userid);
+	pthread_mutex_unlock(&player_mutex);
 }
 
 void

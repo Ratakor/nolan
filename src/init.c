@@ -2,7 +2,6 @@
 
 #include <sys/stat.h>
 
-#include <err.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,7 +23,7 @@ create_folders(void)
 			continue;
 
 		if (mkdir(folders[i], 0755) == -1)
-			err(1, "mkdir: %s", folders[i]);
+			die(1, "mkdir: %s:", folders[i]);
 		else
 			log_info("Created %s", folders[i]);
 	}
@@ -76,12 +75,15 @@ void
 init_players(void)
 {
 	FILE *fp;
+	Player *player;
 	char line[LINE_SIZE], *p, *delim;
-	unsigned int i;
+	size_t i, line_counter = 1;
 
 	fp = xfopen(STATS_FILE, "r");
 	fgets(line, LINE_SIZE, fp); /* discard description line */
 	while ((p = fgets(line, LINE_SIZE, fp)) != NULL) {
+		line_counter++;
+		player = xcalloc(1, sizeof(*player));
 		i = 0;
 		delim = p;
 		/* -1 because the last field in the file finish with a '\n' */
@@ -90,27 +92,32 @@ init_players(void)
 				continue;
 
 			*delim = '\0';
-			if (i == NAME) {
-				players[nplayers].name = try (calloc(1, MAX_USERNAME_LEN));
-				strlcpy(players[nplayers].name, p, MAX_USERNAME_LEN);
-			} else if (i == KINGDOM) {
-				players[nplayers].kingdom = try (calloc(1, MAX_KINGDOM_LEN));
-				strlcpy(players[nplayers].kingdom, p, MAX_KINGDOM_LEN);
-			} else {
-				((long *)&players[nplayers])[i] = atol(p);
+			switch (i) {
+			case NAME:
+				strlcpy(player->name, p, MAX_USERNAME_SIZ);
+				break;
+			case KINGDOM:
+				strlcpy(player->kingdom, p, MAX_KINGDOM_SIZ);
+				break;
+			case UPDATE:
+				player->update = strtol(p, NULL, 10);
+				break;
+			default:
+				U32CAST(player)[i] = strtoul(p, NULL, 10);
+				break;
 			}
 			p = delim + 1;
 			i++;
 		}
 		if (i != LENGTH(fields) - 1) {
-			errx(1, "Player in %s on line %lu is missing a field",
-			     STATS_FILE, nplayers + 1);
+			die(1, "Player in %s on line %zu is missing a field",
+			    STATS_FILE, line_counter);
 		}
-		players[nplayers].userid = strtoul(p, NULL, 10);
-
-		if (++nplayers > MAX_PLAYERS)
-			errx(1, "There is too much players to load (max:%d)",
-			     MAX_PLAYERS);
+		player->userid = strtoull(p, NULL, 10);
+		pthread_mutex_lock(&player_mutex);
+		player->next = player_head;
+		player_head = player;
+		pthread_mutex_unlock(&player_mutex);
 	}
 	fclose(fp);
 }

@@ -18,9 +18,6 @@ enum {
 
 };
 
-static void discord_send_message(struct discord *client,
-                                 const u64snowflake channel_id,
-                                 const char *fmt, ...);
 static char *skip_to_slayers(char *txt);
 static char *trim_name(char *name);
 static uint32_t trim_dmg(char *str);
@@ -50,34 +47,12 @@ static const char *garbageslayer[] = {
 	"討 伐 者"
 };
 
-/* this should be in util.c but it's only used here*/
-void
-discord_send_message(struct discord *client, const u64snowflake channel_id,
-                     const char *fmt, ...)
-{
-	char buf[MAX_MESSAGE_LEN];
-	size_t rsiz;
-	va_list ap;
-
-	va_start(ap, fmt);
-	rsiz = vsnprintf(buf, sizeof(buf), fmt, ap);
-	va_end(ap);
-
-	if (rsiz >= sizeof(buf))
-		log_warn("%s: string truncation", __func__);
-
-	struct discord_create_message msg = {
-		.content = buf
-	};
-	discord_create_message(client, channel_id, &msg, NULL);
-}
-
 char *
 skip_to_slayers(char *txt)
 {
 	char *line = txt, *endline;
 	unsigned int i;
-	int found = 0;
+	bool found = false;
 
 	while (line && !found) {
 		endline = strchr(line, '\n');
@@ -85,7 +60,7 @@ skip_to_slayers(char *txt)
 			*endline = '\0';
 		for (i = 0; i < LENGTH(delims); i++) {
 			if (strcmp(line, delims[i]) == 0) {
-				found = 1;
+				found = true;
 				break;
 			}
 		}
@@ -158,7 +133,7 @@ get_slayers(Slayer slayers[], char *txt)
 	char *line = txt, *endline;
 	size_t nslayers = 0;
 	unsigned int i;
-	int found = 0;
+	bool found = false;
 
 	if (txt == NULL)
 		return 0;
@@ -179,7 +154,7 @@ get_slayers(Slayer slayers[], char *txt)
 		if (!found) { /* skip Slayer */
 			for (i = 0; i < LENGTH(garbageslayer); i++) {
 				if (strcmp(line, garbageslayer[i]) == 0) {
-					found = 1;
+					found = true;
 					break;
 				}
 			}
@@ -189,7 +164,7 @@ get_slayers(Slayer slayers[], char *txt)
 			}
 
 		}
-		slayers[nslayers].name = try (strdup(trim_name(line)));
+		slayers[nslayers].name = xstrdup(trim_name(line));
 		dalloc_comment(slayers[nslayers].name, "slayer name");
 		line = endline + 1;
 
@@ -215,7 +190,7 @@ get_slayers(Slayer slayers[], char *txt)
 			break;
 		}
 		line = endline + 1;
-		slayers[nslayers].found_in_file = 0;
+		slayers[nslayers].found_in_file = false;
 		nslayers++;
 	}
 
@@ -263,7 +238,7 @@ save_to_file(Slayer slayers[], size_t nslayers)
 				continue;
 			if (strncasecmp(slayers[i].name, line,
 			                strlen(slayers[i].name)) == 0) {
-				slayers[i].found_in_file = 1;
+				slayers[i].found_in_file = true;
 				break;
 			}
 		}
@@ -296,8 +271,8 @@ raids(struct discord_attachment *attachment, const char *lang, Slayer slayers[])
 {
 	char *txt = NULL, fname[PATH_MAX];
 	size_t nslayers;
-	CURLcode ret;
-	int is_png;
+	CURLcode code;
+	bool is_png;
 
 	is_png = (strcmp(attachment->content_type, "image/png") == 0);
 	if (is_png)
@@ -307,8 +282,8 @@ raids(struct discord_attachment *attachment, const char *lang, Slayer slayers[])
 		snprintf(fname, sizeof(fname), "%s/%s.jpg",
 		         IMAGES_FOLDER, attachment->filename);
 
-	if ((ret = curl_file(attachment->url, fname)) != 0) {
-		log_error("curl failed CURLcode: %u", ret);
+	if ((code = curl_file(attachment->url, fname)) != 0) {
+		log_error("curl failed CURLcode: %u", code);
 		return DOWNLOAD_FAILED;
 	}
 
@@ -346,7 +321,7 @@ parse_file(char *fname, Slayer slayers[], size_t *nslayers)
 		if (i < *nslayers) {
 			slayers[i].damage += dmg;
 		} else {
-			slayers[i].name = try (strdup(line));
+			slayers[i].name = xstrdup(line);
 			dalloc_comment(slayers[i].name,
 			               "parse_file slayers name");
 			slayers[i].damage = dmg;
@@ -407,7 +382,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 	Slayer *slayers;
 	char *lang;
 	size_t i;
-	int twice = 0;
+	unsigned int time_run = 0;
 
 	for (i = 0; i < LENGTH(cn_slayer_ids); i++) {
 		if (event->author->id == cn_slayer_ids[i]) {
@@ -425,7 +400,7 @@ on_raids(struct discord *client, const struct discord_message *event)
 
 lang_found:
 
-	slayers = try (calloc(MAX_SLAYERS, sizeof(*slayers)));
+	slayers = xcalloc(MAX_SLAYERS, sizeof(*slayers));
 	for (i = 0; i < (size_t)event->attachments->size; i++) {
 run_again:
 		switch (raids(event->attachments->array + i, lang, slayers)) {
@@ -449,11 +424,11 @@ run_again:
 			break;
 		case PARSING_FAILED:
 			/* TODO: this is ugly */
-			if (!twice) {
-				twice = 1;
+			if (time_run < 3) {
+				time_run++;
 				goto run_again;
 			}
-			log_error("parsing failed twice with lang:%s from %s",
+			log_error("parsing failed with lang:%s from %s",
 			          lang, event->author->username);
 			/* TODO: just me being lazy */
 			if (strcmp(lang, "jpn") == 0) {
@@ -466,7 +441,7 @@ run_again:
 			}
 			break;
 		}
-		twice = 0;
+		time_run = 0;
 		memset(slayers, 0, MAX_SLAYERS * sizeof(*slayers));
 	}
 
