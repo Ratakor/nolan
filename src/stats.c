@@ -10,7 +10,7 @@
 #define URL "https://api.oss117quotes.xyz/v1/random"
 
 struct Field {
-	const char *key;
+	const char *const key;
 	const unsigned int val;
 	const unsigned int keylen;
 };
@@ -102,16 +102,6 @@ create_slash_stats(struct discord *client)
 		}
 	};
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
-}
-
-bool
-check_delim(const char *val)
-{
-	do {
-		if (*val == DELIM)
-			return true;
-	} while (*val++);
-	return false;
 }
 
 uint32_t
@@ -231,7 +221,7 @@ parse_line(Player *player, char *line)
 
 	switch (field->val) {
 	case KINGDOM:
-		if (!check_delim(line + field->keylen + 1))
+		if (VALID_STATS(line + field->keylen + 1))
 			strlcpy(player->kingdom, line + field->keylen + 1,
 			        MAX_KINGDOM_SIZ);
 		break;
@@ -319,13 +309,16 @@ get_quote(void)
 size_t
 write_quote(char *buf, size_t siz)
 {
-	char *quote = get_quote();
+	char *quote;
 	size_t ret;
 
+	quote = get_quote();
 	if (quote == NULL)
 		return 0;
+
 	ret = snprintf(buf, siz, "%s\n\n", quote);
 	free(quote);
+
 	return ret;
 }
 
@@ -535,34 +528,31 @@ stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
 }
 
 void
-on_stats(struct discord *client, const struct discord_message *event)
+on_stats(struct discord *client, const struct discord_message *ev)
 {
-	char buf[MAX_MESSAGE_LEN];
+	char buf[MAX_MESSAGE_LEN] = "";
 
 	log_info("%s", __func__);
 	stats(buf,
 	      sizeof(buf),
-	      event->attachments->array[0].url,
-	      event->author->username,
-	      event->author->id,
-	      event->guild_id,
+	      ev->attachments->array[0].url,
+	      ev->author->username,
+	      ev->author->id,
+	      ev->guild_id,
 	      client);
 
-	struct discord_create_message msg = {
-		.content = buf
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
+	discord_send_message(client, ev->channel_id, "%s", buf);
 }
 
 void
 on_stats_interaction(struct discord *client,
-                     const struct discord_interaction *event)
+                     const struct discord_interaction *ev)
 {
 	char buf[MAX_MESSAGE_LEN] = "", *url, *endurl;
 	json_char *attachment;
 
 	log_info("%s", __func__);
-	attachment = xstrdup(event->data->resolved->attachments);
+	attachment = xstrdup(ev->data->resolved->attachments);
 	url = strstr(attachment, "\"url\":");
 	if (!url) {
 		free(attachment);
@@ -579,20 +569,11 @@ on_stats_interaction(struct discord *client,
 	stats(buf,
 	      sizeof(buf),
 	      url,
-	      event->member->user->username,
-	      event->member->user->id,
-	      event->guild_id,
+	      ev->member->user->username,
+	      ev->member->user->id,
+	      ev->guild_id,
 	      client);
 	free(attachment);
 
-	struct discord_interaction_response params = {
-		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
-		.data = &(struct discord_interaction_callback_data)
-		{
-			.content = buf,
-			/* .flags = DISCORD_MESSAGE_EPHEMERAL */
-		}
-	};
-	discord_create_interaction_response(client, event->id, event->token,
-	                                    &params, NULL);
+	discord_send_interaction_message(client, ev->id, ev->token, "%s", buf);
 }

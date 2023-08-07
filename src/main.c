@@ -89,7 +89,7 @@ main(void)
 	/* init curl, ccord global and client */
 	client = discord_init(TOKEN);
 
-	/* client->conf.http = try (calloc(1, sizeof(*(client->conf.http)))); */
+	/* client->conf.http = xcalloc(1, sizeof(*(client->conf.http))); */
 	/* client->conf.http->f = stderr; */
 	logconf_add_callback(&client->conf, &log_callback, stderr, LOG_WARN);
 	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT |

@@ -27,6 +27,7 @@
 #define IMAGES_FOLDER    SAVE_FOLDER "images/"
 #define RAIDS_FOLDER     SAVE_FOLDER "raids/"
 #define STATS_FILE       SAVE_FOLDER FILENAME
+#define VALID_STATS(X)   (strchr(X, DELIM) == 0)
 #define U32CAST(player)\
 	((uint32_t *)((char *)(player) + MAX_USERNAME_SIZ + MAX_KINGDOM_SIZ) - 2)
 
@@ -114,18 +115,20 @@ int file_exists(const char *filename);
 Player *find_player(u64snowflake userid);
 void discord_send_message(struct discord *client, u64snowflake channel_id,
                           const char *fmt, ...);
+void discord_send_interaction_message(struct discord *client, u64snowflake id,
+                                      const char *token, const char *fmt, ...);
 
 /* init.c */
 void create_folders(void);
 void create_stats_file(void);
 void init_players(void);
 void create_slash_commands(struct discord *client);
-void on_ready(struct discord *client, const struct discord_ready *event);
+void on_ready(struct discord *client, const struct discord_ready *ev);
 
 /* run.c */
 void on_interaction(struct discord *client,
-                    const struct discord_interaction *event);
-void on_message(struct discord *client, const struct discord_message *event);
+                    const struct discord_interaction *ev);
+void on_message(struct discord *client, const struct discord_message *ev);
 
 /* ocr.c */
 char *curl(char *url);
@@ -135,16 +138,15 @@ char *ocr(const char *fname, const char *lang);
 
 /* stats.c */
 void create_slash_stats(struct discord *client);
-bool check_delim(const char *val);
 uint32_t trim_stat(const char *str);
 char *playtime_to_str(uint32_t playtime);
 void update_file(Player *player);
-void on_stats(struct discord *client, const struct discord_message *event);
+void on_stats(struct discord *client, const struct discord_message *ev);
 void on_stats_interaction(struct discord *client,
-                          const struct discord_interaction *event);
+                          const struct discord_interaction *ev);
 
 /* raids.c */
-void on_raids(struct discord *client, const struct discord_message *event);
+void on_raids(struct discord *client, const struct discord_message *ev);
 size_t load_files(Slayer slayers[]);
 
 /* roles.c */
@@ -152,53 +154,53 @@ void update_roles(struct discord *client, Player *player);
 
 /* cmd_help.c */
 void create_slash_help(struct discord *client);
-void on_help(struct discord *client, const struct discord_message *event);
+void on_help(struct discord *client, const struct discord_message *ev);
 void on_help_interaction(struct discord *client,
-                         const struct discord_interaction *event);
+                         const struct discord_interaction *ev);
 
 /* cmd_info.c */
 u64snowflake str_to_uid(char *id);
 void create_slash_info(struct discord *client);
 void write_info(char *buf, size_t siz, const Player *player);
-void on_info(struct discord *client, const struct discord_message *event);
+void on_info(struct discord *client, const struct discord_message *ev);
 void on_info_interaction(struct discord *client,
-                         const struct discord_interaction *event);
+                         const struct discord_interaction *ev);
 
 /* cmd_leaderboard.c */
 void create_slash_leaderboard(struct discord *client);
 void on_leaderboard(struct discord *client,
-                    const struct discord_message *event);
+                    const struct discord_message *ev);
 void on_leaderboard_interaction(struct discord *client,
-                                const struct discord_interaction *event);
+                                const struct discord_interaction *ev);
 
 /* cmd_source.c */
 void create_slash_source(struct discord *client);
-void on_source(struct discord *client, const struct discord_message *event);
+void on_source(struct discord *client, const struct discord_message *ev);
 void on_source_interaction(struct discord *client,
-                           const struct discord_interaction *event);
+                           const struct discord_interaction *ev);
 
 /* cmd_lbraid.c */
 void create_slash_lbraid(struct discord *client);
-void on_lbraid(struct discord *client, const struct discord_message *event);
+void on_lbraid(struct discord *client, const struct discord_message *ev);
 void on_lbraid_interaction(struct discord *client,
-                           const struct discord_interaction *event);
+                           const struct discord_interaction *ev);
 
 /* cmd_uraid.c */
 void create_slash_uraid(struct discord *client);
-void on_uraid(struct discord *client, const struct discord_message *event);
+void on_uraid(struct discord *client, const struct discord_message *ev);
 void on_uraid_interaction(struct discord *client,
-                          const struct discord_interaction *event);
+                          const struct discord_interaction *ev);
 
 /* cmd_correct.c */
 void create_slash_correct(struct discord *client);
-void on_correct(struct discord *client, const struct discord_message *event);
+void on_correct(struct discord *client, const struct discord_message *ev);
 void on_correct_interaction(struct discord *client,
-                            const struct discord_interaction *event);
+                            const struct discord_interaction *ev);
 
 /* cmd_time.c */
 void create_slash_time(struct discord *client);
-void on_time(struct discord *client, const struct discord_message *event);
+void on_time(struct discord *client, const struct discord_message *ev);
 void on_time_interaction(struct discord *client,
-                         const struct discord_interaction *event);
+                         const struct discord_interaction *ev);
 
 #endif /* NOLAN_H */

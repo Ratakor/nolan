@@ -123,28 +123,22 @@ init_players(void)
 }
 
 void
-on_ready(struct discord *client, const struct discord_ready *event)
+on_ready(struct discord *client, const struct discord_ready *ev)
 {
-	log_info("Logged in as %s", event->user->username);
-	if (event->guilds->size <= 1)
-		log_info("Connected to %d server", event->guilds->size);
-	else
-		log_info("Connected to %d servers", event->guilds->size);
+	struct discord_presence_update status;
 
-	struct discord_activity activities[] = {
-		{
+	log_info("Logged in as %s", ev->user->username);
+	log_info("Connected to %d server%s", ev->guilds->size,
+	         (ev->guilds->size > 1) ? "s" : "");
+
+	status.status = "online";
+	status.since = discord_timestamp(client);
+	status.activities = &(struct discord_activities) {
+		.size = 1,
+		.array = &(struct discord_activity) {
 			.name = "/help",
-			.type = DISCORD_ACTIVITY_LISTENING,
-		},
-	};
-	struct discord_presence_update status = {
-		.activities = &(struct discord_activities)
-		{
-			.size = LENGTH(activities),
-			.array = activities
-		},
-		.status = "online",
-		.since = discord_timestamp(client),
+			.type = DISCORD_ACTIVITY_LISTENING
+		}
 	};
 	discord_update_presence(client, &status);
 }

@@ -302,54 +302,43 @@ leaderboard(char *buf, size_t siz, char *txt, u64snowflake userid)
 }
 
 void
-on_leaderboard(struct discord *client, const struct discord_message *event)
+on_leaderboard(struct discord *client, const struct discord_message *ev)
 {
 	char buf[MAX_MESSAGE_LEN];
 
-	if (event->author->bot)
+	if (ev->author->bot)
 		return;
 
 #ifdef DEVEL
-	if (event->channel_id != DEVEL)
+	if (ev->channel_id != DEVEL)
 		return;
 #endif /* DEVEL */
 
 	log_info("%s", __func__);
-	if (strlen(event->content) == 0)
+	if (strlen(ev->content) == 0)
 		write_invalid(buf, sizeof(buf));
 	else
 		leaderboard(buf, sizeof(buf),
-		            event->content, event->author->id);
+		            ev->content, ev->author->id);
 
-	struct discord_create_message msg = {
-		.content = buf
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
+	discord_send_message(client, ev->channel_id, "%s", buf);
 }
 
 void
 on_leaderboard_interaction(struct discord *client,
-                           const struct discord_interaction *event)
+                           const struct discord_interaction *ev)
 {
 	char buf[MAX_MESSAGE_LEN];
 
 	log_info("%s", __func__);
-	if (!event->data->options) {
+	if (!ev->data->options) {
 		write_invalid(buf, sizeof(buf));
 	} else {
 		leaderboard(buf, sizeof(buf),
-		            event->data->options->array[0].value,
-		            event->member->user->id);
+		            ev->data->options->array[0].value,
+		            ev->member->user->id);
 	}
 
-	struct discord_interaction_response params = {
-		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
-		.data = &(struct discord_interaction_callback_data)
-		{
-			.content = buf,
-		}
-	};
-	discord_create_interaction_response(client, event->id, event->token,
-	                                    &params, NULL);
+	discord_send_interaction_message(client, ev->id, ev->token, "%s", buf);
 }
 

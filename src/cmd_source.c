@@ -96,69 +96,62 @@ load_sorted_source(char *kingdom)
 }
 
 void
-on_source(struct discord *client, const struct discord_message *event)
+on_source(struct discord *client, const struct discord_message *ev)
 {
-	char *fbuf = NULL;
+	struct discord_attachment attachment;
+	struct discord_create_message msg;
+	char *buf = NULL;
 
-	if (event->author->bot)
+	if (ev->author->bot)
 		return;
 
 #ifdef DEVEL
-	if (event->channel_id != DEVEL)
+	if (ev->channel_id != DEVEL)
 		return;
 #endif /* DEVEL */
 
 	log_info("%s", __func__);
-	if (strlen(event->content) == 0)
-		fbuf = load_source();
+	if (strlen(ev->content) == 0)
+		buf = load_source();
 	else
-		fbuf = load_sorted_source(event->content);
+		buf = load_sorted_source(ev->content);
 
-	struct discord_attachment attachment = {
-		.filename = FILENAME,
-		.content = fbuf,
-		.size = strlen(fbuf)
-	};
-	struct discord_attachments attachments = {
+	attachment.filename = FILENAME;
+	attachment.content = buf;
+	attachment.size = strlen(buf);
+	msg.attachments = &(struct discord_attachments) {
 		.size = 1,
 		.array = &attachment
 	};
-	struct discord_create_message msg = {
-		.attachments = &attachments
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
-	free(fbuf);
+	discord_create_message(client, ev->channel_id, &msg, NULL);
+	free(buf);
 }
 
 void
 on_source_interaction(struct discord *client,
-                      const struct discord_interaction *event)
+                      const struct discord_interaction *ev)
 {
-	char *fbuf = NULL;
+	struct discord_attachment attachment;
+	struct discord_interaction_response params;
+	char *buf = NULL;
 
 	log_info("%s", __func__);
-	if (!event->data->options)
-		fbuf = load_source();
+	if (!ev->data->options)
+		buf = load_source();
 	else
-		fbuf = load_sorted_source(event->data->options->array[0].value);
+		buf = load_sorted_source(ev->data->options->array[0].value);
 
-	struct discord_attachment attachment = {
-		.filename = FILENAME,
-		.content = fbuf,
-		.size = strlen(fbuf)
-	};
-	struct discord_attachments attachments = {
-		.size = 1,
-		.array = &attachment
-	};
-	struct discord_interaction_response params = {
-		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
-		.data = &(struct discord_interaction_callback_data)
-		{
-			.attachments = &attachments
+	attachment.filename = FILENAME;
+	attachment.content = buf;
+	attachment.size = strlen(buf);
+	params.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE;
+	params.data = &(struct discord_interaction_callback_data) {
+		.attachments = &(struct discord_attachments) {
+			.size = 1,
+			.array = &attachment
 		}
 	};
-	discord_create_interaction_response(client, event->id, event->token,
-	                                    &params, NULL);
-	free(fbuf);
+	discord_create_interaction_response(client, ev->id, ev->token, &params,
+	                                    NULL);
+	free(buf);
 }

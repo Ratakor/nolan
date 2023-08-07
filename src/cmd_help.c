@@ -55,38 +55,30 @@ help(char *buf, size_t siz, u64snowflake guild_id)
 }
 
 void
-on_help(struct discord *client, const struct discord_message *event)
+on_help(struct discord *client, const struct discord_message *ev)
 {
 	char buf[MAX_MESSAGE_LEN];
 
+	if (ev->author->bot)
+		return;
+
 #ifdef DEVEL
-	if (event->channel_id != DEVEL)
+	if (ev->channel_id != DEVEL)
 		return;
 #endif /* DEVEL */
 
 	log_info("%s", __func__);
-	help(buf, sizeof(buf), event->guild_id);
-	struct discord_create_message msg = {
-		.content = buf
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
+	help(buf, sizeof(buf), ev->guild_id);
+	discord_send_message(client, ev->channel_id, "%s", buf);
 }
 
 void
 on_help_interaction(struct discord *client,
-                    const struct discord_interaction *event)
+                    const struct discord_interaction *ev)
 {
 	char buf[MAX_MESSAGE_LEN];
 
 	log_info("%s", __func__);
-	help(buf, sizeof(buf), event->guild_id);
-	struct discord_interaction_response params = {
-		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
-		.data = &(struct discord_interaction_callback_data)
-		{
-			.content = buf,
-		}
-	};
-	discord_create_interaction_response(client, event->id, event->token,
-	                                    &params, NULL);
+	help(buf, sizeof(buf), ev->guild_id);
+	discord_send_interaction_message(client, ev->id, ev->token, "%s", buf);
 }

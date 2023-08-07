@@ -10,7 +10,8 @@
 static void write_invalid_category(char *buf, size_t siz);
 static void write_invalid_value(char *buf, size_t siz, char *fmt, ...);
 static void correct(char *buf, size_t siz, char *category, char *val,
-                    u64snowflake userid);
+                    u64snowflake userid, u64snowflake guild_id,
+                    struct discord *client);
 static char *get_value(char *category);
 
 void
@@ -164,7 +165,8 @@ write_invalid_value(char *buf, size_t siz, char *fmt, ...)
 }
 
 void
-correct(char *buf, size_t siz, char *category, char *val, u64snowflake userid)
+correct(char *buf, size_t siz, char *category, char *val, u64snowflake userid,
+        u64snowflake guild_id, struct discord *client)
 {
 	Player *player;
 	uint32_t old, new;
@@ -187,7 +189,7 @@ correct(char *buf, size_t siz, char *category, char *val, u64snowflake userid)
 	}
 
 	if (i == NAME) {
-		if (check_delim(val)) {
+		if (!VALID_STATS(val)) {
 			write_invalid_value(buf, siz,
 			                    "%c is not a valid char.", DELIM);
 			return;
@@ -200,7 +202,7 @@ correct(char *buf, size_t siz, char *category, char *val, u64snowflake userid)
 		         fields[i], player->name, val);
 		strlcpy(player->name, val, MAX_USERNAME_SIZ);
 	} else if (i == KINGDOM) {
-		if (check_delim(val)) {
+		if (!VALID_STATS(val)) {
 			write_invalid_value(buf, siz,
 			                    "%c is not a valid char.", DELIM);
 			return;
@@ -228,9 +230,14 @@ correct(char *buf, size_t siz, char *category, char *val, u64snowflake userid)
 		U32CAST(player)[i] = new;
 	}
 
-	/* TODO: update roles */
-
 	update_file(player);
+#ifdef DEVEL
+	UNUSED(guild_id);
+	UNUSED(client);
+#else
+	if (guild_id == ROLE_GUILD_ID)
+		update_roles(client, player);
+#endif /* DEVEL */
 	pthread_mutex_unlock(&player_mutex);
 }
 
@@ -254,62 +261,53 @@ get_value(char *category)
 }
 
 void
-on_correct(struct discord *client, const struct discord_message *event)
+on_correct(struct discord *client, const struct discord_message *ev)
 {
 	char buf[MAX_MESSAGE_LEN], *category, *val;
 
-	if (event->author->bot)
+	if (ev->author->bot)
 		return;
 
 #ifdef DEVEL
-	if (event->channel_id != DEVEL)
+	if (ev->channel_id != DEVEL)
 		return;
 #endif /* DEVEL */
 
 	log_info("%s", __func__);
-	if (strlen(event->content) == 0) {
+	if (strlen(ev->content) == 0) {
 		write_invalid_category(buf, sizeof(buf));
 	} else {
-		category = xstrdup(event->content);
+		category = xstrdup(ev->content);
 		if (!(val = get_value(category))) {
 			write_invalid_value(buf, sizeof(buf),
 			                    "Hint: No value 😜");
 		} else {
 			correct(buf, sizeof(buf), category, val,
-			        event->author->id);
+			        ev->author->id, ev->guild_id, client);
 		}
 		free(category);
 	}
 
-	struct discord_create_message msg = {
-		.content = buf
-	};
-	discord_create_message(client, event->channel_id, &msg, NULL);
+	discord_send_message(client, ev->channel_id, "%s", buf);
 }
 
 void
 on_correct_interaction(struct discord *client,
-                       const struct discord_interaction *event)
+                       const struct discord_interaction *ev)
 {
 	char buf[MAX_MESSAGE_LEN];
 
 	log_info("%s", __func__);
-	if (!event->data->options) {
-		snprintf(buf, sizeof(buf), "idk please ping <@%lu>", ADMIN);
-	} else {
-		correct(buf, sizeof(buf),
-		        event->data->options->array[0].value,
-		        event->data->options->array[1].value,
-		        event->member->user->id);
+	if (!ev->data->options) {
+		discord_send_interaction_message(client, ev->id, ev->token,
+		                                 "idk please ping <@%lu>",
+		                                 ADMIN);
+		return;
 	}
 
-	struct discord_interaction_response params = {
-		.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE,
-		.data = &(struct discord_interaction_callback_data)
-		{
-			.content = buf,
-		}
-	};
-	discord_create_interaction_response(client, event->id, event->token,
-	                                    &params, NULL);
+	correct(buf, sizeof(buf), ev->data->options->array[0].value,
+	        ev->data->options->array[1].value, ev->member->user->id,
+	        ev->guild_id, client);
+
+	discord_send_interaction_message(client, ev->id, ev->token, "%s", buf);
 }

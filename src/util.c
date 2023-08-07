@@ -84,7 +84,8 @@ void
 discord_send_message(struct discord *client, u64snowflake channel_id,
                      const char *fmt, ...)
 {
-	char buf[MAX_MESSAGE_LEN];
+	struct discord_create_message msg;
+	char buf[MAX_MESSAGE_LEN] = "";
 	va_list ap;
 	int rv;
 
@@ -100,7 +101,34 @@ discord_send_message(struct discord *client, u64snowflake channel_id,
 	if ((size_t)rv >= sizeof(buf))
 		log_warn("%s: string truncation", __func__);
 
-	struct discord_create_message msg = { .content = buf };
-
+	msg.content = buf;
 	discord_create_message(client, channel_id, &msg, NULL);
+}
+
+void
+discord_send_interaction_message(struct discord *client, u64snowflake id,
+                                 const char *token, const char *fmt, ...)
+{
+	struct discord_interaction_response msg;
+	char buf[MAX_MESSAGE_LEN] = "";
+	va_list ap;
+	int rv;
+
+	va_start(ap, fmt);
+	rv = vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+
+	if (rv < 0) {
+		log_error("%s: %s", __func__, strerror(errno));
+		return;
+	}
+
+	if ((size_t)rv >= sizeof(buf))
+		log_warn("%s: string truncation", __func__);
+
+	msg.type = DISCORD_INTERACTION_CHANNEL_MESSAGE_WITH_SOURCE;
+	msg.data = &(struct discord_interaction_callback_data) {
+		.content = buf
+	};
+	discord_create_interaction_response(client, id, token, &msg, NULL);
 }

@@ -423,8 +423,7 @@ run_again:
 			                     "Fix me <@%"PRIu64">", event->author->id, ADMIN);
 			break;
 		case PARSING_FAILED:
-			/* TODO: this is ugly */
-			if (time_run < 3) {
+			if (time_run < 5) {
 				time_run++;
 				goto run_again;
 			}
