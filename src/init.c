@@ -125,7 +125,7 @@ init_players(void)
 void
 on_ready(struct discord *client, const struct discord_ready *ev)
 {
-	struct discord_presence_update status;
+	struct discord_presence_update status = {0};
 
 	log_info("Logged in as %s", ev->user->username);
 	log_info("Connected to %d server%s", ev->guilds->size,
