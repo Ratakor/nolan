@@ -108,12 +108,11 @@ main(void)
 	discord_set_on_command(client, "correct", on_correct);
 	discord_set_on_command(client, "time", on_time);
 
+	atexit(cleanup);
 	setlocale(LC_ALL, "");
 	signal(SIGINT, &sighandler);
 
 	discord_run(client);
-
-	cleanup();
 
 	return EXIT_SUCCESS;
 }

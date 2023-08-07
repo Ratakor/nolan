@@ -7,7 +7,6 @@
 #include <concord/discord.h>
 #include <concord/log.h>
 #include <libre/ubik.h>
-#include <libre/x.h>
 #include <libre/dalloc.h>
 
 #include "../config.h"
@@ -99,6 +98,18 @@ extern pthread_mutex_t player_mutex;
 extern const char *fields[24];
 
 /* util.c */
+#ifdef DALLOC
+#define xmalloc(siz)        malloc(siz)
+#define xcalloc(nmemb, siz) calloc(nmemb, siz)
+#define xrealloc(p, siz)    realloc(p, siz)
+#define xstrdup(s)          strdup(s)
+#else
+void *xmalloc(size_t siz);
+void *xcalloc(size_t nmemb, size_t siz);
+void *xrealloc(void *p, size_t siz);
+char *xstrdup(const char *s);
+#endif /* DALLOC */
+FILE *xfopen(const char *filename, const char *mode);
 int file_exists(const char *filename);
 Player *find_player(u64snowflake userid);
 void discord_send_message(struct discord *client, u64snowflake channel_id,

@@ -445,7 +445,7 @@ run_again:
 		memset(slayers, 0, MAX_SLAYERS * sizeof(*slayers));
 	}
 
-	log_info("%s %d\n", __func__, event->attachments->size);
+	log_info("%s %d", __func__, event->attachments->size);
 	overcap_msg(client, event->channel_id, slayers);
 	free(slayers);
 }

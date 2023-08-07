@@ -9,16 +9,10 @@ A discord bot for Orna.
 
 ## TODO
 
-### features
-- ascensions (track mats)
-
-### chore
 - use config.json instead of config.h
 - rework roles and make it available to other servers
+- use sql or redis for raids and roles
 - add documentation
 - rework DIFF in ocr.c and improve accuracy for raids.c
-- add logging to file
-
-### misc
-- use sql for raids and roles
 - multi-threading for raids.c
+- add logging to file
