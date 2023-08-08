@@ -2,12 +2,11 @@
 
 NAME       = nolan
 PREFIX    ?= /usr/local
-CC         = cc
 
 LIBRE_DIR  = libre
 SRC_DIR    = src
 
-DFLAGS    ?= -O0 -g -DDALLOC
+DFLAGS     = -O0 -g -DDALLOC
 CFLAGS    ?= -O3
 LDFLAGS   ?= -s
 

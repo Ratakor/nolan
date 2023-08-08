@@ -84,7 +84,7 @@ void
 discord_send_message(struct discord *client, u64snowflake channel_id,
                      const char *fmt, ...)
 {
-	struct discord_create_message msg;
+	struct discord_create_message msg = {0};
 	char buf[MAX_MESSAGE_LEN] = "";
 	va_list ap;
 	int rv;
@@ -109,7 +109,7 @@ void
 discord_send_interaction_message(struct discord *client, u64snowflake id,
                                  const char *token, const char *fmt, ...)
 {
-	struct discord_interaction_response msg;
+	struct discord_interaction_response msg = {0};
 	char buf[MAX_MESSAGE_LEN] = "";
 	va_list ap;
 	int rv;
