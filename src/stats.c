@@ -459,9 +459,8 @@ update_players(char *buf, size_t siz, Player *new_player)
 	player = find_player(new_player->userid);
 	s += write_quote(buf + s, siz - s);
 	if (player == NULL) { /* new player */
-		player = memdup(new_player, sizeof(*new_player));
-		if (player == NULL)
-			die(1, "memdup:");
+		player = xmalloc(sizeof(*player));
+		memcpy(player, new_player, sizeof(*player));
 		player->next = player_head;
 		player_head = player;
 		s += snprintf(buf + s, siz - s,

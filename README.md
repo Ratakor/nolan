@@ -5,7 +5,6 @@ A discord bot for Orna.
 - [concord](https://github.com/Cogmasters/concord)
 - [tesseract](https://github.com/tesseract-ocr/tesseract)
 - [gd](https://github.com/libgd/libgd)
-- [libre](https://github.com/ratakor/libre)
 
 ## TODO
 

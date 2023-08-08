@@ -77,10 +77,13 @@ sighandler(int sig)
 }
 
 int
-main(void)
+main(int argc, char *argv[])
 {
 	char *src[] = { "src", "source" };
 	char *lb[] = { "lb", "leaderboard" };
+
+	UNUSED(argc);
+	progname = argv[0];
 
 	create_folders();
 	create_stats_file();

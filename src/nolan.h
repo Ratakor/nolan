@@ -6,9 +6,8 @@
 #include <pthread.h>
 #include <concord/discord.h>
 #include <concord/log.h>
-#include <libre/ubik.h>
-#include <libre/dalloc.h>
 
+#include "dalloc.h"
 #include "../config.h"
 
 /* normally 50 but let's do * 3 to prevent from buffer overflow :) */
@@ -27,6 +26,12 @@
 #define IMAGES_FOLDER    SAVE_FOLDER "images/"
 #define RAIDS_FOLDER     SAVE_FOLDER "raids/"
 #define STATS_FILE       SAVE_FOLDER FILENAME
+
+#define MAX(X, Y)        ((X) > (Y) ? (X) : (Y))
+#define MIN(X, Y)        ((X) < (Y) ? (X) : (Y))
+#define LENGTH(X)        (sizeof(X) / sizeof(X[0]))
+#define STRLEN(X)        (sizeof(X) - 1)
+#define UNUSED(X)        ((void)(X))
 #define VALID_STATS(X)   (strchr(X, DELIM) == 0)
 #define U32CAST(player)\
 	((uint32_t *)((char *)(player) + MAX_USERNAME_SIZ + MAX_KINGDOM_SIZ) - 2)
@@ -94,11 +99,19 @@ typedef struct {
 	bool found_in_file;
 } Slayer;
 
+extern char *progname;
 extern Player *player_head;
 extern pthread_mutex_t player_mutex;
 extern const char *fields[24];
 
 /* util.c */
+void warn(const char *fmt, ...);
+void die(int status, const char *fmt, ...);
+char *nstrchr(const char *s, int c, size_t n);
+size_t ufmt(char *dst, size_t dsiz, uintmax_t n);
+size_t ifmt(char *dst, size_t dsiz, intmax_t n);
+size_t strlcpy(char *dst, const char *src, size_t siz);
+size_t strlcat(char *dst, const char *src, size_t siz);
 #ifdef DALLOC
 #define xmalloc(siz)        malloc(siz)
 #define xcalloc(nmemb, siz) calloc(nmemb, siz)

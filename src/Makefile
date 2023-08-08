@@ -11,6 +11,7 @@ OBJS         = cmd_correct.o     \
                cmd_source.o      \
                cmd_time.o        \
                cmd_uraid.o       \
+               dalloc.o          \
                init.o            \
                main.o            \
                ocr.o             \
@@ -20,7 +21,6 @@ OBJS         = cmd_correct.o     \
                stats.o           \
                util.o
 
-RELIBS       = -lre
 DISCORDLIBS  = -ldiscord -lcurl -lpthread
 TESSLIBS     = -ltesseract -lleptonica
 GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
@@ -28,7 +28,7 @@ GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
 WFLAGS       = -pedantic -Werror -Wall -Wextra -Waggregate-return -Wshadow\
                -Wmissing-prototypes -Wunused-macros -Wdouble-promotion
 CFLAGS      += -std=c99 -D_DEFAULT_SOURCE ${WFLAGS}
-LDFLAGS     += ${RELIBS} ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
+LDFLAGS     += ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
 
 all: ${BIN}
 

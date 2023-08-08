@@ -2,10 +2,133 @@
 
 #include <sys/stat.h>
 #include <errno.h>
+#include <stdarg.h>
 #include <string.h>
-#include <libre/ubik.h>
 
 #include "nolan.h"
+
+char *progname;
+
+static void
+vwarn(const char *fmt, va_list ap)
+{
+	fprintf(stderr, "%s: ", progname);
+
+	if (fmt == NULL) {
+		perror(NULL);
+		return;
+	}
+
+	vfprintf(stderr, fmt, ap);
+	if (fmt[0] && fmt[strlen(fmt) - 1] == ':') {
+		fputc(' ', stderr);
+		perror(NULL);
+	} else {
+		fputc('\n', stderr);
+	}
+}
+
+void
+warn(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	vwarn(fmt, ap);
+	va_end(ap);
+}
+
+void
+die(int status, const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	vwarn(fmt, ap);
+	va_end(ap);
+
+	exit(status);
+}
+
+char *
+nstrchr(const char *s, int c, size_t n)
+{
+	char *p;
+
+	if (n == 0 || s == NULL)
+		return NULL;
+
+	p = strchr(s, c);
+	while (--n != 0 && (p = strchr(p + 1, c)) != NULL);
+
+	return p;
+}
+
+size_t
+ufmt(char *dst, size_t dsiz, uintmax_t n)
+{
+	char buf[sizeof(n) * 4], *p;
+	size_t sizn = 1;
+
+	p = buf + sizeof(buf) - 1;
+	*p-- = '\0';
+	for (;;) {
+		*p-- = (n % 10) + '0';
+		if ((n /= 10) == 0)
+			break;
+		if ((sizn % 3) == 0)
+			*p-- = ',';
+		sizn++;
+	}
+
+	return strlcpy(dst, p + 1, dsiz);
+}
+
+size_t
+ifmt(char *dst, size_t dsiz, intmax_t n)
+{
+	if (dsiz == 0) {
+		if (n < 0)
+			n = -n;
+		return ufmt(NULL, 0, (uintmax_t)n) + 1;
+	}
+
+	if (n < 0) {
+		*dst = '-';
+		n = -n;
+	} else {
+		*dst = '+';
+	}
+
+	return ufmt(dst + 1, dsiz - 1, (uintmax_t)n) + 1;
+}
+
+size_t
+strlcpy(char *dst, const char *src, size_t siz)
+{
+	size_t slen, len;
+
+	slen = strlen(src);
+	if (siz != 0) {
+		len = MIN(slen, siz - 1);
+		memcpy(dst, src, len);
+		dst[len] = '\0';
+	}
+
+	return slen;
+}
+
+size_t
+strlcat(char *dst, const char *src, size_t siz)
+{
+	size_t dlen;
+
+	dlen = strlen(dst);
+	if (dlen >= siz)
+		return strlen(src) + siz;
+
+	return dlen + strlcpy(dst + dlen, src, siz - dlen);
+}
 
 #ifndef DALLOC
 void *
