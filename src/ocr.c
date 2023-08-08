@@ -56,11 +56,11 @@ curl(char *url)
 	return buf.data;
 }
 
-unsigned int
+CURLcode
 curl_file(char *url, char *fname)
 {
 	CURL *handle;
-	CURLcode ret;
+	CURLcode code;
 	FILE *fp;
 
 	handle = curl_easy_init();
@@ -68,11 +68,11 @@ curl_file(char *url, char *fname)
 	curl_easy_setopt(handle, CURLOPT_URL, url);
 	/* curl uses fwrite by default */
 	curl_easy_setopt(handle, CURLOPT_WRITEDATA, fp);
-	ret = curl_easy_perform(handle);
+	code = curl_easy_perform(handle);
 	fclose(fp);
 	curl_easy_cleanup(handle);
 
-	return ret;
+	return code;
 }
 
 

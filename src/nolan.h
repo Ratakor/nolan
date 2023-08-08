@@ -132,7 +132,7 @@ void on_message(struct discord *client, const struct discord_message *ev);
 
 /* ocr.c */
 char *curl(char *url);
-unsigned int curl_file(char *url, char *fname);
+CURLcode curl_file(char *url, char *fname);
 int crop(char *fname, int type);
 char *ocr(const char *fname, const char *lang);
 

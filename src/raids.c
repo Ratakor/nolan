@@ -283,7 +283,8 @@ raids(struct discord_attachment *attachment, const char *lang, Slayer slayers[])
 		         IMAGES_FOLDER, attachment->filename);
 
 	if ((code = curl_file(attachment->url, fname)) != 0) {
-		log_error("curl failed CURLcode: %u", code);
+		log_error("curl failed CURLcode: %s [%u]",
+		          curl_easy_strerror(code), code);
 		return DOWNLOAD_FAILED;
 	}
 

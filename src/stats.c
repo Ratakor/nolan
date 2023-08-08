@@ -481,14 +481,16 @@ void
 stats(char *buf, size_t siz, char *url, char *username, u64snowflake userid,
       u64snowflake guild_id, struct discord *client)
 {
-	unsigned int i, ret;
+	CURLcode code;
+	unsigned int i;
 	char *txt, fname[128];
 	Player local_player, *player;
 
 	/* not always a jpg but idc */
 	snprintf(fname, sizeof(fname), "%s/%lu.jpg", IMAGES_FOLDER, userid);
-	if ((ret = curl_file(url, fname)) != 0) {
-		log_error("curl failed CURLcode: %u", ret);
+	if ((code = curl_file(url, fname)) != 0) {
+		log_error("curl failed CURLcode: %s [%u]",
+		          curl_easy_strerror(code), code);
 		strlcpy(buf, "Error: Failed to download image", siz);
 		return;
 	}
