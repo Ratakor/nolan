@@ -12,7 +12,8 @@
 
 /* meh */
 #define DIFF 110
-#define WHITE 12000000
+/* #define WHITE 12000000 */
+#define WHITE 10000000
 
 struct Slice {
 	char *data;
@@ -34,8 +35,8 @@ write_data(void *ptr, size_t siz, size_t nmemb, void *stream)
 	buf = (struct Slice *)stream;
 	buf->data = xrealloc(buf->data, buf->siz + siz + 1);
 	memcpy(buf->data + buf->siz, ptr, siz);
-	buf->siz += siz + 1;
-	buf->data[buf->siz - 1] = '\0';
+	buf->siz += siz;
+	buf->data[buf->siz] = '\0';
 
 	return buf->siz;
 }
@@ -74,7 +75,6 @@ curl_file(char *url, char *fname)
 
 	return code;
 }
-
 
 int
 write_rect(gdRect *rect, gdImage *im)

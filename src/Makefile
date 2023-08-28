@@ -26,7 +26,7 @@ TESSLIBS     = -ltesseract -lleptonica
 GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
 
 WFLAGS       = -pedantic -Werror -Wall -Wextra -Waggregate-return -Wshadow\
-               -Wmissing-prototypes -Wunused-macros -Wdouble-promotion
+               -Wmissing-prototypes -Wunused-macros -Wdouble-promotion -Wpadded
 CFLAGS      += -std=c99 -D_DEFAULT_SOURCE ${WFLAGS}
 LDFLAGS     += ${DISCORDLIBS} ${TESSLIBS} ${GDLIBS}
 

@@ -3,6 +3,5 @@
 tests/
 images/
 nolan
-libre.a
 config.h
 compile_flags.txt

@@ -33,8 +33,7 @@
 #define STRLEN(X)        (sizeof(X) - 1)
 #define UNUSED(X)        ((void)(X))
 #define VALID_STATS(X)   (strchr(X, DELIM) == 0)
-#define U32CAST(player)\
-	((uint32_t *)((char *)(player) + MAX_USERNAME_SIZ + MAX_KINGDOM_SIZ) - 2)
+#define U32CAST(player)  (&((player)->level))
 
 enum {
 	NAME,
@@ -96,7 +95,7 @@ struct Player {
 typedef struct {
 	char *name;
 	uint32_t damage;
-	bool found_in_file;
+	int found_in_file;
 } Slayer;
 
 extern char *progname;

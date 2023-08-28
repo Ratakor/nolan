@@ -123,6 +123,9 @@ trim_dmg(char *str)
 			dmg = (dmg * 10) + (*p - "①"[2] + 1);
 	} while (*p++);
 
+	if (dmg > 100000000)
+		dmg /= 10;
+
 	return dmg;
 }
 
@@ -375,7 +378,6 @@ overcap_msg(struct discord *client, u64snowflake channel_id, Slayer slayers[])
 		free(slayers[i].name);
 	}
 }
-
 
 void
 on_raids(struct discord *client, const struct discord_message *event)
