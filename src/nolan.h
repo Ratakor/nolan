@@ -33,7 +33,7 @@
 #define STRLEN(X)        (sizeof(X) - 1)
 #define UNUSED(X)        ((void)(X))
 #define VALID_STATS(X)   (strchr(X, DELIM) == 0)
-#define U32CAST2(player)\
+#define U32CAST(player)\
 	((uint32_t *)((char *)(player) + 32 + 32) - 2)
 
 enum {
