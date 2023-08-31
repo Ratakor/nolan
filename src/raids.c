@@ -8,7 +8,9 @@
 
 #include "nolan.h"
 
-#define DAMAGE_CAP  300000000 /* weekly */
+#define DAMAGE_CAP        300000000 /* weekly */
+#define CHANNEL_ID_HALF   1146931774069416027
+#define CHANNEL_ID_DOUBLE 1146932363805331476
 
 enum {
 	SUCCESS,
@@ -25,7 +27,7 @@ static size_t get_slayers(Slayer slayers[], char *txt);
 static void save_to_new_file(Slayer slayers[], size_t nslayers, char *fname);
 static void save_to_file(Slayer slayers[], size_t nslayers);
 static int raids(struct discord_attachment *attachment, const char *lang,
-                 Slayer slayers[]);
+                 Slayer slayers[], u64snowflake channel_id);
 static void parse_file(char *fname, Slayer slayers[], size_t *nslayers);
 static void overcap_msg(struct discord *client, u64snowflake channel_id,
                         Slayer slayers[]);
@@ -123,6 +125,7 @@ trim_dmg(char *str)
 			dmg = (dmg * 10) + (*p - "①"[2] + 1);
 	} while (*p++);
 
+	// FIXME: some other stuff are x10ed
 	if (dmg > 100000000)
 		dmg /= 10;
 
@@ -270,10 +273,11 @@ save_to_file(Slayer slayers[], size_t nslayers)
 }
 
 int
-raids(struct discord_attachment *attachment, const char *lang, Slayer slayers[])
+raids(struct discord_attachment *attachment, const char *lang, Slayer slayers[],
+      u64snowflake channel_id)
 {
 	char *txt = NULL, fname[PATH_MAX];
-	size_t nslayers;
+	size_t i, nslayers;
 	CURLcode code;
 	bool is_png;
 
@@ -295,13 +299,21 @@ raids(struct discord_attachment *attachment, const char *lang, Slayer slayers[])
 	txt = ocr(fname, lang);
 	if (txt == NULL)
 		return OCR_FAILED;
-
 	nslayers = get_slayers(slayers, skip_to_slayers(txt));
-	if (nslayers > 0)
-		save_to_file(slayers, nslayers);
 	free(txt);
 
-	return (nslayers > 0) ? SUCCESS : PARSING_FAILED;
+	if (nslayers == 0)
+		return PARSING_FAILED;
+
+	for (i = 0; i < nslayers; i++) {
+		if (channel_id == CHANNEL_ID_DOUBLE)
+			slayers[i].damage *= 2;
+		else if (channel_id == CHANNEL_ID_HALF)
+			slayers[i].damage /= 2;
+	}
+	save_to_file(slayers, nslayers);
+
+	return SUCCESS;
 }
 
 void
@@ -406,7 +418,7 @@ lang_found:
 	slayers = xcalloc(MAX_SLAYERS, sizeof(*slayers));
 	for (i = 0; i < (size_t)event->attachments->size; i++) {
 run_again:
-		switch (raids(event->attachments->array + i, lang, slayers)) {
+		switch (raids(event->attachments->array + i, lang, slayers, event->channel_id)) {
 		case SUCCESS:
 			discord_send_message(client, event->channel_id, "Success");
 			break;
