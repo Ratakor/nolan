@@ -8,6 +8,9 @@
 #define TOKEN         "YOUR-BOT-TOKEN"
 #define PREFIX        "?"
 
+#define CHANNEL_ID_HALF   0UL
+#define CHANNEL_ID_DOUBLE 0UL
+
 /* list of channel ids to check for stats screenshots */
 static const u64snowflake stats_ids[] = {
 	0,
@@ -15,7 +18,8 @@ static const u64snowflake stats_ids[] = {
 
 /* list of channel ids to check for raids screenshots */
 static const u64snowflake raids_ids[] = {
-	0,
+	CHANNEL_ID_DOUBLE,
+	CHANNEL_ID_HALF,
 };
 
 /* list of chinese slayers for raids screenshots */

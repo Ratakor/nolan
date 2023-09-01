@@ -9,8 +9,6 @@
 #include "nolan.h"
 
 #define DAMAGE_CAP        300000000 /* weekly */
-#define CHANNEL_ID_HALF   1146931774069416027
-#define CHANNEL_ID_DOUBLE 1146932363805331476
 
 enum {
 	SUCCESS,
