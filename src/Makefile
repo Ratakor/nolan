@@ -2,6 +2,7 @@
 
 BIN          = ../nolan
 CONFIG_H     = ../config.h
+CC           = zig cc
 
 OBJS         = cmd_correct.o     \
                cmd_help.o        \
@@ -21,6 +22,8 @@ OBJS         = cmd_correct.o     \
                stats.o           \
                util.o
 
+ZIG_OBJS     = quote.o
+
 DISCORDLIBS  = -ldiscord -lcurl -lpthread
 TESSLIBS     = -ltesseract -lleptonica
 GDLIBS       = -lgd -lpng -lz -ljpeg -lfreetype -lm
@@ -38,13 +41,16 @@ echo:
 	@echo "LDFLAGS  = ${LDFLAGS}"
 	@echo "OBJS     = ${OBJS}"
 
-${BIN}: ${CONFIG_H} ${OBJS}
-	${CC} ${OBJS} ${LDFLAGS} -o $@
+${BIN}: ${CONFIG_H} ${OBJS} ${ZIG_OBJS}
+	${CC} ${OBJS} ${ZIG_OBJS} ${LDFLAGS} -o $@
+
+${ZIG_OBJS}:
+	zig build-obj -OReleaseFast -lc -lcurl ${@:.o=.zig}
 
 ${CONFIG_H}:
 	@cp ../config.def.h $@
 
 clean:
-	rm -f ${OBJS} ${BIN}
+	rm -f ${OBJS} ${ZIG_OBJS} ${BIN}
 
 .PHONY: all echo clean

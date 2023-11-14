@@ -143,11 +143,14 @@ void on_interaction(struct discord *client,
                     const struct discord_interaction *ev);
 void on_message(struct discord *client, const struct discord_message *ev);
 
+
 /* ocr.c */
-char *curl(char *url);
 CURLcode curl_file(char *url, char *fname);
 int crop(char *fname, int type);
 char *ocr(const char *fname, const char *lang);
+
+/* quote.zig */
+size_t write_quote(char *buffer, size_t size);
 
 /* stats.c */
 void create_slash_stats(struct discord *client);

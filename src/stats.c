@@ -7,8 +7,6 @@
 
 #include "nolan.h"
 
-#define URL "https://api.oss117quotes.xyz/v1/random"
-
 struct Field {
 	const char *const key;
 	const unsigned int val;
@@ -20,8 +18,6 @@ enum { ENGLISH, FRENCH };
 static uint32_t playtime_to_u32(char *playtime, int lang);
 static void parse_line(Player *player, char *line);
 static void for_line(Player *player, char *txt);
-static char *get_quote(void);
-static size_t write_quote(char *buf, size_t siz);
 static void update_player(char *buf, size_t siz, Player *player,
                           Player *new_player);
 static Player *update_players(char *buf, size_t siz, Player *new_player);
@@ -253,73 +249,6 @@ for_line(Player *player, char *txt)
 		parse_line(player, line);
 		line = endline ? (endline + 1) : 0;
 	}
-}
-
-char *
-get_quote(void)
-{
-	char *quote, *p, *sentence, *name, *tmp, *op, *otmp;
-
-	quote = curl(URL);
-	if ((sentence = nstrchr(quote, '"', 3)) == NULL) {
-		free(quote);
-		return NULL;
-	}
-	sentence++;
-	if ((name = nstrchr(quote, '"', 8)) == NULL) {
-		free(quote);
-		return NULL;
-	}
-	*name++ = '\n';
-	*name++ = '>';
-	*name = ' ';
-	name -= 2;
-
-	if ((p = strchr(sentence, '"')) == NULL) {
-		free(quote);
-		return NULL;
-	}
-	*p = '\0';
-	if ((p = strchr(name, '"')) == NULL) {
-		free(quote);
-		return NULL;
-	}
-	*p = '\0';
-
-	p = quote;
-	while ((*p++ = *sentence++));
-	p--;
-	while ((*p++ = *name++));
-
-	/* change '*' to "\*", must need a large enough buffer */
-	p = quote;
-	while ((p = strchr(p, '*')) != NULL) {
-		tmp = xstrdup(p);
-		op = p;
-		otmp = tmp;
-		*p++ = '\\';
-		while ((*p++ = *tmp++));
-		p = op + 2;
-		free(otmp);
-	}
-
-	return quote;
-}
-
-size_t
-write_quote(char *buf, size_t siz)
-{
-	char *quote;
-	size_t ret;
-
-	quote = get_quote();
-	if (quote == NULL)
-		return 0;
-
-	ret = snprintf(buf, siz, "%s\n\n", quote);
-	free(quote);
-
-	return ret;
 }
 
 void
