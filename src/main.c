@@ -73,7 +73,8 @@ static void
 sighandler(int sig)
 {
 	UNUSED(sig);
-	ccord_shutdown_async();
+	/* ccord_shutdown_async(); */
+	exit(0);
 }
 
 int
@@ -95,7 +96,7 @@ main(int argc, char *argv[])
 	/* client->conf.http = xcalloc(1, sizeof(*(client->conf.http))); */
 	/* client->conf.http->f = stderr; */
 	logconf_add_callback(&client->conf, &log_callback, stderr, LOG_WARN);
-	discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT |
+	discord_add_intents(client, //DISCORD_GATEWAY_MESSAGE_CONTENT |
 	                    DISCORD_GATEWAY_GUILD_MEMBERS);
 	discord_set_prefix(client, PREFIX);
 	create_slash_commands(client);

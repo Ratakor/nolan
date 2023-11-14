@@ -286,7 +286,8 @@ update_player(char *buf, size_t siz, Player *player, Player *new_player)
 			continue;
 		/* don't update if stat decreases except for special cases */
 		if (diff < 0 && i != ASCENSION     && i != GLOBAL_RANK &&
-		                i != REGIONAL_RANK && i != COMPETITIVE_RANK)
+		                i != REGIONAL_RANK && i != COMPETITIVE_RANK &&
+		                i != REPUTATION)
 			continue;
 
 		if (i == PLAYTIME) {
@@ -478,32 +479,33 @@ void
 on_stats_interaction(struct discord *client,
                      const struct discord_interaction *ev)
 {
-	char buf[MAX_MESSAGE_LEN] = "", *url, *endurl;
-	json_char *attachment;
+	/* char buf[MAX_MESSAGE_LEN] = "", *url, *endurl; */
+	/* json_char *attachment; */
 
 	log_info("%s", __func__);
-	attachment = xstrdup(ev->data->resolved->attachments);
-	url = strstr(attachment, "\"url\":");
-	if (!url) {
-		free(attachment);
-		return;
-	}
-	url += STRLEN("\"url\":\"");
-	endurl = strchr(url, '"');
-	if (!endurl) {
-		free(attachment);
-		return;
-	}
-	*endurl = '\0';
+	/* attachment = xstrdup(ev->data->resolved->attachments); */
+	/* url = strstr(attachment, "\"url\":"); */
+	/* if (!url) { */
+	/* 	free(attachment); */
+	/* 	return; */
+	/* } */
+	/* url += STRLEN("\"url\":\""); */
+	/* endurl = strchr(url, '"'); */
+	/* if (!endurl) { */
+	/* 	free(attachment); */
+	/* 	return; */
+	/* } */
+	/* *endurl = '\0'; */
 
-	stats(buf,
-	      sizeof(buf),
-	      url,
-	      ev->member->user->username,
-	      ev->member->user->id,
-	      ev->guild_id,
-	      client);
-	free(attachment);
+	/* stats(buf, */
+	/*       sizeof(buf), */
+	/*       url, */
+	/*       ev->member->user->username, */
+	/*       ev->member->user->id, */
+	/*       ev->guild_id, */
+	/*       client); */
+	/* free(attachment); */
 
-	discord_send_interaction_message(client, ev->id, ev->token, "%s", buf);
+	/* discord_send_interaction_message(client, ev->id, ev->token, "%s", buf); */
+	discord_send_interaction_message(client, ev->id, ev->token, "This command is momentarily unavailable.");
 }

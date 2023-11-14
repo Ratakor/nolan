@@ -7,7 +7,7 @@ LIBRE_DIR  = libre
 SRC_DIR    = src
 
 DFLAGS     = -O0 -g -DDALLOC
-CFLAGS    ?= -O3
+CFLAGS    ?= -O3 -Wno-unused-function
 LDFLAGS   ?= -s
 
 all: build

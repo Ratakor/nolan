@@ -13,7 +13,8 @@
 /* meh */
 #define DIFF 110
 /* #define WHITE 12000000 */
-#define WHITE 10000000
+/* #define WHITE 10000000 */
+#define WHITE 9000000
 
 static int write_rect(gdRect *rect, gdImagePtr im);
 

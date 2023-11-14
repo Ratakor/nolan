@@ -8,8 +8,6 @@
 
 #include "nolan.h"
 
-#define DAMAGE_CAP        300000000 /* weekly */
-
 enum {
 	SUCCESS,
 	DOWNLOAD_FAILED,
@@ -27,8 +25,6 @@ static void save_to_file(Slayer slayers[], size_t nslayers);
 static int raids(struct discord_attachment *attachment, const char *lang,
                  Slayer slayers[], u64snowflake channel_id);
 static void parse_file(char *fname, Slayer slayers[], size_t *nslayers);
-static void overcap_msg(struct discord *client, u64snowflake channel_id,
-                        Slayer slayers[]);
 
 static const char *delims[] = {
 	"+ Raid options",
@@ -366,30 +362,6 @@ load_files(Slayer slayers[])
 }
 
 void
-overcap_msg(struct discord *client, u64snowflake channel_id, Slayer slayers[])
-{
-	size_t nslayers, i;
-
-	nslayers = load_files(slayers);
-	for (i = 0; i < nslayers; i++) {
-		if (slayers[i].damage < DAMAGE_CAP) {
-			free(slayers[i].name);
-			continue;
-		}
-
-		/* FIXME: ' flag */
-		discord_send_message(client, channel_id,
-		                     "%s has overcapped the limit by %'"PRIu32
-		                     " damage, he is now at %'"PRIu32" damage.",
-		                     slayers[i].name,
-		                     slayers[i].damage - DAMAGE_CAP,
-		                     slayers[i].damage);
-
-		free(slayers[i].name);
-	}
-}
-
-void
 on_raids(struct discord *client, const struct discord_message *event)
 {
 	Slayer *slayers;
@@ -442,15 +414,9 @@ run_again:
 			}
 			log_error("parsing failed with lang:%s from %s",
 			          lang, event->author->username);
-			/* TODO: just me being lazy */
-			if (strcmp(lang, "jpn") == 0) {
-				discord_send_message(client, event->channel_id,
-				                     "Error: Sorry japanese doesn't work well");
-			} else {
-				discord_send_message(client, event->channel_id,
-				                     "Error: Failed to parse image <@%"PRIu64">.\n"
-				                     "Fix me <@%"PRIu64">", event->author->id, ADMIN);
-			}
+			discord_send_message(client, event->channel_id,
+			                     "Error: Failed to parse image\n"
+			                     "Possible cause are luminosity, language (english works better) or dpi.");
 			break;
 		}
 		time_run = 0;
@@ -458,6 +424,5 @@ run_again:
 	}
 
 	log_info("%s %d", __func__, event->attachments->size);
-	overcap_msg(client, event->channel_id, slayers);
 	free(slayers);
 }

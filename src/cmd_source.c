@@ -30,7 +30,6 @@ create_slash_source(struct discord *client)
 	discord_create_global_application_command(client, APP_ID, &cmd, NULL);
 }
 
-
 char *
 load_source(void)
 {
