@@ -3,42 +3,43 @@ const cURL = @cImport({
     @cInclude("curl/curl.h");
 });
 
-const KaamelottResponse = struct {
-    status: u32,
-    citation: struct {
-        citation: []const u8,
-        infos: struct {
-            auteur: []const u8,
-            acteur: []const u8,
-            personnage: []const u8,
-            saison: []const u8,
-            episode: []const u8,
+const KaamelottApi = struct {
+    const Response = struct {
+        status: u32,
+        citation: struct {
+            citation: []const u8,
+            infos: struct {
+                auteur: []const u8,
+                acteur: []const u8,
+                personnage: []const u8,
+                saison: []const u8,
+                episode: []const u8,
+            },
         },
-    },
+    };
 
-    const api_url = "https://kaamelott.chaudie.re/api/random";
+    const url = "https://kaamelott.chaudie.re/api/random";
 };
 
-const Oss117Response = struct {
-    sentence: []const u8,
-    character: struct {
-        name: []const u8,
-        slug: []const u8,
-    },
+const Oss117Api = struct {
+    const Response = struct {
+        sentence: []const u8,
+        character: struct {
+            name: []const u8,
+            slug: []const u8,
+        },
+    };
 
-    const api_url = "https://api.oss117quotes.xyz/v1/random";
+    const url = "https://api.oss117quotes.xyz/v1/random";
 };
 
-const ChuckNorrisResponse = struct {
-    categories: [][]const u8,
-    created_at: []const u8,
-    icon_url: []const u8,
-    id: []const u8,
-    updated_at: []const u8,
-    url: []const u8,
-    value: []const u8,
+const SouthParkApi = struct {
+    const Response = []struct {
+        quote: []const u8,
+        character: []const u8,
+    };
 
-    const api_url = "https://api.chucknorris.io/jokes/random";
+    const url = "https://southparkquotes.onrender.com/v1/quotes";
 };
 
 fn writeToArrayListCallback(data: *anyopaque, size: c_uint, nmemb: c_uint, user_data: *anyopaque) callconv(.C) c_uint {
@@ -48,7 +49,7 @@ fn writeToArrayListCallback(data: *anyopaque, size: c_uint, nmemb: c_uint, user_
     return nmemb * size;
 }
 
-fn writeQuote(comptime Response: type, buf: []u8) !usize {
+fn writeQuote(comptime Api: type, buf: []u8) !usize {
     var arena = std.heap.ArenaAllocator.init(std.heap.c_allocator);
     defer arena.deinit();
     const allocator = arena.allocator();
@@ -59,7 +60,7 @@ fn writeQuote(comptime Response: type, buf: []u8) !usize {
     var buffer = std.ArrayList(u8).init(allocator);
     // defer buffer.deinit();
 
-    if (cURL.curl_easy_setopt(handle, cURL.CURLOPT_URL, Response.api_url) != cURL.CURLE_OK)
+    if (cURL.curl_easy_setopt(handle, cURL.CURLOPT_URL, Api.url) != cURL.CURLE_OK)
         return error.CouldNotSetURL;
     if (cURL.curl_easy_setopt(handle, cURL.CURLOPT_WRITEFUNCTION, writeToArrayListCallback) != cURL.CURLE_OK)
         return error.CouldNotSetWriteCallback;
@@ -69,18 +70,18 @@ fn writeQuote(comptime Response: type, buf: []u8) !usize {
     if (cURL.curl_easy_perform(handle) != cURL.CURLE_OK)
         return error.FailedToPerformRequest;
 
-    const response = try std.json.parseFromSliceLeaky(Response, allocator, buffer.items, .{});
+    const response = try std.json.parseFromSliceLeaky(Api.Response, allocator, buffer.items, .{});
 
-    return (switch (Response) {
-        KaamelottResponse => try std.fmt.bufPrintZ(buf, "{s}\n> {s} (Kaamelott)\n\n", .{
+    return (switch (Api) {
+        KaamelottApi => try std.fmt.bufPrintZ(buf, "{s}\n> {s} (Kaamelott)\n\n", .{
             response.citation.citation,
             response.citation.infos.personnage,
         }),
-        Oss117Response => try std.fmt.bufPrintZ(buf, "{s}\n> {s} (OSS 117)\n\n", .{
+        Oss117Api => try std.fmt.bufPrintZ(buf, "{s}\n> {s} (OSS 117)\n\n", .{
             response.sentence,
             response.character.name,
         }),
-        ChuckNorrisResponse => try std.fmt.bufPrintZ(buf, "{s} (Chuck Norris)\n\n", .{response.value}),
+        SouthParkApi => try std.fmt.bufPrintZ(buf, "{s}\n> {s} (South Park)\n\n", .{ response[0].quote, response[0].character }),
         else => unreachable,
     }).len;
 }
@@ -89,14 +90,14 @@ var count = std.atomic.Atomic(usize).init(0);
 
 export fn write_quote(buffer: [*]u8, size: usize) usize {
     return switch (count.fetchAdd(1, .AcqRel)) {
-        0 => writeQuote(KaamelottResponse, buffer[0..size]),
-        1 => writeQuote(Oss117Response, buffer[0..size]),
+        0 => writeQuote(KaamelottApi, buffer[0..size]),
+        1 => writeQuote(Oss117Api, buffer[0..size]),
         else => blk: {
             count.store(0, .Release);
-            break :blk writeQuote(ChuckNorrisResponse, buffer[0..size]);
+            break :blk writeQuote(SouthParkApi, buffer[0..size]);
         },
     } catch |err| blk: {
-        std.log.warn("write_quote: {}", .{err});
+        std.log.warn("{s}: {}", .{@src().fn_name, err});
         buffer[0] = 0;
         break :blk 0;
     };
