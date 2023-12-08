@@ -52,6 +52,10 @@ write_lbraid(char *buf, size_t siz, Slayer slayers[], size_t nslayers)
 		s += ufmt(buf + s, siz - s, slayers[i].damage);
 		s += strlcpy(buf + s, " damage\n", siz - s);
 	}
+	s += strlcpy(buf + s,
+	             "\nOccasional errors may have impacted scores\n"
+	             "Please check screenshot data manually and report what's wrong to Ratakor",
+	             siz - s);
 }
 
 void

@@ -121,7 +121,11 @@ write_uraid(char *buf, size_t siz, char *username, uint32_t *dmgs)
 		s += ufmt(buf + s, siz - s, dmgs[day]);
 	s += strlcpy(buf + s, " damage\n```\n\nTotal: ", siz - s);
 	s += ufmt(buf + s, siz - s, total);
-	s += strlcpy(buf + s, " damage", siz - s);
+	s += strlcpy(buf + s, " damage\n", siz - s);
+	s += strlcpy(buf + s,
+	             "\nOccasional errors may have impacted scores\n"
+	             "Please check screenshot data manually and report what's wrong to Ratakor",
+	             siz - s);
 	if ((size_t)s >= siz)
 		log_warn("%s: string truncation", __func__);
 }
